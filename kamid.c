@@ -40,6 +40,7 @@
 #include "listener.h"
 #include "log.h"
 #include "sandbox.h"
+#include "table.h"
 #include "utils.h"
 
 enum kd_process {
@@ -244,20 +245,49 @@ main_sig_handler(int sig, short event, void *arg)
 	}
 }
 
+static inline struct table *
+auth_table_by_id(uint32_t id)
+{
+	struct kd_listen_conf *listen;
+
+	SIMPLEQ_FOREACH(listen, &main_conf->listen_head, entry) {
+		if (listen->id == id)
+			return listen->auth_table;
+	}
+
+	return NULL;
+}
+
 static inline void
 do_auth_tls(struct imsg *imsg)
 {
-	const char *hash, *username = "op";
+	char *username = NULL;
 	struct passwd *pw;
+	struct table *t;
+	struct kd_auth_req auth;
 	int p[2];
 
-	hash = imsg->data;
-	if (hash[IMSG_DATA_SIZE(*imsg)-1] != '\0')
-		goto err;
+	if (sizeof(auth) != IMSG_DATA_SIZE(*imsg))
+		fatal("wrong size for IMSG_AUTH_TLS: "
+		    "got %lu; want %lu", IMSG_DATA_SIZE(*imsg),
+		    sizeof(auth));
+	memcpy(&auth, imsg->data, sizeof(auth));
 
-	log_debug("tls hash=%s", hash);
-	log_debug("assuming it refers to user `%s'",
-	    username);
+	if (memmem(auth.hash, sizeof(auth.hash), "", 1) == NULL)
+                fatal("non NUL-terminated hash received");
+
+	log_debug("tls id=%u hash=%s", auth.listen_id, auth.hash);
+
+	if ((t = auth_table_by_id(auth.listen_id)) == NULL)
+		fatal("request for invalid listener id %d", imsg->hdr.pid);
+
+	log_debug("before table_lookup");
+	if (table_lookup(t, auth.hash, &username) == -1) {
+		log_warnx("login failed for hash %s", auth.hash);
+		goto err;
+	}
+
+	log_debug("matched local user %s", username);
 
 	if ((pw = getpwnam(username)) == NULL) {
 		log_warn("getpwnam(%s)", username);
@@ -275,9 +305,11 @@ do_auth_tls(struct imsg *imsg)
 	main_imsg_compose_listener(IMSG_AUTH_DIR, -1, imsg->hdr.peerid,
 	    pw->pw_dir, strlen(pw->pw_dir)+1);
 
+	free(username);
 	return;
 
 err:
+	free(username);
 	main_imsg_compose_listener(IMSG_AUTH, -1, imsg->hdr.peerid,
 	    NULL, 0);
 }

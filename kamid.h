@@ -119,6 +119,11 @@ struct kd_conf {
 	SIMPLEQ_HEAD(kd_listen_conf_head, kd_listen_conf)	 listen_head;
 };
 
+struct kd_auth_req {
+	uint32_t	listen_id;
+	char		hash[128+1];
+};
+
 /* kamid.c */
 extern int verbose;
 int	main_imsg_compose_listener(int, int, uint32_t, const void *, uint16_t);

@@ -51,6 +51,7 @@ SPLAY_HEAD(clients_tree_id, client) clients;
 
 struct client {
 	uint32_t		 id;
+	uint32_t		 lid;
 	int			 fd;
 	int			 done;
 	struct tls		*ctx;
@@ -570,6 +571,7 @@ handle_accept(int fd, short ev, void *data)
 	}
 
 	c = xcalloc(1, sizeof(*c));
+	c->lid = listen->id;
 	c->iev.ibuf.fd = -1;
 
 	if (tls_accept_socket(listen->ctx, &c->ctx, s) == -1) {
@@ -595,6 +597,7 @@ static void
 handle_handshake(int fd, short ev, void *data)
 {
 	struct client *c = data;
+	struct kd_auth_req auth;
 	ssize_t r;
 	const char *hash;
 
@@ -617,8 +620,13 @@ handle_handshake(int fd, short ev, void *data)
 		return;
 	}
 
+	memset(&auth, 0, sizeof(auth));
+	auth.listen_id = c->lid;
+	strlcpy(auth.hash, hash, sizeof(auth.hash));
+	log_debug("sending hash %s", auth.hash);
+
 	listener_imsg_compose_main(IMSG_AUTH_TLS, c->id,
-	    hash, strlen(hash)+1);
+	    &auth, sizeof(auth));
 }
 
 static void
