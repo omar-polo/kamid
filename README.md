@@ -26,6 +26,18 @@ In order to run, a `_kamid` user must exists.  The home directory of
 `_kamid` should be `/var/empty` or similar.  A configuration file is
 also needed.  kamid must be started with root privileges.
 
+A sample configuration file:
+
+```
+pki localhost cert "/path/to/localhost.crt"
+pki localhost key  "/path/to/localhost.key"
+
+table users { "SHA256:..." => "op" }
+
+# should be <users> but there's currently a bug in the parser so...
+listen on localhost port 1337 tls pki localhost auth < users >
+```
+
 
 ## License
 
