@@ -34,6 +34,12 @@
 # include "compat/queue.h"
 #endif
 
+#ifdef HAVE_SYS_TREE_H
+# include <sys/tree.h>
+#else
+# include "compat/tree.h"
+#endif
+
 #ifdef HAVE_LIBUTIL
 # include <imsg.h>
 #else

@@ -38,6 +38,8 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 	AC_DEFINE([HAVE_QUEUE_H], 1, [QUEUE_H])
 ], AC_MSG_RESULT(no))
 
+AC_CHECK_HEADERS([sys/tree.h])
+
 AC_CHECK_DECL(PR_SET_NAME, AC_DEFINE([HAVE_PR_SET_NAME], 1, [pr_set_name]), [],
 	[[#include <sys/prctl.h>]])
 
