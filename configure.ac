@@ -8,6 +8,7 @@ AC_PROG_YACC
 AC_REPLACE_FUNCS([
 	asprintf	\
 	err		\
+	freezero	\
 	getdtablecount	\
 	getdtablesize	\
 	getprogname	\

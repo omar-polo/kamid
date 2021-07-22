@@ -60,6 +60,10 @@ void		 warn(int, const char *, ...);
 void		 warnx(int, const char *, ...);
 #endif
 
+#ifndef FREEZERO
+void		 freezero(void *, size_t);
+#endif
+
 #ifndef HAVE_GETDTABLECOUNT
 int		 getdtablecount(void);
 #endif
