@@ -1,0 +1,73 @@
+.\" Copyright (c) 2021 Omar Polo <op@omarpolo.com>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate: July 07 2021 $
+.Dt KAMID 8
+.Os
+.Sh NAME
+.Nm kamid
+.Nd 9p file server daemon
+.Sh SYNOPSYS
+.Nm
+.Op Fl dnv
+.Op Fl D Ar macro Ns = Ns Ar value
+.Op Fl f Pa file
+.Op Fl s Pa socket
+.Sh DESCRIPTION
+.Nm
+is a 9p file server daemon.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl D Ar macro Ns = Ns Ar value
+Set a
+.Ar macro
+to a
+.Ar value .
+Macros can be referenced in the configuration files.
+.It Fl d
+Do not daemonize.
+If this option is specified,
+.Nm
+will run in the foreground and log to
+.Em stderr .
+.It Fl f Ar file
+specify an alternative configuration file.
+.It Fl n
+Configtest mode.
+Only check the configuration file for validity.
+.It Fl s Ar socket
+Use an alternate location for the default control socket.
+.It Fl v
+Produce more verbose output.
+.El
+.Sh FILES
+.Bl -tag -width "/var/run/kamid.sockXX" -compact
+.It Pa /etc/kamid.conf
+Default
+.Nm
+configuration file.
+.It Pa /var/run/kamid.sock
+UNIX-domain socket used for communication with
+.Xr kamictl 8 .
+.El
+.Sh SEE ALSO
+.Xr kami.conf 5 ,
+.Xr kamictl 8
+.Sh AUTHORS
+.An -nosplit
+The
+.Nm
+program was written by
+.An Omar Polo Aq Mt op@omarpolo.com .
