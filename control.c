@@ -14,8 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "compat.h"
+
 #include <sys/types.h>
-#include <sys/queue.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
