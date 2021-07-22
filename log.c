@@ -80,7 +80,8 @@ vlog(int pri, const char *fmt, va_list ap)
 
 	if (debug) {
 		/* best effort in out of mem situations */
-		if (asprintf(&nfmt, "%s\n", fmt) == -1) {
+		if (asprintf(&nfmt, "%s: %s\n", log_procname, fmt) == -1) {
+			fprintf(stderr, "%s: ", log_procname);
 			vfprintf(stderr, fmt, ap);
 			fprintf(stderr, "\n");
 		} else {
