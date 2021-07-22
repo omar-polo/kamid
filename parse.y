@@ -93,7 +93,7 @@ static struct kd_listen_conf *listen_new(void);
 
 static uint32_t			 counter;
 static struct table		*table;
-static struct kd_listen_conf	*listen;
+static struct kd_listen_conf	*listener;
 static struct kd_conf		*conf;
 static int			 errors;
 
@@ -267,29 +267,29 @@ tableref	: '<' STRING '>' {
 		}
 		;
 
-listen		: LISTEN { listen = listen_new(); }
-		    listen_opts { listen = NULL; };
+listen		: LISTEN { listener = listen_new(); }
+		    listen_opts { listener = NULL; };
 
 listen_opts	: listen_opt
 		| listen_opt listen_opts
 		;
 
 listen_opt	: ON STRING PORT NUMBER	{
-			if (*listen->iface != '\0')
+			if (*listener->iface != '\0')
 				yyerror("listen address and port already"
 				    " defined");
-			strlcpy(listen->iface, $2, sizeof(listen->iface));
-			listen->port = $4;
+			strlcpy(listener->iface, $2, sizeof(listener->iface));
+			listener->port = $4;
 		}
 		| TLS PKI STRING {
-			if (*listen->pki != '\0')
+			if (*listener->pki != '\0')
 				yyerror("listen tls pki already defined");
-			strlcpy(listen->pki, $3, sizeof(listen->pki));
+			strlcpy(listener->pki, $3, sizeof(listener->pki));
 		}
 		| AUTH tableref {
-			if (listen->auth_table != NULL)
+			if (listener->auth_table != NULL)
 				yyerror("listen auth already defined");
-			listen->auth_table = $2;
+			listener->auth_table = $2;
 		}
 		;
 
