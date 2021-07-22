@@ -31,7 +31,7 @@ kamid_SOURCES =		client.c	\
 			utils.c		\
 			utils.h
 
-LDADD =			$(LIBOBJ)
+LDADD =			$(LIBOBJS)
 
 BUILT_SOURCES =		compile_flags.txt
 CLEANFILES =		compile_flags.txt
