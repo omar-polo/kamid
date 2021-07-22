@@ -48,6 +48,13 @@
 # include "compat/ohash.h"
 #endif
 
+#ifndef HAVE_ARC4RANDOM
+# include <stdint.h>
+uint32_t	 arc4random(void);
+void		 arc4random_buf(void *, size_t);
+uint32_t	 arc4random_uniform(uint32_t);
+#endif
+
 #ifndef HAVE_ASPRINTF
 int		 asprintf(char **, const char *, ...);
 int		 vasprintf(char **, const char *, ...);

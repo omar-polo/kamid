@@ -6,6 +6,7 @@ AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_YACC
 
 AC_REPLACE_FUNCS([
+	arc4random	\
 	asprintf	\
 	err		\
 	freezero	\
@@ -43,6 +44,10 @@ AC_CHECK_HEADERS([sys/tree.h])
 
 AC_CHECK_DECL(PR_SET_NAME, AC_DEFINE([HAVE_PR_SET_NAME], 1, [pr_set_name]), [],
 	[[#include <sys/prctl.h>]])
+
+AC_CHECK_LIB([crypto], [RAND_add], [], [
+	AC_MSG_ERROR([requires openssl])
+])
 
 AC_CHECK_LIB(tls, tls_init, [], [
 	AC_MSG_ERROR([requires libtls])
