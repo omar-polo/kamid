@@ -42,8 +42,10 @@
 
 #ifdef HAVE_LIBUTIL
 # include <imsg.h>
+# include <ohash.h>
 #else
 # include "compat/imsg.h"
+# include "compat/ohash.h"
 #endif
 
 #ifndef HAVE_ASPRINTF
