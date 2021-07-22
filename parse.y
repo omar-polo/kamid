@@ -89,10 +89,11 @@ static void		 add_table(const char *, const char *, const char *);
 static struct table	*findtable(const char *name);
 static void		 add_cert(const char *, const char *);
 static void		 add_key(const char *, const char *);
-static void		 add_listen(const char *, uint32_t, const char *, struct table *);
+static struct kd_listen_conf *listen_new(void);
 
 static uint32_t			 counter;
 static struct table		*table;
+static struct kd_listen_conf	*listen;
 static struct kd_conf		*conf;
 static int			 errors;
 
@@ -256,22 +257,39 @@ table		: TABLE STRING STRING {
 		;
 
 tableref	: '<' STRING '>' {
-			$$ = findtable($2);
+			struct table *t;
+
+			t = findtable($2);
 			free($2);
-			if ($$ == NULL)
+			if (t == NULL)
 				YYERROR;
+			$$ = t;
 		}
 		;
 
-listen		: LISTEN ON STRING PORT NUMBER TLS PKI STRING /* AUTH tableref */ {
-			char *iface = $3;
-			uint32_t port = $5;
-			char *pki = $8;
-			struct table *auth = NULL; /* $10 */
+listen		: LISTEN { listen = listen_new(); }
+		    listen_opts { listen = NULL; };
 
-			add_listen(iface, port, pki, auth);
-			free(iface);
-			free(pki);
+listen_opts	: listen_opt
+		| listen_opt listen_opts
+		;
+
+listen_opt	: ON STRING PORT NUMBER	{
+			if (*listen->iface != '\0')
+				yyerror("listen address and port already"
+				    " defined");
+			strlcpy(listen->iface, $2, sizeof(listen->iface));
+			listen->port = $4;
+		}
+		| TLS PKI STRING {
+			if (*listen->pki != '\0')
+				yyerror("listen tls pki already defined");
+			strlcpy(listen->pki, $3, sizeof(listen->pki));
+		}
+		| AUTH tableref {
+			if (listen->auth_table != NULL)
+				yyerror("listen auth already defined");
+			listen->auth_table = $2;
 		}
 		;
 
@@ -863,22 +881,15 @@ set:
 		fatal(NULL);
 }
 
-static void
-add_listen(const char *iface, uint32_t portno, const char *pki, struct table *auth)
+static struct kd_listen_conf *
+listen_new(void)
 {
 	struct kd_listen_conf *l;
 
-	if (portno >= UINT16_MAX)
-		fatalx("invalid port number: %"PRIu32, portno);
-
 	l = xcalloc(1, sizeof(*l));
-
 	l->id = counter++;
 	l->fd = -1;
-	strlcpy(l->iface, iface, sizeof(l->iface));
-	l->port = portno;
-	l->auth_table = auth;
-	strlcpy(l->pki, pki, sizeof(l->pki));
 
 	SIMPLEQ_INSERT_HEAD(&conf->listen_head, l, entry);
+	return l;
 }
