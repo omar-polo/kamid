@@ -16,7 +16,6 @@
 
 #include "compat.h"
 
-#include <ohash.h>
 #include <stdlib.h>
 
 #include "kamid.h"
