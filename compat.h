@@ -34,21 +34,56 @@
 
 #ifdef HAVE_LIBUTIL
 # include <imsg.h>
-# include <ohash.h>
-# include <util.h>
 #else
 # include "compat/imsg.h"
-# include "compat/ohash.h"
-# define FMT_SCALED_STRSIZE      7       /* minus sign, 4 digits, suffix, null byte */
-int		 fmt_scaled(long long, char *);
+#endif
+
+#ifndef HAVE_ASPRINTF
+int		 asprintf(char **, const char *, ...);
+int		 vasprintf(char **, const char *, ...);
+#endif
+
+#ifndef HAVE_ERR
+void		 err(int, const char *, ...);
+void		 errx(int, const char *, ...);
+void		 warn(int, const char *, ...);
+void		 warnx(int, const char *, ...);
+#endif
+
+#ifndef HAVE_GETDTABLECOUNT
+int		 getdtablecount(void);
+#endif
+
+#ifndef HAVE_GETDTABLESIZE
+int		 getdtablesize(void);
 #endif
 
 #ifndef HAVE_GETPROGNAME
 const char	*getprogname(void);
 #endif
 
+#ifndef HAVE_RECALLOCARRAY
+void		*recallocarray(void *, size_t, size_t, size_t);
+#endif
+
+#ifndef HAVE_SETPROCTITLE
+void		 setproctitle(const char *, ...);
+#endif
+
 #ifndef HAVE_SETPROGNAME
 void		 setproctitle(const char *, ...);
 #endif
 
+#ifndef HAVE_STRLCAT
+size_t		 strlcat(char *, const char *, size_t);
 #endif
+
+#ifndef HAVE_STRLCPY
+size_t		 strlcpy(char *, const char *, size_t);
+#endif
+
+#ifndef HAVE_STRTONUM
+long long	 strtonum(const char *, long long, long long, const char **);
+#endif
+
+#endif	/* COMPAT_H */

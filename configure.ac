@@ -6,8 +6,17 @@ AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_YACC
 
 AC_REPLACE_FUNCS([
+	asprintf	\
+	err		\
+	getdtablecount	\
+	getdtablesize	\
 	getprogname	\
+	recallocarray	\
+	setproctitle	\
 	setprogname	\
+	strlcat		\
+	strlcpy		\
+	strtonum	\
 ])
 
 AC_MSG_CHECKING([for sys/queue.h with TAILQ_FOREACH_SAFE])
