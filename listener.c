@@ -21,7 +21,6 @@
 #include "compat.h"
 
 #include <sys/socket.h>
-#include <sys/tree.h>
 
 #include <errno.h>
 #include <inttypes.h>
