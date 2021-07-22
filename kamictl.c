@@ -28,11 +28,11 @@
 #include "kamid.h"
 #include "log.h"
 
-__dead void	 usage(void);
+ATTR_DEAD void	 usage(void);
 
 struct imsgbuf	*ibuf;
 
-__dead void
+ATTR_DEAD void
 usage(void)
 {
 	/*

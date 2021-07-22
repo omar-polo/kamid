@@ -52,14 +52,14 @@ const char	*saved_argv0;
 static int	 debug, nflag;
 int		 verbose;
 
-__dead void	usage(void);
+ATTR_DEAD void	usage(void);
 
 void		main_sig_handler(int, short, void *);
 void		main_dispatch_listener(int, short, void *);
 int		main_reload(void);
 int		main_imsg_send_config(struct kd_conf *);
 void		main_dispatch_listener(int, short, void *);
-__dead void	main_shutdown(void);
+ATTR_DEAD void	main_shutdown(void);
 
 static pid_t	start_child(enum kd_process, int, int, int);
 
@@ -69,7 +69,7 @@ const char		*conffile;
 pid_t			 listener_pid;
 uint32_t		 cmd_opts;
 
-__dead void
+ATTR_DEAD void
 usage(void)
 {
 	fprintf(stderr, "usage: %s [-dnv] [-f file] [-s socket]\n",
@@ -448,7 +448,7 @@ config_clear(struct kd_conf *conf)
 	free(conf);
 }
 
-__dead void
+ATTR_DEAD void
 main_shutdown(void)
 {
 	pid_t	pid;

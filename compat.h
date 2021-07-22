@@ -26,6 +26,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define ATTR_DEAD __attribute__((noreturn))
+
 #ifdef HAVE_QUEUE_H
 # include <sys/queue.h>
 #else

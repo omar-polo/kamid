@@ -46,7 +46,7 @@ static struct kd_conf	*listener_conf;
 static struct imsgev	*iev_main;
 
 static void	listener_sig_handler(int, short, void *);
-__dead void	listener_shutdown(void);
+ATTR_DEAD void	listener_shutdown(void);
 
 SPLAY_HEAD(clients_tree_id, client) clients;
 
@@ -166,7 +166,7 @@ listener(int debug, int verbose)
 	listener_shutdown();
 }
 
-__dead void
+ATTR_DEAD void
 listener_shutdown(void)
 {
 	msgbuf_clear(&iev_main->ibuf.w);

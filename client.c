@@ -31,7 +31,7 @@
 
 static struct imsgev	*iev_listener;
 
-static __dead void	client_shutdown(void);
+static ATTR_DEAD void	client_shutdown(void);
 static void		client_sig_handler(int, short, void *);
 static void		client_dispatch_listener(int, short, void *);
 static void		client_privdrop(const char *, const char *);
@@ -39,7 +39,7 @@ static void		client_privdrop(const char *, const char *);
 static int		client_imsg_compose_listener(int, uint32_t,
     const void *, uint16_t);
 
-__dead void
+ATTR_DEAD void
 client(int debug, int verbose)
 {
 	struct event	ev_sigint, ev_sigterm;
@@ -77,12 +77,11 @@ client(int debug, int verbose)
 	    iev_listener->events, iev_listener->handler, iev_listener);
 	event_add(&iev_listener->ev, NULL);
 
-	log_debug("before dispatch");
 	event_dispatch();
 	client_shutdown();
 }
 
-static __dead void
+static ATTR_DEAD void
 client_shutdown(void)
 {
 	msgbuf_clear(&iev_listener->ibuf.w);
@@ -148,7 +147,6 @@ client_dispatch_listener(int fd, short event, void *d)
 		if (n == 0)	/* No more messages. */
 			break;
 
-		log_debug("client: got message type %d", imsg.hdr.type);
 		switch (imsg.hdr.type) {
 		case IMSG_AUTH:
 			if (auth)
