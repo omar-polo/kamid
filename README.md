@@ -20,6 +20,13 @@ to build from a git checkout:
 	make
 
 
+## Usage
+
+In order to run, a `_kamid` user must exists.  The home directory of
+`_kamid` should be `/var/empty` or similar.  A configuration file is
+also needed.  kamid must be started with root privileges.
+
+
 ## License
 
 kamid is released under a BSD-like license.  The bulk of the code is
