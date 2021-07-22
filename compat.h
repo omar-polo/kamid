@@ -81,7 +81,7 @@ void		 setproctitle(const char *, ...);
 #endif
 
 #ifndef HAVE_SETPROGNAME
-void		 setproctitle(const char *, ...);
+void		 setprogname(const char *);
 #endif
 
 #ifndef HAVE_STRLCAT
