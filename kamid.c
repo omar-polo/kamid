@@ -151,7 +151,7 @@ main(int argc, char **argv)
 		exit(1);
 
 	if (nflag) {
-		fprintf(stderr, "configuratino OK\n");
+		fprintf(stderr, "configuration OK\n");
 		exit(0);
 	}
 
