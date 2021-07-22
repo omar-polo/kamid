@@ -17,6 +17,7 @@
 #include "compat.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "kamid.h"
 #include "utils.h"
@@ -99,12 +100,24 @@ table_static_lookup(struct table *t, const char *key, char **ret_val)
 	struct kp	*kp;
 	unsigned int	 slot;
 
+#if 0
 	slot = ohash_qlookup(t->t_handle, key);
 	if ((kp = ohash_find(t->t_handle, slot)) == NULL)
 		return -1;
 
 	*ret_val = xstrdup(kp->val);
 	return 0;
+#endif
+
+	for (kp = ohash_first(t->t_handle, &slot);
+	     kp != NULL;
+	     kp = ohash_next(t->t_handle, &slot)) {
+		if (!strcmp(kp->key, key)) {
+			*ret_val = xstrdup(kp->val);
+			return 0;
+		}
+	}
+	return -1;
 }
 
 static void
