@@ -29,13 +29,14 @@ table_open(struct kd_conf *conf, const char *name, const char *type,
 {
 	struct table *t;
 	struct kd_tables_conf *entry;
-	struct table_backend backends[] = {
-		table_static,
+	struct table_backend *backends[] = {
+		&table_static,
+		NULL,
 	}, *b;
 	size_t i;
 
-	for (i = 0; i < sizeof(backends)/sizeof(backends[0]); ++i) {
-		b = &backends[i];
+	for (i = 0; backends[i] != NULL; ++i) {
+		b = backends[i];
 		if (!strcmp(type, b->name))
 			goto found;
 	}
