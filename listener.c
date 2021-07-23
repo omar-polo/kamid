@@ -260,11 +260,24 @@ listener_receive_config(struct imsg *imsg, struct kd_conf **nconf,
 	}
 }
 
+static inline struct kd_listen_conf *
+listen_by_id(uint32_t id)
+{
+	struct kd_listen_conf *l;
+
+	SIMPLEQ_FOREACH(l, &listener_conf->listen_head, entry) {
+		if (l->id == id)
+			return l;
+	}
+	return NULL;
+}
+
 void
 listener_dispatch_main(int fd, short event, void *d)
 {
 	static struct kd_conf		*nconf;
 	static struct kd_pki_conf	*pki;
+	struct kd_listen_conf		*listen;
 	struct client			*client, find;
 	struct imsg			 imsg;
 	struct imsgev			*iev = d;
@@ -347,10 +360,14 @@ listener_dispatch_main(int fd, short event, void *d)
 				close_conn(client);
 				return;
 			}
-			event_set(&client->bev->ev_read, client->fd, EV_READ,
-			    client_tls_readcb, client->bev);
-			event_set(&client->bev->ev_write, client->fd, EV_WRITE,
-			    client_tls_writecb, client->bev);
+
+			listen = listen_by_id(client->lid);
+			if (listen->flags & L_TLS) {
+				event_set(&client->bev->ev_read, client->fd,
+				    EV_READ, client_tls_readcb, client->bev);
+				event_set(&client->bev->ev_write, client->fd,
+				    EV_WRITE, client_tls_writecb, client->bev);
+			}
 
 			/* TODO: adjust watermarks */
                         bufferevent_setwatermark(client->bev, EV_WRITE, 1, 0);

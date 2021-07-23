@@ -268,7 +268,12 @@ tableref	: '<' STRING '>' {
 		;
 
 listen		: LISTEN { listener = listen_new(); }
-		    listen_opts { listener = NULL; };
+		listen_opts {
+			if (listener->auth_table == NULL)
+				yyerror("missing auth table");
+
+			listener = NULL;
+		};
 
 listen_opts	: listen_opt
 		| listen_opt listen_opts
@@ -284,6 +289,7 @@ listen_opt	: ON STRING PORT NUMBER	{
 		| TLS PKI STRING {
 			if (*listener->pki != '\0')
 				yyerror("listen tls pki already defined");
+			listener->flags |= L_TLS;
 			strlcpy(listener->pki, $3, sizeof(listener->pki));
 		}
 		| AUTH tableref {

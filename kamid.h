@@ -85,9 +85,12 @@ struct table_backend {
 /* table_static.c */
 extern struct table_backend table_static;
 
+#define L_NONE	0x0
+#define L_TLS	0x1
 struct kd_listen_conf {
 	SIMPLEQ_ENTRY(kd_listen_conf)	 entry;
 	uint32_t			 id;
+	uint32_t			 flags;
 	int				 fd;
 	char				 iface[LINE_MAX];
 	uint16_t			 port;
