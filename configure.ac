@@ -5,8 +5,11 @@ AC_PROG_CC
 AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_YACC
 
+AC_SEARCH_LIBS([arc4random], [bsd],
+	[AC_DEFINE([HAVE_ARC4RANDOM], 1, [arc4random])],
+	[AC_DEFINE([HAVE_ARC4RANDOM], 0, [arc4random])])
+
 AC_REPLACE_FUNCS([
-	arc4random	\
 	asprintf	\
 	err		\
 	freezero	\
