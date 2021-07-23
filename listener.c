@@ -565,9 +565,9 @@ yield_w(struct client *c, void (*fn)(int, short, void *))
 static inline uint32_t
 random_id(void)
 {
-#if HAVE_ARC4RANDOM
 	struct client find, *res;
 
+#if HAVE_ARC4RANDOM
 	for (;;) {
 		find.id = arc4random();
 		res = SPLAY_FIND(clients_tree_id, &clients, &find);
