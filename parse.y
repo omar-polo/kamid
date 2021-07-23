@@ -271,6 +271,8 @@ listen		: LISTEN { listener = listen_new(); }
 		listen_opts {
 			if (listener->auth_table == NULL)
 				yyerror("missing auth table");
+			if (!(listener->flags & L_TLS))
+				yyerror("can't define a non-tls listener");
 
 			listener = NULL;
 		};
