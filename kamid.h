@@ -127,6 +127,66 @@ struct kd_auth_req {
 	char		hash[128+1];
 };
 
+/*
+ * 9p message header.
+ *
+ * The message itself is len bytes long (counting the whole header
+ * too.)
+ */
+struct np_msg_header {
+	uint32_t	len;
+	uint8_t		type;
+	uint16_t	tag;
+};
+
+/* useful constants */
+#define NOTAG		((uint16_t)~0U)
+#define NOFID		((uint32_t)~0U)
+#define NOUID		(-1)
+
+/* 9p message types */
+enum {
+	Tversion =	100,
+	Rversion,
+	Tauth =		102,
+	Rauth,
+	Tattach =	104,
+	Rattach,
+	Terror =	106,	/* illegal */
+	Rerror,
+	Tflush =	108,
+	Rflush,
+	Twalk =		110,
+	Rwalk,
+	Topen =		112,
+	Ropen,
+	Tcreate =	114,
+	Rcreate,
+	Tread =		116,
+	Rread,
+	Twrite =	118,
+	Rwrite,
+	Tclunk =	120,
+	Rclunk,
+	Tremove =	122,
+	Rremove,
+	Tstat =		124,
+	Rstat,
+	Twstat =	126,
+	Rwstat,
+	Tmax,
+
+	/*
+	 * plan9ports' include/fcall.h also has a
+	 *
+	 *	Topenfd = 98,
+	 *	Ropenfd,
+	 *
+	 * which it's not mentioned in the 9p "rfc" over at
+	 * 9p.cat-v.org.  Ignoring that for now.
+	 */
+};
+
 /* kamid.c */
 extern int verbose;
 int	main_imsg_compose_listener(int, int, uint32_t, const void *, uint16_t);

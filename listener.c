@@ -22,6 +22,7 @@
 
 #include <sys/socket.h>
 
+#include <endian.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <pwd.h>
@@ -350,8 +351,10 @@ listener_dispatch_main(int fd, short event, void *d)
 				log_info("got AUTH_DIR but client gone");
 				break;
 			}
+
 			listener_imsg_compose_client(client, IMSG_AUTH_DIR,
 			    0, imsg.data, IMSG_DATA_SIZE(imsg));
+
 			client->bev = bufferevent_new(client->fd,
 			    client_read, client_write, client_error,
 			    client);
@@ -369,12 +372,17 @@ listener_dispatch_main(int fd, short event, void *d)
 				    EV_WRITE, client_tls_writecb, client->bev);
 			}
 
-			/* TODO: adjust watermarks */
-                        bufferevent_setwatermark(client->bev, EV_WRITE, 1, 0);
-			bufferevent_setwatermark(client->bev, EV_READ,  1, 0);
-
+			/*
+			 * Read or write at least a header before
+			 * firing the callbacks.  High watermark of 0
+			 * to never stop reading/writing; probably to
+			 * be revisited.
+			 */
+			bufferevent_setwatermark(client->bev, EV_READ|EV_WRITE,
+			    sizeof(struct np_msg_header), 0);
 			bufferevent_enable(client->bev, EV_READ|EV_WRITE);
 			break;
+
 		default:
 			log_debug("%s: unexpected imsg %d", __func__,
 			    imsg.hdr.type);
@@ -661,19 +669,22 @@ client_read(struct bufferevent *bev, void *d)
 {
 	struct client	*client = d;
 	struct evbuffer	*src = EVBUFFER_INPUT(bev);
-	char		 buf[BUFSIZ];
-	size_t		 len;
+	uint32_t	 len;
 
-	if (!EVBUFFER_LENGTH(src))
-		return;
+	for (;;) {
+		if (EVBUFFER_LENGTH(src) < 4)
+			return;
 
-	len = bufferevent_read(bev, buf, sizeof(buf));
-	if (len == 0) {
-		(*bev->errorcb)(bev, EVBUFFER_READ, bev->cbarg);
-		return;
+		memcpy(&len, EVBUFFER_DATA(src), sizeof(len));
+		len = le32toh(len);
+
+		if (len > EVBUFFER_LENGTH(src))
+			return;
+
+		listener_imsg_compose_client(client, IMSG_BUF, client->id,
+		    EVBUFFER_DATA(src), len);
+		evbuffer_drain(src, len);
 	}
-
-	listener_imsg_compose_client(client, IMSG_BUF, client->id, buf, len);
 }
 
 static void
