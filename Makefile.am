@@ -1,7 +1,8 @@
 bin_PROGRAMS =		kamictl kamid kamirelp
 
+EXTRA_kamid_SOURCES =	compat/ohash.h compat/imsg.h compat/queue.h compat/tree.h
+
 kamictl_SOURCES =	compat.h	\
-			compat/*.[ch]	\
 			ctl_parser.c	\
 			ctl_parser.h	\
 			kamictl.c	\
@@ -16,7 +17,6 @@ kamid_SOURCES =		client.c	\
 			control.c	\
 			control.h	\
 			compat.h	\
-			compat/*.[ch]	\
 			kamid.c		\
 			kamid.h		\
 			listener.c	\
