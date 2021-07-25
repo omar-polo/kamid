@@ -65,6 +65,8 @@ void		 err(int, const char *, ...);
 void		 errx(int, const char *, ...);
 void		 warn(int, const char *, ...);
 void		 warnx(int, const char *, ...);
+#else
+#include <err.h>
 #endif
 
 #ifndef FREEZERO
