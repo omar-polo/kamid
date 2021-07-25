@@ -1,10 +1,11 @@
-bin_PROGRAMS =		kamictl kamid
+bin_PROGRAMS =		kamictl kamid kamirelp
 
 kamictl_SOURCES =	compat.h	\
 			compat/*.[ch]	\
 			ctl_parser.c	\
 			ctl_parser.h	\
 			kamictl.c	\
+			kamid.h		\
 			log.c		\
 			log.h		\
 			sandbox.c	\
