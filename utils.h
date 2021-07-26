@@ -24,4 +24,6 @@ void	*xcalloc(size_t, size_t);
 char	*xstrdup(const char *);
 void	*xmemdup(const void *, size_t);
 
+const char	*pp_msg_type(uint8_t);
+
 #endif

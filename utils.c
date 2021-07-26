@@ -14,11 +14,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "utils.h"
+#include "compat.h"
 
 #include <stdlib.h>
 #include <string.h>
 
+#include "kamid.h"
 #include "log.h"
 #include "utils.h"
 
@@ -61,4 +62,25 @@ xmemdup(const void *d, size_t len)
 		fatal("malloc");
 	memcpy(r, d, len);
 	return r;
+}
+
+const char *
+pp_msg_type(uint8_t type)
+{
+	switch (type) {
+	case Tversion:	return "version";
+	case Tauth:	return "auth";
+	case Tattach:	return "attach";
+	case Tflush:	return "flush";
+	case Twalk:	return "walk";
+	case Topen:	return "open";
+	case Tcreate:	return "create";
+	case Tread:	return "read";
+	case Twrite:	return "write";
+	case Tclunk:	return "clunk";
+	case Tremove:	return "remove";
+	case Tstat:	return "stat";
+	case Twstat:	return "wstat";
+	default:	return "unknown";
+	}
 }
