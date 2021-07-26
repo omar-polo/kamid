@@ -331,6 +331,7 @@ listener_dispatch_main(int fd, short event, void *d)
 				break;
 			}
 			if (imsg.fd == -1) {
+				log_info("got fd = -1, auth failed?");
 				close_conn(client);
 				break;
 			}
