@@ -19,6 +19,7 @@ compile_flags.txt
 
 kamid
 kamictl
+kamirepl
 *.o
 kamid.conf
 parse.c

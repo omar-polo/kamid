@@ -1,4 +1,4 @@
-bin_PROGRAMS =		kamictl kamid kamirelp
+bin_PROGRAMS =		kamictl kamid kamirepl
 
 EXTRA_kamid_SOURCES =	compat/ohash.h compat/imsg.h compat/queue.h compat/tree.h
 
@@ -29,6 +29,13 @@ kamid_SOURCES =		client.c	\
 			table.c		\
 			table.h		\
 			table_static.c	\
+			utils.c		\
+			utils.h
+
+kamirepl_SOURCES =	kamid.h		\
+			kamirepl.c	\
+			log.c		\
+			log.h		\
 			utils.c		\
 			utils.h
 
