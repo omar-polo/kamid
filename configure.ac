@@ -5,9 +5,42 @@ AC_PROG_CC
 AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_YACC
 
-AC_SEARCH_LIBS([arc4random], [bsd],
-	[AC_DEFINE([HAVE_ARC4RANDOM], 1, [arc4random])],
-	[AC_DEFINE([HAVE_ARC4RANDOM], 0, [arc4random])])
+# Some functions can be in libbsd.  Thanks to lldpb for the inspiration :)
+AC_ARG_WITH([libbsd],
+  AS_HELP_STRING([--with-libbsd], [Use libbsd @<:@default=auto@:>@]),
+  [],
+  [with_libbsd=auto])
+if test x"$with_libbsd" != x"no"; then
+  PKG_CHECK_MODULES([libbsd], [libbsd-overlay libbsd-ctor], [
+    _save_CFLAGS="$CFLAGS"
+    _save_LIBS="$LIBS"
+    CFLAGS="$CFLAGS $libbsd_CFLAGS"
+    LIBS="$LIBS $libbsd_LIBS"
+    AC_MSG_CHECKING([if libbsd can be linked correctly])
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+  @%:@include <sys/time.h>
+  @%:@include <sys/types.h>
+  ]], [[]])],[
+        AC_MSG_RESULT(yes)
+        LLDP_CFLAGS="$LLDP_CFLAGS $libbsd_CFLAGS"
+        LLDP_LDFLAGS="$LLDP_LDFLAGS $libbsd_LIBS"
+        with_libbsd=yes
+      ],[
+        AC_MSG_RESULT(no)
+        CFLAGS="$_save_CFLAGS"
+        LIBS="$_save_LIBS"
+        if test x"$with_libbsd" = x"yes"; then
+           AC_MSG_FAILURE([*** no libbsd support found])
+        fi
+        with_libbsd=no
+      ])
+  ], [
+    if test x"$with_libbsd" = x"yes"; then
+       AC_MSG_FAILURE([*** no libbsd support found])
+    fi
+    with_libbsd=no
+  ])
+fi
 
 AC_REPLACE_FUNCS([
 	asprintf	\
@@ -24,7 +57,7 @@ AC_REPLACE_FUNCS([
 	strtonum	\
 ])
 
-AC_MSG_CHECKING([for sys/queue.h with TAILQ_FOREACH_SAFE])
+AC_MSG_CHECKING([for sys/queue.h with TAILQ_FOREACH_SAFE and SIMPLEQ_ENTRY])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 #include <sys/queue.h>
 #include <stddef.h>
@@ -37,6 +70,12 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 	TAILQ_FOREACH_SAFE(np, &head, entries, nt) {
 		/* nop */ ;
 	}
+
+	SIMPLEQ_HEAD(listhead, q_entry) head = SIMPLEQ_HEAD_INITIALIZER(head);
+	struct q_entry {
+		SIMPLEQ_ENTRY(q_entry) entries;
+	} foo;
+
 	return 0;
 ])], [
 	AC_MSG_RESULT(yes)
