@@ -68,6 +68,7 @@ static void		 client_error(struct bufferevent *, short, void *);
 static void		 readcmd(int, short, void *);
 
 static void		 handle_9p(const void *, size_t);
+static void		 clr(void);
 static void		 prompt(void);
 
 static void ATTR_DEAD
@@ -91,7 +92,8 @@ sig_handler(int sig, short event, void *d)
 	switch (sig) {
 	case SIGINT:
 	case SIGTERM:
-		log_warnx("\rShutting down...");
+		clr();
+		log_warnx("Shutting down...");
 		event_loopbreak();
 		return;
 	default:
@@ -276,13 +278,13 @@ client_error(struct bufferevent *bev, short err, void *data)
 		fatal("buffer event error");
 
 	if (err & EVBUFFER_EOF) {
-		printf("\r");
+		clr();
 		log_info("EOF");
 		event_loopbreak();
 		return;
 	}
 
-	printf("\r");
+	clr();
 	log_warnx("unknown event error");
 	event_loopbreak();
 }
@@ -297,7 +299,7 @@ readcmd(int fd, short event, void *data)
 	if ((linelen = getline(&line, &linesize, stdin)) != -1) {
 		line[linelen-1] = '\0';
 
-		printf("\r");
+		clr();
 		log_info("TODO: parse `%s'", line);
 		prompt();
 	}
@@ -319,10 +321,17 @@ handle_9p(const void *data, size_t len)
 	/* type is one byte long, no endianness issues */
 	hdr.tag = le16toh(hdr.tag);
 
-	printf("\r");
+	clr();
 	log_info("[%d] type=%s len=%"PRIu32, hdr.tag, pp_msg_type(hdr.type),
 	    hdr.len);
 	prompt();
+}
+
+static void
+clr(void)
+{
+	printf("\r");
+	fflush(stdout);
 }
 
 static void
