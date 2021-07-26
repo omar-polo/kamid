@@ -326,7 +326,7 @@ listener_dispatch_main(int fd, short event, void *d)
 			find.id = imsg.hdr.peerid;
 			client = SPLAY_FIND(clients_tree_id, &clients, &find);
 			if (client == NULL) {
-				if (imsg.fd == -1)
+				if (imsg.fd != -1)
 					close(imsg.fd);
 				break;
 			}
