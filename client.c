@@ -16,6 +16,7 @@
 
 #include "compat.h"
 
+#include <endian.h>
 #include <errno.h>
 #include <pwd.h>
 #include <signal.h>
@@ -28,6 +29,7 @@
 #include "kamid.h"
 #include "log.h"
 #include "sandbox.h"
+#include "utils.h"
 
 static struct imsgev	*iev_listener;
 
@@ -38,6 +40,8 @@ static void		client_privdrop(const char *, const char *);
 
 static int		client_imsg_compose_listener(int, uint32_t,
     const void *, uint16_t);
+
+static void		handle_message(struct imsg *, size_t);
 
 ATTR_DEAD void
 client(int debug, int verbose)
@@ -168,8 +172,10 @@ client_dispatch_listener(int fd, short event, void *d)
 			break;
 		case IMSG_BUF:
 			/* echo! */
-			client_imsg_compose_listener(IMSG_BUF, imsg.hdr.peerid,
-			    imsg.data, IMSG_DATA_SIZE(imsg));
+			if (!auth)
+				fatalx("%s: can't handle messages before"
+				    " doing the auth", __func__);
+			handle_message(&imsg, IMSG_DATA_SIZE(imsg));
 			break;
 		case IMSG_CONN_GONE:
 			log_debug("closing");
@@ -228,4 +234,62 @@ client_imsg_compose_listener(int type, uint32_t peerid,
 		imsg_event_add(iev_listener);
 
 	return ret;
+}
+
+static inline void
+parse_message(void *data, size_t len, struct np_msg_header *hdr, void **cnt)
+{
+	memset(hdr, 0, sizeof(*hdr));
+
+	if (len < 4)
+		goto err;
+
+	hdr->len = le32toh(hdr->len);
+
+	if (len != hdr->len)
+		goto err;
+
+	/* type is one byte long, no endianness issues */
+	if (hdr->type < Tversion ||
+	    hdr->type >= Tmax    ||
+	    hdr->type == Terror  ||
+	    (hdr->type & 0x1) != 0) /* cannot recv a R* */
+		goto err;
+
+	hdr->tag = le32toh(hdr->tag);
+
+	*cnt = data + sizeof(*hdr);
+	return;
+
+err:
+	/* TODO: send a proper message to terminate the connection. */
+	fatalx("got invalid message");
+}
+
+static void
+handle_message(struct imsg *imsg, size_t len)
+{
+	struct np_msg_header hdr, h;
+	uint32_t l;
+	void *data;
+	const char *ns_err = "Not supported.";
+
+	parse_message(imsg->data, len, &hdr, &data);
+
+	/* for now, log the request and reply with an error. */
+
+	log_debug("got request type %s", pp_msg_type(hdr.type));
+
+	memset(&h, 0, sizeof(h));
+	l = strlen(ns_err);
+	h.len = htole32(sizeof(h) + 2 + l);
+	h.type = Rerror;
+	h.tag = htole32(hdr.tag);
+
+	client_imsg_compose_listener(IMSG_BUF, imsg->hdr.peerid,
+	    &h, sizeof(h));
+	client_imsg_compose_listener(IMSG_BUF, imsg->hdr.peerid,
+	    &l, sizeof(l));
+	client_imsg_compose_listener(IMSG_BUF, imsg->hdr.peerid,
+	    ns_err, l);
 }
