@@ -239,10 +239,10 @@ client_imsg_compose_listener(int type, uint32_t peerid,
 static inline void
 parse_message(void *data, size_t len, struct np_msg_header *hdr, void **cnt)
 {
-	memset(hdr, 0, sizeof(*hdr));
-
 	if (len < 4)
 		goto err;
+
+	memcpy(hdr, data, sizeof(*hdr));
 
 	hdr->len = le32toh(hdr->len);
 
