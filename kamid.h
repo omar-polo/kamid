@@ -31,6 +31,8 @@
 
 #define IMSG_DATA_SIZE(imsg)	((imsg).hdr.len - IMSG_HEADER_SIZE)
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
 struct imsgev {
 	struct imsgbuf	 ibuf;
 	void		(*handler)(int, short, void *);

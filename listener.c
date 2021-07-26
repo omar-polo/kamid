@@ -40,8 +40,6 @@
 #include "sandbox.h"
 #include "utils.h"
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-
 static struct kd_conf	*listener_conf;
 static struct imsgev	*iev_main;
 
