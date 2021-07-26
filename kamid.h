@@ -90,7 +90,7 @@ extern struct table_backend table_static;
 #define L_NONE	0x0
 #define L_TLS	0x1
 struct kd_listen_conf {
-	SIMPLEQ_ENTRY(kd_listen_conf)	 entry;
+	STAILQ_ENTRY(kd_listen_conf)	 entry;
 	uint32_t			 id;
 	uint32_t			 flags;
 	int				 fd;
@@ -103,7 +103,7 @@ struct kd_listen_conf {
 };
 
 struct kd_pki_conf {
-	SIMPLEQ_ENTRY(kd_pki_conf)	 entry;
+	STAILQ_ENTRY(kd_pki_conf)	 entry;
 	char				 name[LINE_MAX];
 	uint8_t				*cert;
 	size_t				 certlen;
@@ -113,15 +113,15 @@ struct kd_pki_conf {
 };
 
 struct kd_tables_conf {
-	SIMPLEQ_ENTRY(kd_tables_conf)	 entry;
+	STAILQ_ENTRY(kd_tables_conf)	 entry;
 	struct table			*table;
 };
 
 struct kd_conf {
 	struct kd_options_conf					 kd_options;
-	SIMPLEQ_HEAD(kd_pki_conf_head, kd_pki_conf)		 pki_head;
-	SIMPLEQ_HEAD(kd_tables_conf_head, kd_tables_conf)	 table_head;
-	SIMPLEQ_HEAD(kd_listen_conf_head, kd_listen_conf)	 listen_head;
+	STAILQ_HEAD(kd_pki_conf_head, kd_pki_conf)		 pki_head;
+	STAILQ_HEAD(kd_tables_conf_head, kd_tables_conf)	 table_head;
+	STAILQ_HEAD(kd_listen_conf_head, kd_listen_conf)	 listen_head;
 };
 
 struct kd_auth_req {

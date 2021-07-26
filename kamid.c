@@ -250,7 +250,7 @@ auth_table_by_id(uint32_t id)
 {
 	struct kd_listen_conf *listen;
 
-	SIMPLEQ_FOREACH(listen, &main_conf->listen_head, entry) {
+	STAILQ_FOREACH(listen, &main_conf->listen_head, entry) {
 		if (listen->id == id)
 			return listen->auth_table;
 	}
@@ -428,14 +428,14 @@ main_imsg_send_config(struct kd_conf *xconf)
 	/* Send fixed part of config to children. */
 	SEND(IMSG_RECONF_CONF, -1, xconf, sizeof(*xconf));
 
-	SIMPLEQ_FOREACH(pki, &xconf->pki_head, entry) {
+	STAILQ_FOREACH(pki, &xconf->pki_head, entry) {
 		log_debug("sending pki %s", pki->name);
 		SEND(IMSG_RECONF_PKI, -1, pki->name, sizeof(pki->name));
 		SEND(IMSG_RECONF_PKI_CERT, -1, pki->cert, pki->certlen);
 		SEND(IMSG_RECONF_PKI_KEY, -1, pki->key, pki->keylen);
 	}
 
-	SIMPLEQ_FOREACH(listen, &xconf->listen_head, entry) {
+	STAILQ_FOREACH(listen, &xconf->listen_head, entry) {
 		log_debug("sending listen on port %d", listen->port);
 		SEND(IMSG_RECONF_LISTEN, make_socket_for(listen), listen,
 		    sizeof(*listen));

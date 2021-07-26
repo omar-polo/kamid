@@ -820,7 +820,7 @@ add_table(const char *name, const char *type, const char *path)
 {
 	if (table_open(conf, name, type, path) == -1)
 		yyerror("can't initialize table %s", name);
-	table = SIMPLEQ_FIRST(&conf->table_head)->table;
+	table = STAILQ_FIRST(&conf->table_head)->table;
 }
 
 static struct table *
@@ -828,7 +828,7 @@ findtable(const char *name)
 {
 	struct kd_tables_conf *i;
 
-	SIMPLEQ_FOREACH(i, &conf->table_head, entry) {
+	STAILQ_FOREACH(i, &conf->table_head, entry) {
 		if (!strcmp(i->table->t_name, name))
 			return i->table;
 	}
@@ -842,7 +842,7 @@ add_cert(const char *name, const char *path)
 {
 	struct kd_pki_conf *pki;
 
-	SIMPLEQ_FOREACH(pki, &conf->pki_head, entry) {
+	STAILQ_FOREACH(pki, &conf->pki_head, entry) {
 		if (strcmp(name, pki->name) != 0)
 			continue;
 
@@ -856,7 +856,7 @@ add_cert(const char *name, const char *path)
 
 	pki = xcalloc(1, sizeof(*pki));
 	strlcpy(pki->name, name, sizeof(pki->name));
-	SIMPLEQ_INSERT_HEAD(&conf->pki_head, pki, entry);
+	STAILQ_INSERT_HEAD(&conf->pki_head, pki, entry);
 
 set:
 	if ((pki->cert = tls_load_file(path, &pki->certlen, NULL)) == NULL)
@@ -868,7 +868,7 @@ add_key(const char *name, const char *path)
 {
 	struct kd_pki_conf *pki;
 
-	SIMPLEQ_FOREACH(pki, &conf->pki_head, entry) {
+	STAILQ_FOREACH(pki, &conf->pki_head, entry) {
 		if (strcmp(name, pki->name) != 0)
 			continue;
 
@@ -882,7 +882,7 @@ add_key(const char *name, const char *path)
 
 	pki = xcalloc(1, sizeof(*pki));
 	strlcpy(pki->name, name, sizeof(pki->name));
-	SIMPLEQ_INSERT_HEAD(&conf->pki_head, pki, entry);
+	STAILQ_INSERT_HEAD(&conf->pki_head, pki, entry);
 
 set:
 	if ((pki->key = tls_load_file(path, &pki->keylen, NULL)) == NULL)
@@ -898,6 +898,6 @@ listen_new(void)
 	l->id = counter++;
 	l->fd = -1;
 
-	SIMPLEQ_INSERT_HEAD(&conf->listen_head, l, entry);
+	STAILQ_INSERT_HEAD(&conf->listen_head, l, entry);
 	return l;
 }

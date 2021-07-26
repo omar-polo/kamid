@@ -228,7 +228,7 @@ listener_receive_config(struct imsg *imsg, struct kd_conf **nconf,
 			    "IMSG_RECONF_PKI", __func__);
 		(*pki)->keylen = IMSG_DATA_SIZE(*imsg);
 		(*pki)->key = xmemdup(imsg->data, (*pki)->keylen);
-		SIMPLEQ_INSERT_HEAD(&(*nconf)->pki_head, *pki, entry);
+		STAILQ_INSERT_HEAD(&(*nconf)->pki_head, *pki, entry);
 		pki = NULL;
 		break;
 	case IMSG_RECONF_LISTEN:
@@ -246,7 +246,7 @@ listener_receive_config(struct imsg *imsg, struct kd_conf **nconf,
 			    __func__);
 		listen->auth_table = NULL;
 		memset(&listen->ev, 0, sizeof(listen->ev));
-		SIMPLEQ_INSERT_HEAD(&(*nconf)->listen_head, listen, entry);
+		STAILQ_INSERT_HEAD(&(*nconf)->listen_head, listen, entry);
 		break;
 	case IMSG_RECONF_END:
 		if (*nconf == NULL)
@@ -264,7 +264,7 @@ listen_by_id(uint32_t id)
 {
 	struct kd_listen_conf *l;
 
-	SIMPLEQ_FOREACH(l, &listener_conf->listen_head, entry) {
+	STAILQ_FOREACH(l, &listener_conf->listen_head, entry) {
 		if (l->id == id)
 			return l;
 	}
@@ -505,7 +505,7 @@ pki_by_name(const char *name)
 {
         struct kd_pki_conf *pki;
 
-	SIMPLEQ_FOREACH(pki, &listener_conf->pki_head, entry) {
+	STAILQ_FOREACH(pki, &listener_conf->pki_head, entry) {
 		if (!strcmp(name, pki->name))
 			return pki;
 	}
@@ -522,7 +522,7 @@ apply_config(struct kd_conf *conf)
 	listener_conf = conf;
 
 	/* prepare the various tls_config */
-	SIMPLEQ_FOREACH(pki, &listener_conf->pki_head, entry) {
+	STAILQ_FOREACH(pki, &listener_conf->pki_head, entry) {
 		if ((pki->tlsconf = tls_config_new()) == NULL)
 			fatal("tls_config_new");
 		tls_config_verify_client_optional(pki->tlsconf);
@@ -535,7 +535,7 @@ apply_config(struct kd_conf *conf)
 	}
 
 	/* prepare and kickoff the listeners */
-	SIMPLEQ_FOREACH(listen, &listener_conf->listen_head, entry) {
+	STAILQ_FOREACH(listen, &listener_conf->listen_head, entry) {
 		if ((listen->ctx = tls_server()) == NULL)
 			fatal("tls_server");
 

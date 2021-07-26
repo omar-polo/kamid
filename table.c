@@ -62,7 +62,7 @@ found:
 
 	entry = xcalloc(1, sizeof(*entry));
 	entry->table = t;
-	SIMPLEQ_INSERT_HEAD(&conf->table_head, entry, entry);
+	STAILQ_INSERT_HEAD(&conf->table_head, entry, entry);
 	return 0;
 }
 

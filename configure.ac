@@ -61,7 +61,7 @@ AC_REPLACE_FUNCS([
 	strtonum	\
 ])
 
-AC_MSG_CHECKING([for sys/queue.h with TAILQ_FOREACH_SAFE and SIMPLEQ_ENTRY])
+AC_MSG_CHECKING([for sys/queue.h with TAILQ_FOREACH_SAFE and STAILQ_ENTRY])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 #include <sys/queue.h>
 #include <stddef.h>
@@ -75,9 +75,9 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 		/* nop */ ;
 	}
 
-	SIMPLEQ_HEAD(listhead, q_entry) head = SIMPLEQ_HEAD_INITIALIZER(head);
-	struct q_entry {
-		SIMPLEQ_ENTRY(q_entry) entries;
+	STAILQ_HEAD(listhead, qentry) qhead = STAILQ_HEAD_INITIALIZER(qhead);
+	struct qentry {
+		STAILQ_ENTRY(qentry) entries;
 	} foo;
 
 	return 0;
