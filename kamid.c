@@ -290,7 +290,7 @@ do_auth_tls(struct imsg *imsg)
 	log_debug("matched local user %s", username);
 
 	if ((pw = getpwnam(username)) == NULL) {
-		log_warn("getpwnam(%s)", username);
+		log_warnx("getpwnam(%s) failed", username);
 		goto err;
 	}
 
