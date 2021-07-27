@@ -141,6 +141,8 @@ struct np_msg_header {
 };
 
 /* useful constants */
+#define	VERSION9P	"9P2000"
+#define MSIZE9P		((uint32_t)256)
 #define NOTAG		((uint16_t)~0U)
 #define NOFID		((uint32_t)~0U)
 #define NOUID		(-1)
