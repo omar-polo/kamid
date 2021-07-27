@@ -377,8 +377,8 @@ listener_dispatch_main(int fd, short event, void *d)
 			 * to never stop reading/writing; probably to
 			 * be revisited.
 			 */
-			bufferevent_setwatermark(client->bev, EV_READ|EV_WRITE,
-			    sizeof(struct np_msg_header), 0);
+			/* bufferevent_setwatermark(client->bev, EV_READ|EV_WRITE, */
+			    /* sizeof(struct np_msg_header), 0); */
 			bufferevent_enable(client->bev, EV_READ|EV_WRITE);
 			break;
 
@@ -670,16 +670,25 @@ client_read(struct bufferevent *bev, void *d)
 	struct evbuffer	*src = EVBUFFER_INPUT(bev);
 	uint32_t	 len;
 
+	log_debug("in client read");
+
 	for (;;) {
+		log_debug("buffer length %zu < 4? %s", EVBUFFER_LENGTH(src),
+		    EVBUFFER_LENGTH(src) < 4 ? "true" : "false");
 		if (EVBUFFER_LENGTH(src) < 4)
 			return;
 
 		memcpy(&len, EVBUFFER_DATA(src), sizeof(len));
+		log_debug("raw msg len=%"PRIu32, len);
 		len = le32toh(len);
+		log_debug("msg len=%"PRIu32, len);
 
+		log_debug("%zu > %zu? %s", (size_t)len, EVBUFFER_LENGTH(src),
+		    len > EVBUFFER_LENGTH(src) ? "true" : "false");
 		if (len > EVBUFFER_LENGTH(src))
 			return;
 
+		log_debug("forwarding a message");
 		listener_imsg_compose_client(client, IMSG_BUF, client->id,
 		    EVBUFFER_DATA(src), len);
 		evbuffer_drain(src, len);
