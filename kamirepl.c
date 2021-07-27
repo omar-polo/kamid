@@ -24,7 +24,6 @@
 #include <assert.h>
 #include <endian.h>
 #include <errno.h>
-#include <event.h>
 #include <inttypes.h>
 #include <signal.h>
 #include <stdio.h>

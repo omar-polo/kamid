@@ -19,7 +19,6 @@
 
 #include "compat.h"
 
-#include <event.h>
 #include <limits.h>
 #include <stdint.h>
 #include <tls.h>

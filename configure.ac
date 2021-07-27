@@ -1,9 +1,12 @@
 AC_INIT([kamid], [0.1], [kamid@omarpolo.com], [kamid], [gemini://kamid.omarpolo.com])
 AC_CONFIG_LIBOBJ_DIR(compat)
+AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([-Wall foreign subdir-objects])
 AC_PROG_CC
 AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_YACC
+
+PKG_PROG_PKG_CONFIG
 
 # Some functions can be in libbsd.  Thanks to lldpb for the inspiration :)
 AC_ARG_WITH([libbsd],
@@ -99,9 +102,15 @@ AC_CHECK_LIB(tls, tls_init, [], [
 	AC_MSG_ERROR([requires libtls])
 ])
 
-AC_CHECK_LIB(event, event_init, [], [
-	AC_MSG_ERROR([requires libevent])
-])
+AS_CASE([$host_os],
+	[*openbsd*], [AC_CHECK_LIB([event], [event_init], [],
+			[AC_MSG_ERROR([requires libevent])])],
+	[PKG_CHECK_MODULES([libevent2], [libevent_core >= 2],
+		[
+			AC_DEFINE([HAVE_EVENT2], 1, [1 if using event2])
+			CFLAGS="$libevent2_CFLAGS $CFLAGS"
+			LIBS="$libevent2_LIBS $LIBS"
+		], [AC_MSG_ERROR([requires libevent])])])
 
 AC_CHECK_LIB(util, imsg_init, [], [
 	AC_LIBOBJ(imsg)
