@@ -24,6 +24,7 @@
 #include <assert.h>
 #include <endian.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <inttypes.h>
 #include <signal.h>
 #include <stdio.h>
@@ -50,12 +51,14 @@ const char		*port;
 /* state */
 struct tls_config	*tlsconf;
 struct tls		*ctx;
+struct bufferevent	*bev, *inbev;
 
 static void ATTR_DEAD	 usage(int);
 
 static void		 sig_handler(int, short, void *);
 
 static int		 openconn(void);
+static void		 mark_nonblock(int);
 
 static void		 tls_readcb(int, short, void *);
 static void		 tls_writecb(int, short, void *);
@@ -64,7 +67,10 @@ static void		 client_read(struct bufferevent *, void *);
 static void		 client_write(struct bufferevent *, void *);
 static void		 client_error(struct bufferevent *, short, void *);
 
-static void		 readcmd(int, short, void *);
+static void		 repl_read(struct bufferevent *, void *);
+static void		 repl_error(struct bufferevent *, short, void *);
+static void		 write_hdr(struct np_msg_header *);
+static void		 excmd(const char **, int);
 
 static void		 handle_9p(const void *, size_t);
 static void		 clr(void);
@@ -144,6 +150,17 @@ openconn(void)
 		warn("%s", cause);
 
 	return s;
+}
+
+static void
+mark_nonblock(int fd)
+{
+	int flags;
+
+	if ((flags = fcntl(fd, F_GETFL)) == -1)
+		fatal("fcntl(F_GETFL)");
+	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
+		fatal("fcntl(F_SETFL)");
 }
 
 static void
@@ -289,23 +306,90 @@ client_error(struct bufferevent *bev, short err, void *data)
 }
 
 static void
-readcmd(int fd, short event, void *data)
+repl_read(struct bufferevent *bev, void *d)
 {
-	char	*line = NULL;
-	size_t	 linesize = 0;
-	ssize_t	 linelen;
+	size_t		 len;
+	int		 argc;
+	const char	*argv[10], **ap;
+	char		*line;
 
-	if ((linelen = getline(&line, &linesize, stdin)) != -1) {
-		line[linelen-1] = '\0';
+	line = evbuffer_readln(bev->input, &len, EVBUFFER_EOL_LF);
+	if (line == NULL)
+		return;
 
-		clr();
-		log_info("TODO: parse `%s'", line);
-		prompt();
+	for (argc = 0, ap = argv; ap < &argv[9] &&
+	    (*ap = strsep(&line, " \t")) != NULL;) {
+		if (**ap != '\0')
+			ap++, argc++;
 	}
 
+	clr();
+	excmd(argv, argc);
+	prompt();
+
 	free(line);
-	if (ferror(stdin))
-		fatal("getline");
+}
+
+static void
+repl_error(struct bufferevent *bev, short error, void *d)
+{
+	fatalx("an error occurred");
+}
+
+static void
+write_hdr(struct np_msg_header *hdr)
+{
+	log_debug("enqueuing a packet; len=%"PRIu32, hdr->len);
+
+	hdr->len = htole32(hdr->len);
+	/* type is one byte, no endiannes issues */
+	hdr->tag = htole16(hdr->tag);
+
+	bufferevent_write(bev, &hdr->len, sizeof(hdr->len));
+	bufferevent_write(bev, &hdr->type, sizeof(hdr->type));
+	bufferevent_write(bev, &hdr->tag, sizeof(hdr->tag));
+}
+
+static void
+excmd(const char **argv, int argc)
+{
+	struct np_msg_header hdr = {
+		/*
+		 * can't use sizeof(struct np_msg_header) because the
+		 * compiler will add at least one byte of padding
+		 * before the type, making the total length 8 instead
+		 * of 7.
+		 */
+		.len = 7,
+	};
+	uint16_t hw;
+	uint32_t w;
+	const char *s;
+
+	memset(&hdr, 0, sizeof(hdr));
+
+	/* ``version'' [``version string''] */
+	if (!strcmp(*argv, "version")) {
+		s = VERSION9P;
+		if (argc == 2)
+			s = argv[1];
+
+		/* 4 bytes of msize, 2 strlen + string */
+		hdr.len += 4 + 2 + strlen(s);
+		hdr.type = Tversion;
+		hdr.tag = NOTAG;
+		write_hdr(&hdr);
+
+		w = htole32(MSIZE9P);
+		bufferevent_write(bev, &w, sizeof(w));
+
+		hw = htole16(strlen(s));
+		bufferevent_write(bev, &hw, sizeof(hw));
+
+		bufferevent_write(bev, s, strlen(s));
+	} else {
+		log_warnx("Unknown command %s", *argv);
+	}
 }
 
 static void
@@ -343,9 +427,8 @@ prompt(void)
 int
 main(int argc, char **argv)
 {
-	int			 ch, sock, handshake;
-	struct bufferevent	*bev;
-	struct event		 inev, ev_sigint, ev_sigterm;
+	int		 ch, sock, handshake;
+	struct event	 ev_sigint, ev_sigterm;
 
 	signal(SIGPIPE, SIG_IGN);
 
@@ -428,6 +511,8 @@ main(int argc, char **argv)
 
 	log_info("connected!");
 
+	mark_nonblock(sock);
+
 	event_init();
 
 	signal_set(&ev_sigint, SIGINT, sig_handler, NULL);
@@ -449,8 +534,9 @@ main(int argc, char **argv)
 	    sizeof(struct np_msg_header), 0);
 	bufferevent_enable(bev, EV_READ|EV_WRITE);
 
-	event_set(&inev, 0, EV_READ, readcmd, NULL);
-	event_add(&inev, NULL);
+	mark_nonblock(0);
+	inbev = bufferevent_new(0, repl_read, NULL, repl_error, NULL);
+	bufferevent_enable(inbev, EV_READ);
 
 	prompt();
 	event_dispatch();
