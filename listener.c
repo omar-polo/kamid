@@ -51,6 +51,7 @@ SPLAY_HEAD(clients_tree_id, client) clients;
 struct client {
 	uint32_t		 id;
 	uint32_t		 lid;
+	uint32_t		 msize;
 	int			 fd;
 	int			 done;
 	struct tls		*ctx;
@@ -610,6 +611,7 @@ handle_accept(int fd, short ev, void *data)
 	}
 
 	c = xcalloc(1, sizeof(*c));
+	c->msize = MSIZE9P;
 	c->lid = listen->id;
 	c->iev.ibuf.fd = -1;
 
@@ -684,6 +686,13 @@ client_read(struct bufferevent *bev, void *d)
 		log_debug("expecting a message %"PRIu32" bytes long "
 		    "(of wich %zu already read)",
 		    len, EVBUFFER_LENGTH(src));
+
+		if (len > client->msize) {
+			log_warnx("incoming message bigger than msize "
+			    "(%"PRIu32" vs %"PRIu32")", len, client->msize);
+			client_error(bev, EVBUFFER_READ, client);
+			return;
+		}
 
 		if (len > EVBUFFER_LENGTH(src))
 			return;
