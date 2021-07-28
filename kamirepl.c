@@ -69,10 +69,10 @@ static void		 client_error(struct bufferevent *, short, void *);
 
 static void		 repl_read(struct bufferevent *, void *);
 static void		 repl_error(struct bufferevent *, short, void *);
-static void		 write_hdr(struct np_msg_header *);
+static void		 write_hdr(uint32_t, uint8_t, uint16_t);
 static void		 excmd(const char **, int);
 
-static void		 handle_9p(const void *, size_t);
+static void		 handle_9p(const uint8_t *, size_t);
 static void		 clr(void);
 static void		 prompt(void);
 
@@ -337,36 +337,34 @@ repl_error(struct bufferevent *bev, short error, void *d)
 }
 
 static void
-write_hdr(struct np_msg_header *hdr)
+write_hdr(uint32_t len, uint8_t type, uint16_t tag)
 {
-	log_debug("enqueuing a packet; len=%"PRIu32, hdr->len);
+	log_debug("enqueuing a packet; len=%"PRIu32" type=%d[%s] tag=%d",
+	    len, type, pp_msg_type(type), tag);
 
-	hdr->len = htole32(hdr->len);
+	len = htole32(len);
 	/* type is one byte, no endiannes issues */
-	hdr->tag = htole16(hdr->tag);
+	tag = htole16(tag);
 
-	bufferevent_write(bev, &hdr->len, sizeof(hdr->len));
-	bufferevent_write(bev, &hdr->type, sizeof(hdr->type));
-	bufferevent_write(bev, &hdr->tag, sizeof(hdr->tag));
+	bufferevent_write(bev, &len, sizeof(len));
+	bufferevent_write(bev, &type, sizeof(type));
+	bufferevent_write(bev, &tag, sizeof(tag));
+}
+
+static void
+write_str(uint16_t len, const char *str)
+{
+	len = htole16(len);
+	bufferevent_write(bev, &len, sizeof(len));
+	bufferevent_write(bev, str, len);
 }
 
 static void
 excmd(const char **argv, int argc)
 {
-	struct np_msg_header hdr = {
-		/*
-		 * can't use sizeof(struct np_msg_header) because the
-		 * compiler will add at least one byte of padding
-		 * before the type, making the total length 8 instead
-		 * of 7.
-		 */
-		.len = 7,
-	};
-	uint16_t hw;
-	uint32_t w;
+	uint16_t sl;
+	uint32_t len;
 	const char *s;
-
-	memset(&hdr, 0, sizeof(hdr));
 
 	/* ``version'' [``version string''] */
 	if (!strcmp(*argv, "version")) {
@@ -375,38 +373,40 @@ excmd(const char **argv, int argc)
 			s = argv[1];
 
 		/* 4 bytes of msize, 2 strlen + string */
-		hdr.len += 4 + 2 + strlen(s);
-		hdr.type = Tversion;
-		hdr.tag = NOTAG;
-		write_hdr(&hdr);
+		sl = strlen(s);
+		len = HEADERSIZE + 4 + sizeof(sl) + sl;
+		write_hdr(len, Tversion, NOTAG);
 
-		w = htole32(MSIZE9P);
-		bufferevent_write(bev, &w, sizeof(w));
+		len = htole32(MSIZE9P);
+		bufferevent_write(bev, &len, sizeof(len));
 
-		hw = htole16(strlen(s));
-		bufferevent_write(bev, &hw, sizeof(hw));
-
-		bufferevent_write(bev, s, strlen(s));
+		write_str(sl, s);
 	} else {
 		log_warnx("Unknown command %s", *argv);
 	}
 }
 
 static void
-handle_9p(const void *data, size_t len)
+handle_9p(const uint8_t *data, size_t len)
 {
 	struct np_msg_header hdr;
 
-	assert(len >= sizeof(hdr));
-	memcpy(&hdr, data, sizeof(hdr));
+	assert(len >= HEADERSIZE);
+
+	memcpy(&hdr.len, data, sizeof(hdr.len));
+	data += sizeof(hdr.len);
+	memcpy(&hdr.type, data, sizeof(hdr.type));
+	data += sizeof(hdr.len);
+	memcpy(&hdr.tag, data, sizeof(hdr.tag));
+	data += sizeof(hdr.tag);
 
 	hdr.len = le32toh(hdr.len);
 	/* type is one byte long, no endianness issues */
 	hdr.tag = le16toh(hdr.tag);
 
 	clr();
-	log_info("[%d] type=%s len=%"PRIu32, hdr.tag, pp_msg_type(hdr.type),
-	    hdr.len);
+	log_info("type=%"PRIu32"[%s] tag=%d len=%"PRIu32, hdr.tag,
+	    pp_msg_type(hdr.type), hdr.tag, hdr.len);
 	prompt();
 }
 
