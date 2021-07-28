@@ -61,6 +61,7 @@ AC_REPLACE_FUNCS([
 	setprogname	\
 	strlcat		\
 	strlcpy		\
+	strsep		\
 	strtonum	\
 ])
 
