@@ -74,6 +74,8 @@ pp_msg_type(uint8_t type)
 	case Rauth:	return "Rauth";
 	case Tattach:	return "Tattach";
 	case Rattach:	return "Rattach";
+	case Terror:	return "Terror"; /* illegal */
+	case Rerror:	return "Rerror";
 	case Tflush:	return "Tflush";
 	case Rflush:	return "Rflush";
 	case Twalk:	return "Twalk";
