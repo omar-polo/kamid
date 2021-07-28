@@ -267,7 +267,7 @@ client_read(struct bufferevent *bev, void *data)
 	uint32_t	 len;
 
 	for (;;) {
-		if (EVBUFFER_LENGTH(src) < 4)
+		if (EVBUFFER_LENGTH(src) < sizeof(len))
 			return;
 
 		memcpy(&len, EVBUFFER_DATA(src), sizeof(len));
