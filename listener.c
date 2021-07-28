@@ -675,8 +675,6 @@ client_read(struct bufferevent *bev, void *d)
 	struct evbuffer	*src = EVBUFFER_INPUT(bev);
 	uint32_t	 len;
 
-	log_debug("in client read");
-
 	for (;;) {
 		if (EVBUFFER_LENGTH(src) < 4)
 			return;
