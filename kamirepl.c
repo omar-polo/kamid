@@ -387,26 +387,30 @@ excmd(const char **argv, int argc)
 }
 
 static void
-handle_9p(const uint8_t *data, size_t len)
+handle_9p(const uint8_t *data, size_t size)
 {
-	struct np_msg_header hdr;
+        uint32_t len;
+	uint16_t tag;
+	uint8_t type;
 
-	assert(len >= HEADERSIZE);
+	assert(size >= HEADERSIZE);
 
-	memcpy(&hdr.len, data, sizeof(hdr.len));
-	data += sizeof(hdr.len);
-	memcpy(&hdr.type, data, sizeof(hdr.type));
-	data += sizeof(hdr.len);
-	memcpy(&hdr.tag, data, sizeof(hdr.tag));
-	data += sizeof(hdr.tag);
+	memcpy(&len, data, sizeof(len));
+	data += sizeof(len);
 
-	hdr.len = le32toh(hdr.len);
+	memcpy(&type, data, sizeof(type));
+	data += sizeof(type);
+
+	memcpy(&tag, data, sizeof(tag));
+	data += sizeof(tag);
+
+	len = le32toh(len);
 	/* type is one byte long, no endianness issues */
-	hdr.tag = le16toh(hdr.tag);
+	tag = le16toh(tag);
 
 	clr();
-	log_info("type=%"PRIu32"[%s] tag=%d len=%"PRIu32, hdr.tag,
-	    pp_msg_type(hdr.type), hdr.tag, hdr.len);
+	log_info("type=%"PRIu32"[%s] tag=%d len=%"PRIu32, type,
+	    pp_msg_type(type), tag, len);
 	prompt();
 }
 
