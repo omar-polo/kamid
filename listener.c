@@ -683,7 +683,6 @@ client_read(struct bufferevent *bev, void *d)
 
 		memcpy(&len, EVBUFFER_DATA(src), sizeof(len));
 		len = le32toh(len);
-		log_debug("msg len=%"PRIu32, len);
 		log_debug("expecting a message %"PRIu32" bytes long "
 		    "(of wich %zu already read)",
 		    len, EVBUFFER_LENGTH(src));
