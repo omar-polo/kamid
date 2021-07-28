@@ -56,6 +56,8 @@ enum imsg_type {
 	IMSG_AUTH_TLS,
 	IMSG_CONN_GONE,
 	IMSG_BUF,
+	IMSG_MSIZE,
+	IMSG_CLOSE,
 };
 
 struct kd_options_conf {

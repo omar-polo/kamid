@@ -35,12 +35,18 @@ static struct imsgev	*iev_listener;
 static struct evbuffer	*evb;
 static uint32_t		 peerid;
 
+static int		 handshaked;
+uint32_t		 msize;
+
 static ATTR_DEAD void	client_shutdown(void);
 static void		client_sig_handler(int, short, void *);
 static void		client_dispatch_listener(int, short, void *);
 static void		client_privdrop(const char *, const char *);
 
 static int		client_send_listener(int, const void *, uint16_t);
+
+static void		parse_message(uint8_t *, size_t, struct np_msg_header *,
+			    uint8_t **);
 
 static void		np_error(uint16_t, const char *);
 
@@ -245,8 +251,9 @@ client_send_listener(int type, const void *data, uint16_t len)
 	return ret;
 }
 
-static inline void
-parse_message(uint8_t *data, size_t len, struct np_msg_header *hdr, void **cnt)
+static void
+parse_message(uint8_t *data, size_t len, struct np_msg_header *hdr,
+    uint8_t **cnt)
 {
 	if (len < 4)
 		goto err;
@@ -295,6 +302,16 @@ np_header(uint32_t len, uint8_t type, uint16_t tag)
 }
 
 static inline void
+np_string(uint16_t len, const char *str)
+{
+	uint16_t l = len;
+
+	len = htole16(len);
+	evbuffer_add(evb, &len, sizeof(len));
+	evbuffer_add(evb, str, l);
+}
+
+static inline void
 do_send(void)
 {
 	size_t len;
@@ -303,6 +320,23 @@ do_send(void)
 	log_debug("sending a packet long %zu bytes", len);
 	client_send_listener(IMSG_BUF, EVBUFFER_DATA(evb), len);
 	evbuffer_drain(evb, len);
+}
+
+static void
+np_version(uint16_t tag, uint32_t msize, const char *version)
+{
+	uint32_t len = HEADERSIZE;
+	uint16_t l;
+
+	l = strlen(version);
+	len += sizeof(msize) + sizeof(l) + l;
+
+	msize = htole32(msize);
+
+	np_header(len, Rversion, tag);
+	evbuffer_add(evb, &msize, sizeof(msize));
+	np_string(l, version);
+	do_send();
 }
 
 static void
@@ -315,21 +349,66 @@ np_error(uint16_t tag, const char *errstr)
 	len += sizeof(l) + l;
 
 	np_header(len, Rerror, tag);
-	evbuffer_add(evb, &l, sizeof(l));
-	evbuffer_add(evb, errstr, l);
-
+	np_string(l, errstr);
 	do_send();
 }
 
 static void
 handle_message(struct imsg *imsg, size_t len)
 {
-	struct np_msg_header hdr;
-	void *data;
+	struct np_msg_header	 hdr;
+	uint16_t		 slen;
+	uint8_t			*data;
 
 	parse_message(imsg->data, len, &hdr, &data);
+	len -= HEADERSIZE;
 
-	/* for now, log the request and reply with an error. */
-	log_debug("got request type %s", pp_msg_type(hdr.type));
-	np_error(hdr.tag, "Not supported.");
+	log_debug("got request: len=%d type=%d[%s] tag=%d",
+	    hdr.len, hdr.type, pp_msg_type(hdr.type), hdr.tag);
+
+	if (!handshaked && hdr.type != Tversion)
+		goto err;
+
+	switch (hdr.type) {
+	case Tversion:
+		if (handshaked)
+			goto err;
+
+		/* msize[4] + version[s] */
+		if (len < 6)
+			goto err;
+
+		memcpy(&msize, data, sizeof(msize));
+		data += sizeof(msize);
+		len = le32toh(len);
+
+		memcpy(&slen, data, sizeof(slen));
+		data += sizeof(slen);
+		slen = le16toh(slen);
+
+		if (slen != strlen(VERSION9P) ||
+		    memcpy(data, VERSION9P, strlen(VERSION9P)) != 0 ||
+		    msize == 0) {
+			np_version(hdr.tag, MSIZE9P, "unknown");
+			return;
+		}
+
+		handshaked = 1;
+
+		msize = MIN(msize, MSIZE9P);
+		client_send_listener(IMSG_MSIZE, &msize, sizeof(msize));
+		np_version(hdr.tag, msize, VERSION9P);
+		break;
+
+	default:
+		/* for now, log the request and reply with an error. */
+		np_error(hdr.tag, "Not supported.");
+		break;
+	}
+
+	return;
+
+err:
+	client_send_listener(IMSG_CLOSE, NULL, 0);
+	client_shutdown();
 }

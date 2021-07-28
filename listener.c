@@ -477,6 +477,29 @@ listener_dispatch_client(int fd, short event, void *d)
 				break;
 			}
 			break;
+
+		case IMSG_MSIZE:
+			if (IMSG_DATA_SIZE(imsg) != sizeof(client->msize))
+				fatal("IMSG_MSIZE size mismatch: "
+				    "got %zu want %zu", IMSG_DATA_SIZE(imsg),
+				    sizeof(client->msize));
+
+			memcpy(&client->msize, imsg.data,
+			    sizeof(client->msize));
+
+			if (client->msize == 0)
+				fatal("IMSG_MSIZE got msize = 0");
+
+			break;
+
+		case IMSG_CLOSE:
+			/*
+			 * Both EVBUFFER_READ or EVBUFFER_WRITE should
+			 * be fine.
+			 */
+			client_error(client->bev, EVBUFFER_READ, client);
+			break;
+
 		default:
 			log_debug("%s: unexpected imsg %d", __func__,
 			    imsg.hdr.type);
