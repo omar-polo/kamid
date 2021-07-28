@@ -32,14 +32,17 @@
 #include "utils.h"
 
 static struct imsgev	*iev_listener;
+static struct evbuffer	*evb;
+static uint32_t		 peerid;
 
 static ATTR_DEAD void	client_shutdown(void);
 static void		client_sig_handler(int, short, void *);
 static void		client_dispatch_listener(int, short, void *);
 static void		client_privdrop(const char *, const char *);
 
-static int		client_send_listener(int, uint32_t,
-    const void *, uint16_t);
+static int		client_send_listener(int, const void *, uint16_t);
+
+static void		np_error(uint16_t, const char *);
 
 static void		handle_message(struct imsg *, size_t);
 
@@ -88,6 +91,9 @@ client(int debug, int verbose)
 static ATTR_DEAD void
 client_shutdown(void)
 {
+	if (evb != NULL)
+		evbuffer_free(evb);
+
 	msgbuf_clear(&iev_listener->ibuf.w);
 	close(iev_listener->ibuf.fd);
 
@@ -153,6 +159,7 @@ client_dispatch_listener(int fd, short event, void *d)
 
 		switch (imsg.hdr.type) {
 		case IMSG_AUTH:
+			peerid = imsg.hdr.peerid;
 			if (auth)
 				fatalx("%s: IMSG_AUTH already done", __func__);
 			auth = AUTH_USER;
@@ -221,11 +228,13 @@ client_privdrop(const char *username, const char *dir)
 
 	sandbox_client();
 	log_debug("client ready");
+
+	if ((evb = evbuffer_new()) == NULL)
+		fatal("evbuffer_new");
 }
 
 static int
-client_send_listener(int type, uint32_t peerid,
-    const void *data, uint16_t len)
+client_send_listener(int type, const void *data, uint16_t len)
 {
 	int ret;
 
@@ -266,30 +275,50 @@ err:
 	fatalx("got invalid message");
 }
 
+static inline void
+np_header(uint32_t len, uint8_t type, uint16_t tag)
+{
+	evbuffer_add(evb, &len, sizeof(len));
+	evbuffer_add(evb, &type, sizeof(type));
+	evbuffer_add(evb, &tag, sizeof(tag));
+}
+
+static inline void
+do_send(void)
+{
+	size_t len;
+
+	len = EVBUFFER_LENGTH(evb);
+	log_debug("sending a packet long %zu bytes", len);
+	client_send_listener(IMSG_BUF, EVBUFFER_DATA(evb), len);
+	evbuffer_drain(evb, len);
+}
+
+static void
+np_error(uint16_t tag, const char *errstr)
+{
+	uint32_t len = HEADERSIZE;
+	uint16_t l;
+
+	l = strlen(errstr);
+	len += sizeof(l) + l;
+
+	np_header(len, Rerror, tag);
+	evbuffer_add(evb, &l, sizeof(l));
+	evbuffer_add(evb, errstr, l);
+
+	do_send();
+}
+
 static void
 handle_message(struct imsg *imsg, size_t len)
 {
-	struct np_msg_header hdr, h;
-	uint32_t l;
+	struct np_msg_header hdr;
 	void *data;
-	const char *ns_err = "Not supported.";
 
 	parse_message(imsg->data, len, &hdr, &data);
 
 	/* for now, log the request and reply with an error. */
-
 	log_debug("got request type %s", pp_msg_type(hdr.type));
-
-	memset(&h, 0, sizeof(h));
-	l = strlen(ns_err);
-	h.len = htole32(sizeof(h) + 2 + l);
-	h.type = Rerror;
-	h.tag = htole32(hdr.tag);
-
-	client_send_listener(IMSG_BUF, imsg->hdr.peerid, &h.len, 4);
-	client_send_listener(IMSG_BUF, imsg->hdr.peerid, &h.type, 1);
-	client_send_listener(IMSG_BUF, imsg->hdr.peerid, &h.tag, 2);
-
-	client_send_listener(IMSG_BUF, imsg->hdr.peerid, &l, sizeof(l));
-	client_send_listener(IMSG_BUF, imsg->hdr.peerid, ns_err, l);
+	np_error(hdr.tag, "Not supported.");
 }
