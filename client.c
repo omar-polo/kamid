@@ -38,7 +38,7 @@ static void		client_sig_handler(int, short, void *);
 static void		client_dispatch_listener(int, short, void *);
 static void		client_privdrop(const char *, const char *);
 
-static int		client_imsg_compose_listener(int, uint32_t,
+static int		client_send_listener(int, uint32_t,
     const void *, uint16_t);
 
 static void		handle_message(struct imsg *, size_t);
@@ -224,7 +224,7 @@ client_privdrop(const char *username, const char *dir)
 }
 
 static int
-client_imsg_compose_listener(int type, uint32_t peerid,
+client_send_listener(int type, uint32_t peerid,
     const void *data, uint16_t len)
 {
 	int ret;
@@ -286,10 +286,10 @@ handle_message(struct imsg *imsg, size_t len)
 	h.type = Rerror;
 	h.tag = htole32(hdr.tag);
 
-	client_imsg_compose_listener(IMSG_BUF, imsg->hdr.peerid,
+	client_send_listener(IMSG_BUF, imsg->hdr.peerid,
 	    &h, sizeof(h));
-	client_imsg_compose_listener(IMSG_BUF, imsg->hdr.peerid,
+	client_send_listener(IMSG_BUF, imsg->hdr.peerid,
 	    &l, sizeof(l));
-	client_imsg_compose_listener(IMSG_BUF, imsg->hdr.peerid,
+	client_send_listener(IMSG_BUF, imsg->hdr.peerid,
 	    ns_err, l);
 }
