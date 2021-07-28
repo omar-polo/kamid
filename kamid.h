@@ -141,6 +141,7 @@ struct np_msg_header {
 };
 
 /* useful constants */
+#define HEADERSIZE	(4 + 1 + 2)
 #define	VERSION9P	"9P2000"
 #define MSIZE9P		((uint32_t)256)
 #define NOTAG		((uint16_t)~0U)
