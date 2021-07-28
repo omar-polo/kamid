@@ -678,22 +678,20 @@ client_read(struct bufferevent *bev, void *d)
 	log_debug("in client read");
 
 	for (;;) {
-		log_debug("buffer length %zu < 4? %s", EVBUFFER_LENGTH(src),
-		    EVBUFFER_LENGTH(src) < 4 ? "true" : "false");
 		if (EVBUFFER_LENGTH(src) < 4)
 			return;
 
 		memcpy(&len, EVBUFFER_DATA(src), sizeof(len));
-		log_debug("raw msg len=%"PRIu32, len);
 		len = le32toh(len);
 		log_debug("msg len=%"PRIu32, len);
+		log_debug("expecting a message %"PRIu32" bytes long "
+		    "(of wich %zu already read)",
+		    len, EVBUFFER_LENGTH(src));
 
-		log_debug("%zu > %zu? %s", (size_t)len, EVBUFFER_LENGTH(src),
-		    len > EVBUFFER_LENGTH(src) ? "true" : "false");
 		if (len > EVBUFFER_LENGTH(src))
 			return;
 
-		log_debug("forwarding a message");
+		log_debug("forwarding the message");
 		listener_imsg_compose_client(client, IMSG_BUF, client->id,
 		    EVBUFFER_DATA(src), len);
 		evbuffer_drain(src, len);
