@@ -246,19 +246,27 @@ client_send_listener(int type, const void *data, uint16_t len)
 }
 
 static inline void
-parse_message(void *data, size_t len, struct np_msg_header *hdr, void **cnt)
+parse_message(uint8_t *data, size_t len, struct np_msg_header *hdr, void **cnt)
 {
 	if (len < 4)
 		goto err;
 
-	memcpy(hdr, data, sizeof(*hdr));
+	memcpy(&hdr->len, data, sizeof(hdr->len));
+	data += sizeof(hdr->len);
+
+	memcpy(&hdr->type, data, sizeof(hdr->type));
+	data += sizeof(hdr->type);
+
+	memcpy(&hdr->tag, data, sizeof(hdr->tag));
+	data += sizeof(hdr->tag);
 
 	hdr->len = le32toh(hdr->len);
+	/* type is one byte long, no endianness issues */
+	hdr->tag = le16toh(hdr->tag);
 
 	if (len != hdr->len)
 		goto err;
 
-	/* type is one byte long, no endianness issues */
 	if (hdr->type < Tversion ||
 	    hdr->type >= Tmax    ||
 	    hdr->type == Terror  ||
@@ -278,6 +286,9 @@ err:
 static inline void
 np_header(uint32_t len, uint8_t type, uint16_t tag)
 {
+	len = htole32(len);
+	tag = htole16(tag);
+
 	evbuffer_add(evb, &len, sizeof(len));
 	evbuffer_add(evb, &type, sizeof(type));
 	evbuffer_add(evb, &tag, sizeof(tag));
