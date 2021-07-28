@@ -354,9 +354,11 @@ write_hdr(uint32_t len, uint8_t type, uint16_t tag)
 static void
 write_str(uint16_t len, const char *str)
 {
+	uint16_t l = len;
+
 	len = htole16(len);
 	bufferevent_write(bev, &len, sizeof(len));
-	bufferevent_write(bev, str, len);
+	bufferevent_write(bev, str, l);
 }
 
 static void
