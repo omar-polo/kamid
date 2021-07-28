@@ -341,7 +341,7 @@ listener_dispatch_main(int fd, short event, void *d)
 			event_set(&client->iev.ev, client->iev.ibuf.fd,
 			    client->iev.events, client->iev.handler, client);
 			listener_imsg_compose_client(client, IMSG_AUTH,
-			    0, imsg.data, IMSG_DATA_SIZE(imsg));
+			    client->id, imsg.data, IMSG_DATA_SIZE(imsg));
 			break;
 		case IMSG_AUTH_DIR:
 			find.id = imsg.hdr.peerid;
