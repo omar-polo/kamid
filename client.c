@@ -286,10 +286,7 @@ handle_message(struct imsg *imsg, size_t len)
 	h.type = Rerror;
 	h.tag = htole32(hdr.tag);
 
-	client_send_listener(IMSG_BUF, imsg->hdr.peerid,
-	    &h, sizeof(h));
-	client_send_listener(IMSG_BUF, imsg->hdr.peerid,
-	    &l, sizeof(l));
-	client_send_listener(IMSG_BUF, imsg->hdr.peerid,
-	    ns_err, l);
+	client_send_listener(IMSG_BUF, imsg->hdr.peerid, &h, sizeof(h));
+	client_send_listener(IMSG_BUF, imsg->hdr.peerid, &l, sizeof(l));
+	client_send_listener(IMSG_BUF, imsg->hdr.peerid, ns_err, l);
 }
