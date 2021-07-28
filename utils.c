@@ -68,19 +68,32 @@ const char *
 pp_msg_type(uint8_t type)
 {
 	switch (type) {
-	case Tversion:	return "version";
-	case Tauth:	return "auth";
-	case Tattach:	return "attach";
-	case Tflush:	return "flush";
-	case Twalk:	return "walk";
-	case Topen:	return "open";
-	case Tcreate:	return "create";
-	case Tread:	return "read";
-	case Twrite:	return "write";
-	case Tclunk:	return "clunk";
-	case Tremove:	return "remove";
-	case Tstat:	return "stat";
-	case Twstat:	return "wstat";
+	case Tversion:	return "Tversion";
+	case Rversion:	return "Rversion";
+	case Tauth:	return "Tauth";
+	case Rauth:	return "Rauth";
+	case Tattach:	return "Tattach";
+	case Rattach:	return "Rattach";
+	case Tflush:	return "Tflush";
+	case Rflush:	return "Rflush";
+	case Twalk:	return "Twalk";
+	case Rwalk:	return "Rwalk";
+	case Topen:	return "Topen";
+	case Ropen:	return "Ropen";
+	case Tcreate:	return "Tcreate";
+	case Rcreate:	return "Rcreate";
+	case Tread:	return "Tread";
+	case Rread:	return "Rread";
+	case Twrite:	return "Twrite";
+	case Rwrite:	return "Rwrite";
+	case Tclunk:	return "Tclunk";
+	case Rclunk:	return "Rclunk";
+	case Tremove:	return "Tremove";
+	case Rremove:	return "Rremove";
+	case Tstat:	return "Tstat";
+	case Rstat:	return "Rstat";
+	case Twstat:	return "Twstat";
+	case Rwstat:	return "Rwstat";
 	default:	return "unknown";
 	}
 }
