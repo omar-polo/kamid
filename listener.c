@@ -688,7 +688,6 @@ client_read(struct bufferevent *bev, void *d)
 		if (len > EVBUFFER_LENGTH(src))
 			return;
 
-		log_debug("forwarding the message");
 		listener_imsg_compose_client(client, IMSG_BUF, client->id,
 		    EVBUFFER_DATA(src), len);
 		evbuffer_drain(src, len);
