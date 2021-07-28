@@ -227,7 +227,7 @@ client_privdrop(const char *username, const char *dir)
 		fatal("can't drop privileges");
 
 	sandbox_client();
-	log_debug("client ready");
+	log_debug("client ready; user=%s dir=%s", username, dir);
 
 	if ((evb = evbuffer_new()) == NULL)
 		fatal("evbuffer_new");
