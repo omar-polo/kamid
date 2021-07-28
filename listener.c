@@ -363,6 +363,11 @@ listener_dispatch_main(int fd, short event, void *d)
 				return;
 			}
 
+#if HAVE_EVENT2
+			evbuffer_unfreeze(client->bev->input, 0);
+			evbuffer_unfreeze(client->bev->output, 1);
+#endif
+
 			listen = listen_by_id(client->lid);
 			if (listen->flags & L_TLS) {
 				event_set(&client->bev->ev_read, client->fd,
@@ -757,7 +762,6 @@ client_tls_readcb(int fd, short event, void *d)
 	char			 buf[IBUF_READ_SIZE];
 	int			 what = EVBUFFER_READ;
 	int			 howmuch = IBUF_READ_SIZE;
-	int			 res;
 	ssize_t			 ret;
 	size_t			 len;
 
@@ -784,10 +788,7 @@ client_tls_readcb(int fd, short event, void *d)
 		goto err;
 	}
 
-	evbuffer_unfreeze(bufev->input, 0);
-	res = evbuffer_add(bufev->input, buf, len);
-	evbuffer_freeze(bufev->input, 0);
-	if (res == -1) {
+	if (evbuffer_add(bufev->input, buf, len) == -1) {
 		what |= EVBUFFER_ERROR;
 		goto err;
 	}
