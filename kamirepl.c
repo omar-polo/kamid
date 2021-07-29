@@ -344,6 +344,8 @@ repl_error(struct bufferevent *bev, short error, void *d)
 static void
 write_hdr(uint32_t len, uint8_t type, uint16_t tag)
 {
+	len += HEADERSIZE;
+
 	log_debug("enqueuing a packet; len=%"PRIu32" type=%d[%s] tag=%d",
 	    len, type, pp_msg_type(type), tag);
 
@@ -388,7 +390,7 @@ excmd(const char **argv, int argc)
 
 		/* msize[4] version[s] */
 		sl = strlen(s);
-		len = HEADERSIZE + 4 + sizeof(sl) + sl;
+		len = 4 + sizeof(sl) + sl;
 		write_hdr(len, Tversion, NOTAG);
 
 		len = htole32(MSIZE9P);
@@ -414,7 +416,7 @@ excmd(const char **argv, int argc)
 		tl = strlen(t);
 
 		/* fid[4] afid[4] uname[s] aname[s] */
-		len = HEADERSIZE + 4 + 4 + sizeof(sl) + sl + sizeof(tl) + tl;
+		len = 4 + 4 + sizeof(sl) + sl + sizeof(tl) + tl;
 		write_hdr(len, Tattach, 0);
 
 		write_fid(fid);
