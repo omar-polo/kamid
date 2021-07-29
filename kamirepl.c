@@ -72,6 +72,8 @@ static void		 repl_error(struct bufferevent *, short, void *);
 static void		 write_hdr(uint32_t, uint8_t, uint16_t);
 static void		 excmd(const char **, int);
 
+static const char	*pp_qid_type(uint8_t);
+static void		 pp_qid(const uint8_t *, uint32_t);
 static void		 pp_msg(uint32_t, uint8_t, uint16_t, const uint8_t *);
 static void		 handle_9p(const uint8_t *, size_t);
 static void		 clr(void);
@@ -365,9 +367,9 @@ write_str(uint16_t len, const char *str)
 static void
 excmd(const char **argv, int argc)
 {
-	uint16_t sl;
-	uint32_t len;
-	const char *s;
+	uint32_t	 len, fid;
+	uint16_t	 sl, tl;
+	const char	*s, *t, *errstr;
 
 	/* ``version'' [``version string''] */
 	if (!strcmp(*argv, "version")) {
@@ -384,9 +386,82 @@ excmd(const char **argv, int argc)
 		bufferevent_write(bev, &len, sizeof(len));
 
 		write_str(sl, s);
+	} else if (!strcmp(*argv, "attach")) {
+		/* ``attach'' fid uname aname */
+		if (argc != 4) {
+			log_warnx("usage: attach fid uname aname");
+			return;
+		}
+
+		fid = strtonum(argv[1], 0, UINT32_MAX, &errstr);
+		if (errstr != NULL) {
+			log_warnx("usage: attach fid uname aname");
+			return;
+		}
+		fid = htole32(fid);
+
+		s = argv[2];
+		sl = strlen(s);
+		t = argv[3];
+		tl = strlen(t);
+
+		/* fid[4] afid[4] uname[s] aname[s] */
+		len = HEADERSIZE + 4 + 4 + sizeof(sl) + sl + sizeof(tl) + tl;
+		write_hdr(len, Tattach, 0);
+
+		bufferevent_write(bev, &fid, sizeof(fid));
+
+		fid = htole32(NOFID);
+		bufferevent_write(bev, &fid, sizeof(fid));
+
+		write_str(sl, s);
+		write_str(tl, t);
 	} else {
 		log_warnx("Unknown command %s", *argv);
 	}
+}
+
+static const char *
+pp_qid_type(uint8_t type)
+{
+        switch (type) {
+	case QTDIR: return "dir";
+	case QTAPPEND: return "append-only";
+	case QTEXCL: return "exclusive";
+	case QTMOUNT: return "mounted-channel";
+	case QTAUTH: return "authentication";
+	case QTTMP: return "non-backed-up";
+	case QTSYMLINK: return "symlink";
+	case QTFILE: return "file";
+	}
+
+	return "unknown";
+}
+
+static void
+pp_qid(const uint8_t *d, uint32_t len)
+{
+	uint64_t	path;
+	uint32_t	vers;
+	uint8_t		type;
+
+	if (len < 13) {
+		printf("invalid");
+		return;
+	}
+
+	memcpy(&path, d, sizeof(path));
+	d += sizeof(path);
+	path = le64toh(path);
+
+	memcpy(&vers, d, sizeof(vers));
+	d += sizeof(vers);
+	path = le64toh(vers);
+
+	type = *d;
+
+	printf("qid{path=%"PRIu64" version=%"PRIu32" type=0x%x\"%s\"",
+	    path, vers, type, pp_qid_type(type));
 }
 
 static void
@@ -429,6 +504,10 @@ pp_msg(uint32_t len, uint8_t type, uint16_t tag, const uint8_t *d)
 		fwrite(d, 1, slen, stdout);
 		printf("\"");
 
+		break;
+
+	case Rattach:
+		pp_qid(d, len);
 		break;
 
 	default:
