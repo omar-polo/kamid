@@ -388,7 +388,7 @@ handle_message(struct imsg *imsg, size_t len)
 		slen = le16toh(slen);
 
 		if ((dot = memchr(data, '.', slen)) != NULL)
-			slen -= dot - data + 1;
+			slen -= dot - data;
 
 		if (slen != strlen(VERSION9P) ||
 		    memcmp(data, VERSION9P, slen) != 0 ||
