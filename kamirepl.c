@@ -495,7 +495,7 @@ pp_qid(const uint8_t *d, uint32_t len)
 
 	memcpy(&vers, d, sizeof(vers));
 	d += sizeof(vers);
-	path = le64toh(vers);
+	vers = le64toh(vers);
 
 	type = *d;
 
