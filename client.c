@@ -358,7 +358,7 @@ handle_message(struct imsg *imsg, size_t len)
 {
 	struct np_msg_header	 hdr;
 	uint16_t		 slen;
-	uint8_t			*data;
+	uint8_t			*data, *dot;
 
 	parse_message(imsg->data, len, &hdr, &data);
 	len -= HEADERSIZE;
@@ -385,6 +385,9 @@ handle_message(struct imsg *imsg, size_t len)
 		memcpy(&slen, data, sizeof(slen));
 		data += sizeof(slen);
 		slen = le16toh(slen);
+
+		if ((dot = memchr(data, '.', slen)) != NULL)
+			slen -= dot - data;
 
 		if (slen != strlen(VERSION9P) ||
 		    memcpy(data, VERSION9P, strlen(VERSION9P)) != 0 ||
