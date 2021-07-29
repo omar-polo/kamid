@@ -374,7 +374,7 @@ excmd(const char **argv, int argc)
 		if (argc == 2)
 			s = argv[1];
 
-		/* 4 bytes of msize, 2 strlen + string */
+		/* msize[4] version[s] */
 		sl = strlen(s);
 		len = HEADERSIZE + 4 + sizeof(sl) + sl;
 		write_hdr(len, Tversion, NOTAG);
