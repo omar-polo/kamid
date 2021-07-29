@@ -430,6 +430,9 @@ pp_msg(uint32_t len, uint8_t type, uint16_t tag, const uint8_t *d)
 		printf("\"");
 
 		break;
+
+	default:
+		printf("unknown command type");
 	}
 
 	printf("\n");
