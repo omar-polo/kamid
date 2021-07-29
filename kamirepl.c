@@ -445,8 +445,8 @@ excmd(const char **argv, int argc)
 		const char	*name;
 		void		(*fn)(const char **, int);
 	} cmds[] = {
-		{"version", excmd_version},
-		{"attach", excmd_attach},
+		{"version",	excmd_version},
+		{"attach",	excmd_attach},
 	};
 	size_t i;
 
@@ -464,14 +464,14 @@ static const char *
 pp_qid_type(uint8_t type)
 {
         switch (type) {
-	case QTDIR: return "dir";
-	case QTAPPEND: return "append-only";
-	case QTEXCL: return "exclusive";
-	case QTMOUNT: return "mounted-channel";
-	case QTAUTH: return "authentication";
-	case QTTMP: return "non-backed-up";
+	case QTDIR:	return "dir";
+	case QTAPPEND:	return "append-only";
+	case QTEXCL:	return "exclusive";
+	case QTMOUNT:	return "mounted-channel";
+	case QTAUTH:	return "authentication";
+	case QTTMP:	return "non-backed-up";
 	case QTSYMLINK: return "symlink";
-	case QTFILE: return "file";
+	case QTFILE:	return "file";
 	}
 
 	return "unknown";
