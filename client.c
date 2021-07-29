@@ -16,8 +16,11 @@
 
 #include "compat.h"
 
+#include <sys/stat.h>
+
 #include <endian.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <pwd.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -30,6 +33,32 @@
 #include "log.h"
 #include "sandbox.h"
 #include "utils.h"
+
+#if HAVE_ARC4RANDOM
+# define RANDID() arc4random()
+#else
+static uint32_t counter;
+# define RANDID() counter++
+#endif
+
+STAILQ_HEAD(qidhead, qid) qids;
+struct qid {
+	/* definition of a qid */
+	uint64_t		 path;
+	uint32_t		 vers;
+	uint8_t			 type;
+
+	int			 fd;
+
+	STAILQ_ENTRY(qid)	 entries;
+};
+
+STAILQ_HEAD(fidhead, fid) fids;
+struct fid {
+	uint32_t		 fid;
+	struct qid		*qid;
+	STAILQ_ENTRY(fid)	 entries;
+};
 
 static struct imsgev	*iev_listener;
 static struct evbuffer	*evb;
@@ -45,15 +74,21 @@ static void		client_privdrop(const char *, const char *);
 
 static int		client_send_listener(int, const void *, uint16_t);
 
+static struct qid	*new_qid(int);
+static struct fid	*new_fid(struct qid *, uint32_t);
+
 static void		parse_message(uint8_t *, size_t, struct np_msg_header *,
 			    uint8_t **);
 
 static void		np_header(uint32_t, uint8_t, uint16_t);
 static void		np_string(uint16_t, const char *);
+static void		np_qid(struct qid *);
 static void		do_send(void);
 
 static void		np_version(uint16_t, uint32_t, const char *);
+static void		np_attach(uint16_t, struct qid *);
 static void		np_error(uint16_t, const char *);
+static void		np_errno(uint16_t);
 
 static void		handle_message(struct imsg *, size_t);
 
@@ -256,6 +291,53 @@ client_send_listener(int type, const void *data, uint16_t len)
 	return ret;
 }
 
+/* creates a qid given a fd */
+static struct qid *
+new_qid(int fd)
+{
+	struct stat	 sb;
+	struct qid	*qid;
+
+	if (fstat(fd, &sb) == -1) {
+		log_warn("fstat");
+		return NULL;
+	}
+
+	if ((qid = calloc(1, sizeof(*qid))) == NULL)
+		return NULL;
+
+	qid->fd = fd;
+
+	qid->path = RANDID();
+
+	if (S_ISREG(sb.st_mode))
+		qid->type = QTFILE;
+	else if (S_ISDIR(sb.st_mode))
+		qid->type = QTDIR;
+	else if (S_ISLNK(sb.st_mode))
+		qid->type = QTSYMLINK;
+
+        STAILQ_INSERT_HEAD(&qids, qid, entries);
+
+	return qid;
+}
+
+static struct fid *
+new_fid(struct qid *qid, uint32_t fid)
+{
+	struct fid *f;
+
+	if ((f = calloc(1, sizeof(*f))) == NULL)
+		return NULL;
+
+	f->qid = qid;
+	f->fid = fid;
+
+	STAILQ_INSERT_HEAD(&fids, f, entries);
+
+	return f;
+}
+
 static void
 parse_message(uint8_t *data, size_t len, struct np_msg_header *hdr,
     uint8_t **cnt)
@@ -317,6 +399,20 @@ np_string(uint16_t len, const char *str)
 }
 
 static void
+np_qid(struct qid *qid)
+{
+	uint64_t	path;
+	uint32_t	vers;
+
+	path = htole64(qid->path);
+	vers = htole32(qid->vers);
+
+	evbuffer_add(evb, &path, sizeof(path));
+	evbuffer_add(evb, &vers, sizeof(path));
+	evbuffer_add(evb, &qid->type, sizeof(qid->type));
+}
+
+static void
 do_send(void)
 {
 	size_t len;
@@ -345,6 +441,17 @@ np_version(uint16_t tag, uint32_t msize, const char *version)
 }
 
 static void
+np_attach(uint16_t tag, struct qid *qid)
+{
+	uint32_t len = HEADERSIZE;
+
+	len += 13;
+	np_header(len, Rattach, tag);
+	np_qid(qid);
+	do_send();
+}
+
+static void
 np_error(uint16_t tag, const char *errstr)
 {
 	uint32_t len = HEADERSIZE;
@@ -359,9 +466,22 @@ np_error(uint16_t tag, const char *errstr)
 }
 
 static void
+np_errno(uint16_t tag)
+{
+	char buf[64];
+
+	strerror_r(errno, buf, sizeof(buf));
+	np_error(tag, buf);
+}
+
+static void
 handle_message(struct imsg *imsg, size_t len)
 {
 	struct np_msg_header	 hdr;
+	struct qid		*qid;
+	struct fid		*f;
+	int			 fd;
+	uint32_t		 fid;
 	uint16_t		 slen;
 	uint8_t			*data, *dot;
 	char			 buf[16];
@@ -413,6 +533,37 @@ handle_message(struct imsg *imsg, size_t len)
 		msize = MIN(msize, MSIZE9P);
 		client_send_listener(IMSG_MSIZE, &msize, sizeof(msize));
 		np_version(hdr.tag, msize, VERSION9P);
+		break;
+
+	case Tattach:
+		/* fid[4] afid[4] uname[s] aname[s] */
+
+		/* for the moment, happily ignore afid */
+
+		if ((fd = open("/", O_DIRECTORY)) == -1) {
+			np_errno(hdr.tag);
+                        return;
+		}
+
+		if ((qid = new_qid(fd)) == NULL) {
+                        close(fd);
+			np_error(hdr.tag, "no memory");
+			return;
+		}
+
+		memcpy(&fid, data, sizeof(fid));
+		data += sizeof(fid);
+		fid = le32toh(fid);
+
+		if ((f = new_fid(qid, fid)) == NULL) {
+			close(qid->fd);
+			free(qid);
+			np_error(hdr.tag, "no memory");
+			return;
+		}
+
+		np_attach(hdr.tag, qid);
+
 		break;
 
 	default:
