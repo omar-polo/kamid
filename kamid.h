@@ -150,6 +150,16 @@ struct np_msg_header {
 #define NOFID		((uint32_t)~0U)
 #define NOUID		(-1)
 
+/* bits in Qid.type */
+#define QTDIR		0x80		/* type bit for directories */
+#define QTAPPEND	0x40		/* type bit for append only files */
+#define QTEXCL		0x20		/* type bit for exclusive use files */
+#define QTMOUNT		0x10		/* type bit for mounted channel */
+#define QTAUTH		0x08		/* type bit for authentication file */
+#define QTTMP		0x04		/* type bit for non-backed-up file */
+#define QTSYMLINK	0x02		/* type bit for symbolic link */
+#define QTFILE		0x00		/* type bits for plain file */
+
 /* 9p message types */
 enum {
 	Tversion =	100,
