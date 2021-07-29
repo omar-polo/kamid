@@ -38,7 +38,7 @@
 #include "log.h"
 #include "utils.h"
 
-#define PROMPT "> "
+#define PROMPT "=% "
 
 /* flags */
 int			 verbose;
