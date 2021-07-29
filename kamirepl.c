@@ -72,6 +72,7 @@ static void		 repl_error(struct bufferevent *, short, void *);
 static void		 write_hdr(uint32_t, uint8_t, uint16_t);
 static void		 excmd(const char **, int);
 
+static void		 pp_msg(uint32_t, uint8_t, uint16_t, const uint8_t *);
 static void		 handle_9p(const uint8_t *, size_t);
 static void		 clr(void);
 static void		 prompt(void);
@@ -389,6 +390,52 @@ excmd(const char **argv, int argc)
 }
 
 static void
+pp_msg(uint32_t len, uint8_t type, uint16_t tag, const uint8_t *d)
+{
+	uint32_t	msize;
+	uint16_t	slen;
+
+	printf("len=%"PRIu32" type=%d[%s] tag=0x%x[%d] ", len,
+	    type, pp_msg_type(type), tag, tag);
+
+	len -= HEADERSIZE;
+
+	switch (type) {
+	case Rversion:
+		if (len < 6) {
+			printf("invalid: not enough space for msize "
+			    "and version provided.");
+			break;
+		}
+
+		memcpy(&msize, d, sizeof(msize));
+		d += sizeof(msize);
+		len -= sizeof(msize);
+		msize = le32toh(msize);
+
+		memcpy(&slen, d, sizeof(slen));
+		d += sizeof(slen);
+		len -= sizeof(slen);
+		slen = le32toh(slen);
+
+		if (len != slen) {
+			printf("invalid: version string length doesn't "
+			    "match.  Got %d; want %d", slen, len);
+			break;
+		}
+
+		printf("msize=%"PRIu32" version[%"PRIu16"]=\"",
+		    msize, slen);
+		fwrite(d, 1, slen, stdout);
+		printf("\"");
+
+		break;
+	}
+
+	printf("\n");
+}
+
+static void
 handle_9p(const uint8_t *data, size_t size)
 {
         uint32_t len;
@@ -411,8 +458,7 @@ handle_9p(const uint8_t *data, size_t size)
 	tag = le16toh(tag);
 
 	clr();
-	log_info("type=%"PRIu32"[%s] tag=%d len=%"PRIu32, type,
-	    pp_msg_type(type), tag, len);
+	pp_msg(len, type, tag, data);
 	prompt();
 }
 
