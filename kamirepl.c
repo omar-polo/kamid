@@ -70,6 +70,8 @@ static void		 client_error(struct bufferevent *, short, void *);
 static void		 repl_read(struct bufferevent *, void *);
 static void		 repl_error(struct bufferevent *, short, void *);
 static void		 write_hdr(uint32_t, uint8_t, uint16_t);
+static void		 write_str(uint16_t, const char *);
+static void		 write_fid(uint32_t);
 static void		 excmd(const char **, int);
 
 static const char	*pp_qid_type(uint8_t);
@@ -365,6 +367,13 @@ write_str(uint16_t len, const char *str)
 }
 
 static void
+write_fid(uint32_t fid)
+{
+	fid = htole32(fid);
+	bufferevent_write(bev, &fid, sizeof(fid));
+}
+
+static void
 excmd(const char **argv, int argc)
 {
 	uint32_t	 len, fid;
@@ -398,7 +407,6 @@ excmd(const char **argv, int argc)
 			log_warnx("usage: attach fid uname aname");
 			return;
 		}
-		fid = htole32(fid);
 
 		s = argv[2];
 		sl = strlen(s);
@@ -409,10 +417,8 @@ excmd(const char **argv, int argc)
 		len = HEADERSIZE + 4 + 4 + sizeof(sl) + sl + sizeof(tl) + tl;
 		write_hdr(len, Tattach, 0);
 
-		bufferevent_write(bev, &fid, sizeof(fid));
-
-		fid = htole32(NOFID);
-		bufferevent_write(bev, &fid, sizeof(fid));
+		write_fid(fid);
+		write_fid(NOFID);
 
 		write_str(sl, s);
 		write_str(tl, t);
