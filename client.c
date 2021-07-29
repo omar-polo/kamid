@@ -48,6 +48,10 @@ static int		client_send_listener(int, const void *, uint16_t);
 static void		parse_message(uint8_t *, size_t, struct np_msg_header *,
 			    uint8_t **);
 
+static void		np_header(uint32_t, uint8_t, uint16_t);
+static void		np_string(uint16_t, const char *);
+
+static void		np_version(uint16_t, uint32_t, const char *);
 static void		np_error(uint16_t, const char *);
 
 static void		handle_message(struct imsg *, size_t);
@@ -290,7 +294,7 @@ err:
 	fatalx("got invalid message");
 }
 
-static inline void
+static void
 np_header(uint32_t len, uint8_t type, uint16_t tag)
 {
 	len = htole32(len);
@@ -301,7 +305,7 @@ np_header(uint32_t len, uint8_t type, uint16_t tag)
 	evbuffer_add(evb, &tag, sizeof(tag));
 }
 
-static inline void
+static void
 np_string(uint16_t len, const char *str)
 {
 	uint16_t l = len;
