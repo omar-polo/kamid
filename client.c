@@ -390,7 +390,7 @@ handle_message(struct imsg *imsg, size_t len)
 			slen -= dot - data;
 
 		if (slen != strlen(VERSION9P) ||
-		    memcpy(data, VERSION9P, strlen(VERSION9P)) != 0 ||
+		    memcmp(data, VERSION9P, slen) != 0 ||
 		    msize == 0) {
 			log_warnx("unknown 9P version string: [%d]\"%*s\", "
 			    "want " VERSION9P,
