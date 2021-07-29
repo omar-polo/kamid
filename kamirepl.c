@@ -72,6 +72,9 @@ static void		 repl_error(struct bufferevent *, short, void *);
 static void		 write_hdr(uint32_t, uint8_t, uint16_t);
 static void		 write_str(uint16_t, const char *);
 static void		 write_fid(uint32_t);
+
+static void		 excmd_version(const char **, int);
+static void		 excmd_attach(const char **, int);
 static void		 excmd(const char **, int);
 
 static const char	*pp_qid_type(uint8_t);
@@ -375,58 +378,86 @@ write_fid(uint32_t fid)
 	bufferevent_write(bev, &fid, sizeof(fid));
 }
 
+/* version [version-str] */
 static void
-excmd(const char **argv, int argc)
+excmd_version(const char **argv, int argc)
+{
+	uint32_t	 len, msize;
+	uint16_t	 sl;
+	const char	*s;
+
+	s = VERSION9P;
+	if (argc == 2)
+		s = argv[1];
+
+	sl = strlen(s);
+
+	/* msize[4] version[s] */
+	len = 4 + sizeof(sl) + sl;
+	write_hdr(len, Tversion, NOTAG);
+
+	msize = htole32(MSIZE9P);
+	bufferevent_write(bev, &msize, sizeof(msize));
+
+	write_str(sl, s);
+}
+
+/* attach fid uname aname */
+static void
+excmd_attach(const char **argv, int argc)
 {
 	uint32_t	 len, fid;
 	uint16_t	 sl, tl;
 	const char	*s, *t, *errstr;
 
-	/* ``version'' [``version string''] */
-	if (!strcmp(*argv, "version")) {
-		s = VERSION9P;
-		if (argc == 2)
-			s = argv[1];
+	if (argc != 4)
+		goto usage;
 
-		/* msize[4] version[s] */
-		sl = strlen(s);
-		len = 4 + sizeof(sl) + sl;
-		write_hdr(len, Tversion, NOTAG);
-
-		len = htole32(MSIZE9P);
-		bufferevent_write(bev, &len, sizeof(len));
-
-		write_str(sl, s);
-	} else if (!strcmp(*argv, "attach")) {
-		/* ``attach'' fid uname aname */
-		if (argc != 4) {
-			log_warnx("usage: attach fid uname aname");
-			return;
-		}
-
-		fid = strtonum(argv[1], 0, UINT32_MAX, &errstr);
-		if (errstr != NULL) {
-			log_warnx("usage: attach fid uname aname");
-			return;
-		}
-
-		s = argv[2];
-		sl = strlen(s);
-		t = argv[3];
-		tl = strlen(t);
-
-		/* fid[4] afid[4] uname[s] aname[s] */
-		len = 4 + 4 + sizeof(sl) + sl + sizeof(tl) + tl;
-		write_hdr(len, Tattach, 0);
-
-		write_fid(fid);
-		write_fid(NOFID);
-
-		write_str(sl, s);
-		write_str(tl, t);
-	} else {
-		log_warnx("Unknown command %s", *argv);
+        fid = strtonum(argv[1], 0, UINT32_MAX, &errstr);
+	if (errstr != NULL) {
+		log_warnx("fid is %s: %s", errstr, argv[1]);
+		return;
 	}
+
+	s = argv[2];
+	sl = strlen(s);
+	t = argv[3];
+	tl = strlen(t);
+
+	/* fid[4] afid[4] uname[s] aname[s] */
+	len = 4 + 4 + sizeof(sl) + sl + sizeof(tl) + tl;
+	write_hdr(len, Tattach, 0);
+	write_fid(fid);
+	write_fid(NOFID);
+	write_str(sl, s);
+	write_str(tl, t);
+
+	return;
+
+usage:
+	log_warnx("usage: attach fid uname aname");
+}
+
+static void
+excmd(const char **argv, int argc)
+{
+	struct cmd {
+		const char	*name;
+		void		(*fn)(const char **, int);
+	} cmds[] = {
+		{"version", excmd_version},
+		{"attach", excmd_attach},
+	};
+	size_t i;
+
+	for (i = 0; i < sizeof(cmds)/sizeof(cmds[0]); ++i) {
+		if (!strcmp(cmds[i].name, argv[0])) {
+			cmds[i].fn(argv, argc);
+			return;
+		}
+	}
+
+	log_warnx("Unknown command %s", *argv);
 }
 
 static const char *
