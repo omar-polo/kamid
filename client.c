@@ -282,7 +282,7 @@ parse_message(uint8_t *data, size_t len, struct np_msg_header *hdr,
 
 	hdr->tag = le32toh(hdr->tag);
 
-	*cnt = data + sizeof(*hdr);
+	*cnt = data + HEADERSIZE;
 	return;
 
 err:
