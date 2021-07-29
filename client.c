@@ -389,6 +389,9 @@ handle_message(struct imsg *imsg, size_t len)
 		if (slen != strlen(VERSION9P) ||
 		    memcpy(data, VERSION9P, strlen(VERSION9P)) != 0 ||
 		    msize == 0) {
+			log_warnx("unknown 9P version string: \"%*s\", "
+			    "want " VERSION9P,
+			    slen, data);
 			np_version(hdr.tag, MSIZE9P, "unknown");
 			return;
 		}
