@@ -50,6 +50,7 @@ static void		parse_message(uint8_t *, size_t, struct np_msg_header *,
 
 static void		np_header(uint32_t, uint8_t, uint16_t);
 static void		np_string(uint16_t, const char *);
+static void		do_send(void);
 
 static void		np_version(uint16_t, uint32_t, const char *);
 static void		np_error(uint16_t, const char *);
@@ -315,7 +316,7 @@ np_string(uint16_t len, const char *str)
 	evbuffer_add(evb, str, l);
 }
 
-static inline void
+static void
 do_send(void)
 {
 	size_t len;
