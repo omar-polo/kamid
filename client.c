@@ -380,7 +380,7 @@ handle_message(struct imsg *imsg, size_t len)
 
 		memcpy(&msize, data, sizeof(msize));
 		data += sizeof(msize);
-		len = le32toh(len);
+		msize = le32toh(msize);
 
 		memcpy(&slen, data, sizeof(slen));
 		data += sizeof(slen);
