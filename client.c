@@ -359,6 +359,7 @@ handle_message(struct imsg *imsg, size_t len)
 	struct np_msg_header	 hdr;
 	uint16_t		 slen;
 	uint8_t			*data, *dot;
+	char			 buf[16];
 
 	parse_message(imsg->data, len, &hdr, &data);
 	len -= HEADERSIZE;
@@ -392,9 +393,12 @@ handle_message(struct imsg *imsg, size_t len)
 		if (slen != strlen(VERSION9P) ||
 		    memcmp(data, VERSION9P, slen) != 0 ||
 		    msize == 0) {
-			log_warnx("unknown 9P version string: [%d]\"%*s\", "
+			slen = MIN(slen, sizeof(buf)-1);
+			memcpy(buf, data, slen);
+			buf[slen] = '\0';
+			log_warnx("unknown 9P version string: [%d]\"%s\", "
 			    "want " VERSION9P,
-			    slen, slen, data);
+			    slen, buf);
 			np_version(hdr.tag, MSIZE9P, "unknown");
 			return;
 		}
