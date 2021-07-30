@@ -811,8 +811,6 @@ main(int argc, char **argv)
 	event_set(&bev->ev_read, sock, EV_READ, tls_readcb, bev);
 	event_set(&bev->ev_write, sock, EV_WRITE, tls_writecb, bev);
 
-	bufferevent_setwatermark(bev, EV_READ|EV_WRITE,
-	    sizeof(struct np_msg_header), 0);
 	bufferevent_enable(bev, EV_READ|EV_WRITE);
 
 	mark_nonblock(0);
