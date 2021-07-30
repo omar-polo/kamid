@@ -490,6 +490,9 @@ excmd(const char **argv, int argc)
 	};
 	size_t i;
 
+	if (argc == 0)
+		return;
+
 	for (i = 0; i < sizeof(cmds)/sizeof(cmds[0]); ++i) {
 		if (!strcmp(cmds[i].name, argv[0])) {
 			cmds[i].fn(argv, argc);
