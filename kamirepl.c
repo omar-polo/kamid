@@ -70,6 +70,7 @@ static void		 client_error(struct bufferevent *, short, void *);
 static void		 repl_read(struct bufferevent *, void *);
 static void		 repl_error(struct bufferevent *, short, void *);
 static void		 write_hdr(uint32_t, uint8_t, uint16_t);
+static void		 write_hdr_auto(uint32_t, uint8_t);
 static void		 write_str(uint16_t, const char *);
 static void		 write_fid(uint32_t);
 
@@ -362,6 +363,17 @@ write_hdr(uint32_t len, uint8_t type, uint16_t tag)
 }
 
 static void
+write_hdr_auto(uint32_t len, uint8_t type)
+{
+        static uint16_t tag = 0;
+
+	if (++tag == NOTAG)
+		++tag;
+
+	write_hdr(len, type, tag);
+}
+
+static void
 write_str(uint16_t len, const char *str)
 {
 	uint16_t l = len;
@@ -426,7 +438,7 @@ excmd_attach(const char **argv, int argc)
 
 	/* fid[4] afid[4] uname[s] aname[s] */
 	len = 4 + 4 + sizeof(sl) + sl + sizeof(tl) + tl;
-	write_hdr(len, Tattach, 0);
+	write_hdr_auto(len, Tattach);
 	write_fid(fid);
 	write_fid(NOFID);
 	write_str(sl, s);
