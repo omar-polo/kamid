@@ -763,8 +763,7 @@ handle_message(struct imsg *imsg, size_t len)
 	    hdr.len, hdr.type, pp_msg_type(hdr.type), hdr.tag);
 
 #if DEBUG_PACKETS
-	printf("====================\n");
-	printf("hexdump:\n");
+	printf("\nhexdump:\n");
 	for (i = 0; i < len; ++i) {
 		if (i != 0 && i % 8 == 0)
 			printf(" ");
