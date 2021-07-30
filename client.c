@@ -610,8 +610,11 @@ tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	}
 
 	/* fid[4] afid[4] uname[s] aname[s] */
-	if (len < 4 + 4 + 2 + 2)
+	if (len < 12) {		/* minimal case, uname and aname both "" */
+		log_warnx("%s: expecting at least %d bytes; got %zu",
+		    __func__, 12, len);
 		goto err;
+	}
 
 	memcpy(&fid, data, sizeof(fid));
 	data += sizeof(fid);
@@ -627,8 +630,11 @@ tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	len -= sizeof(size);
 	size = le16toh(size);
 
-	if (len < size + 2)
+	if (len < size + 2) {
+		log_warnx("%s: expecting at least %d bytes for "
+		    "uname and aname; got %zu", __func__, size + 2, len);
 		goto err;
+	}
 
 	data += size;
 	len -= size;
@@ -638,8 +644,12 @@ tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	len -= sizeof(size);
 	size = le16toh(size);
 
-	if (len != size)
+	if (len != size) {
+		log_warnx("%s: expecting %d bytes for aname, got %zu",
+		    __func__, size, len);
 		goto err;
+	}
+
 	if (len > sizeof(aname)-1) {
 		np_error(hdr->tag, "name too long");
 		return;
