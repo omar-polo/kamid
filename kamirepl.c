@@ -73,10 +73,12 @@ static void		 write_hdr(uint32_t, uint8_t, uint16_t);
 static void		 write_hdr_auto(uint32_t, uint8_t);
 static void		 write_str(uint16_t, const char *);
 static void		 write_fid(uint32_t);
+static void		 write_tag(uint16_t);
 
 static void		 excmd_version(const char **, int);
 static void		 excmd_attach(const char **, int);
 static void		 excmd_clunk(const char **, int);
+static void		 excmd_flush(const char **, int);
 static void		 excmd(const char **, int);
 
 static const char	*pp_qid_type(uint8_t);
@@ -391,6 +393,13 @@ write_fid(uint32_t fid)
 	bufferevent_write(bev, &fid, sizeof(fid));
 }
 
+static void
+write_tag(uint16_t tag)
+{
+	tag = htole16(tag);
+	bufferevent_write(bev, &tag, sizeof(tag));
+}
+
 /* version [version-str] */
 static void
 excmd_version(const char **argv, int argc)
@@ -477,6 +486,33 @@ usage:
 	log_warnx("usage: clunk fid");
 }
 
+/* flush oldtag */
+static void
+excmd_flush(const char **argv, int argc)
+{
+	uint32_t	 len;
+	uint16_t	 oldtag;
+	const char	*errstr;
+
+	if (argc != 2)
+		goto usage;
+
+	oldtag = strtonum(argv[1], 0, UINT16_MAX, &errstr);
+	if (errstr != NULL) {
+		log_warnx("oldtag is %s: %s", errstr, argv[1]);
+		return;
+	}
+
+	/* oldtag[2] */
+	len = sizeof(oldtag);
+	write_hdr_auto(len, Tflush);
+	write_tag(oldtag);
+	return;
+
+usage:
+	log_warnx("usage: flush oldtag");
+}
+
 static void
 excmd(const char **argv, int argc)
 {
@@ -487,6 +523,7 @@ excmd(const char **argv, int argc)
 		{"version",	excmd_version},
 		{"attach",	excmd_attach},
 		{"clunk",	excmd_clunk},
+		{"flush",	excmd_flush},
 	};
 	size_t i;
 
@@ -595,6 +632,11 @@ pp_msg(uint32_t len, uint8_t type, uint16_t tag, const uint8_t *d)
 	case Rclunk:
 		if (len != 0)
 			printf("invalid Rclunk: %"PRIu32" extra bytes", len);
+		break;
+
+	case Rflush:
+		if (len != 0)
+			printf("invalid Rflush: %"PRIu32" extra bytes", len);
 		break;
 
 	case Rerror:
