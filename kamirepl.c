@@ -549,6 +549,24 @@ pp_msg(uint32_t len, uint8_t type, uint16_t tag, const uint8_t *d)
 		pp_qid(d, len);
 		break;
 
+	case Rerror:
+		memcpy(&slen, d, sizeof(slen));
+		d += sizeof(slen);
+		len -= sizeof(slen);
+		slen = le16toh(slen);
+
+		if (slen != len) {
+			printf("invalid: error string length doesn't "
+			    "match.  Got %d; want %d", slen, len);
+			break;
+		}
+
+		printf("error=\"");
+		fwrite(d, 1, slen, stdout);
+		printf("\"");
+
+		break;
+
 	default:
 		printf("unknown command type");
 	}
