@@ -49,6 +49,7 @@ struct qid {
 	uint8_t			 type;
 
 	int			 fd;
+	int			 refcount;
 
 	STAILQ_ENTRY(qid)	 entries;
 };
@@ -75,7 +76,12 @@ static void		client_privdrop(const char *, const char *);
 static int		client_send_listener(int, const void *, uint16_t);
 
 static struct qid	*new_qid(int);
+static struct qid	*qid_incref(struct qid *);
+static void		 qid_decref(struct qid *);
+
 static struct fid	*new_fid(struct qid *, uint32_t);
+static struct fid	*fid_by_id(uint32_t);
+static void		 free_fid(struct fid *);
 
 static void		parse_message(uint8_t *, size_t, struct np_msg_header *,
 			    uint8_t **);
@@ -87,11 +93,13 @@ static void		do_send(void);
 
 static void		np_version(uint16_t, uint32_t, const char *);
 static void		np_attach(uint16_t, struct qid *);
+static void		np_clunk(uint16_t);
 static void		np_error(uint16_t, const char *);
 static void		np_errno(uint16_t);
 
 static void	tversion(struct np_msg_header *, const uint8_t *, size_t);
 static void	tattach(struct np_msg_header *, const uint8_t *, size_t);
+static void	tclunk(struct np_msg_header *, const uint8_t *, size_t);
 static void	handle_message(struct imsg *, size_t);
 
 ATTR_DEAD void
@@ -324,6 +332,28 @@ new_qid(int fd)
 	return qid;
 }
 
+static struct qid *
+qid_incref(struct qid *qid)
+{
+	qid->refcount++;
+	return qid;
+}
+
+static void
+qid_decref(struct qid *qid)
+{
+	if (--qid->refcount > 0)
+		return;
+
+	STAILQ_REMOVE(&qids, qid, qid, entries);
+
+	close(qid->fd);
+	free(qid);
+
+	if (STAILQ_EMPTY(&qids))
+		attached = 0;
+}
+
 static struct fid *
 new_fid(struct qid *qid, uint32_t fid)
 {
@@ -332,12 +362,34 @@ new_fid(struct qid *qid, uint32_t fid)
 	if ((f = calloc(1, sizeof(*f))) == NULL)
 		return NULL;
 
-	f->qid = qid;
+	f->qid = qid_incref(qid);
 	f->fid = fid;
 
 	STAILQ_INSERT_HEAD(&fids, f, entries);
 
 	return f;
+}
+
+static struct fid *
+fid_by_id(uint32_t fid)
+{
+	struct fid	*f;
+
+	STAILQ_FOREACH(f, &fids, entries) {
+		if (f->fid == fid)
+			return f;
+	}
+
+	return NULL;
+}
+
+static void
+free_fid(struct fid *f)
+{
+	qid_decref(f->qid);
+
+	STAILQ_REMOVE(&fids, f, fid, entries);
+	free(f);
 }
 
 static void
@@ -450,6 +502,15 @@ np_attach(uint16_t tag, struct qid *qid)
 	len += 13;
 	np_header(len, Rattach, tag);
 	np_qid(qid);
+	do_send();
+}
+
+static void
+np_clunk(uint16_t tag)
+{
+	uint32_t len = HEADERSIZE;
+
+	np_header(len, Rclunk, tag);
 	do_send();
 }
 
@@ -614,6 +675,35 @@ err:
 }
 
 static void
+tclunk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
+{
+	struct fid	*f;
+	uint32_t	 fid;
+
+	/* fid[4] */
+	if (len != 4) {
+		log_warnx("Tclunk with the wrong size: got %zu want %d",
+		    len, 4);
+		client_send_listener(IMSG_CLOSE, NULL, 0);
+		client_shutdown();
+		return;
+	}
+
+	memcpy(&fid, data, sizeof(fid));
+	data += sizeof(fid);
+	len -= sizeof(fid);
+	fid = le32toh(fid);
+
+	if ((f = fid_by_id(fid)) == NULL) {
+		np_error(hdr->tag, "invalid fid");
+		return;
+	}
+
+	free_fid(f);
+	np_clunk(hdr->tag);
+}
+
+static void
 handle_message(struct imsg *imsg, size_t len)
 {
 	struct msg {
@@ -622,6 +712,7 @@ handle_message(struct imsg *imsg, size_t len)
 	} msgs[] = {
 		{Tversion,	tversion},
 		{Tattach,	tattach},
+		{Tclunk,	tclunk},
 	};
 	struct np_msg_header	 hdr;
 	size_t			 i;
