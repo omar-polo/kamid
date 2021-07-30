@@ -537,7 +537,9 @@ tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	struct qid	*qid;
 	struct fid	*f;
 	uint32_t	 fid;
+	uint16_t	 size;
 	int		 fd;
+	char		 aname[PATH_MAX];
 
 	if (attached) {
 		np_error(hdr->tag, "already attached");
@@ -545,23 +547,55 @@ tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	}
 
 	/* fid[4] afid[4] uname[s] aname[s] */
+	if (len < 4 + 4 + 2 + 2)
+		goto err;
 
-	/* for the moment, happily ignore afid */
+	memcpy(&fid, data, sizeof(fid));
+	data += sizeof(fid);
+	len -= sizeof(fid);
+	fid = le32toh(fid);
 
-	if ((fd = open("/", O_DIRECTORY)) == -1) {
-		np_errno(hdr->tag);
+	/* skip afid */
+	data += 4;
+	len -= 4;
+
+	memcpy(&size, data, sizeof(size));
+	data += sizeof(size);
+	len -= sizeof(size);
+	size = le16toh(size);
+
+	if (len < size + 2)
+		goto err;
+
+	data += size;
+	len -= size;
+
+	memcpy(&size, data, sizeof(size));
+	data += sizeof(size);
+	len -= sizeof(size);
+	size = le16toh(size);
+
+	if (len != size)
+		goto err;
+	if (len > sizeof(aname)-1) {
+		np_error(hdr->tag, "name too long");
 		return;
 	}
+	memcpy(aname, data, len);
+	aname[len] = '\0';
+
+	if ((fd = open(aname, O_DIRECTORY)) == -1) {
+		np_errno(hdr->tag);
+		log_debug("failed to attach %s: %s", aname, strerror(errno));
+		return;
+	}
+	log_debug("attached %s", aname);
 
 	if ((qid = new_qid(fd)) == NULL) {
 		close(fd);
 		np_error(hdr->tag, "no memory");
 		return;
 	}
-
-	memcpy(&fid, data, sizeof(fid));
-	data += sizeof(fid);
-	fid = le32toh(fid);
 
 	if ((f = new_fid(qid, fid)) == NULL) {
 		close(qid->fd);
@@ -573,6 +607,10 @@ tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	np_attach(hdr->tag, qid);
 	attached = 1;
 	return;
+
+err:
+	client_send_listener(IMSG_CLOSE, NULL, 0);
+	client_shutdown();
 }
 
 static void
