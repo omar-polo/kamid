@@ -21,6 +21,7 @@
 #include <endian.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <pwd.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -64,7 +65,7 @@ static struct imsgev	*iev_listener;
 static struct evbuffer	*evb;
 static uint32_t		 peerid;
 
-static int		 handshaked;
+static int		 handshaked, attached;
 uint32_t		 msize;
 
 static ATTR_DEAD void	client_shutdown(void);
@@ -536,6 +537,11 @@ handle_message(struct imsg *imsg, size_t len)
 		break;
 
 	case Tattach:
+		if (attached) {
+			np_error(hdr.tag, "already attached");
+			return;
+		}
+
 		/* fid[4] afid[4] uname[s] aname[s] */
 
 		/* for the moment, happily ignore afid */
@@ -562,7 +568,10 @@ handle_message(struct imsg *imsg, size_t len)
 			return;
 		}
 
+		log_debug("qid{path=%"PRIu64" vers=%d type=0x%x}",
+		    qid->path, qid->vers, qid->type);
 		np_attach(hdr.tag, qid);
+		attached = 1;
 
 		break;
 
