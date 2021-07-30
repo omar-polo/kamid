@@ -21,7 +21,6 @@
 #include <endian.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <inttypes.h>
 #include <pwd.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -91,7 +90,9 @@ static void		np_attach(uint16_t, struct qid *);
 static void		np_error(uint16_t, const char *);
 static void		np_errno(uint16_t);
 
-static void		handle_message(struct imsg *, size_t);
+static void	tversion(struct np_msg_header *, const uint8_t *, size_t);
+static void	tattach(struct np_msg_header *, const uint8_t *, size_t);
+static void	handle_message(struct imsg *, size_t);
 
 ATTR_DEAD void
 client(int debug, int verbose)
@@ -476,16 +477,112 @@ np_errno(uint16_t tag)
 }
 
 static void
+tversion(struct np_msg_header *hdr, const uint8_t *data, size_t len)
+{
+	uint16_t	 slen;
+	const uint8_t	*dot;
+	char		 buf[16];
+
+	if (handshaked)
+		goto err;
+
+	/* msize[4] + version[s] */
+	if (len < 6)
+		goto err;
+
+	memcpy(&msize, data, sizeof(msize));
+	data += sizeof(msize);
+	msize = le32toh(msize);
+
+	memcpy(&slen, data, sizeof(slen));
+	data += sizeof(slen);
+	slen = le16toh(slen);
+
+	if ((dot = memchr(data, '.', slen)) != NULL)
+		slen -= dot - data;
+
+	if (slen != strlen(VERSION9P) ||
+	    memcmp(data, VERSION9P, slen) != 0 ||
+	    msize == 0) {
+		slen = MIN(slen, sizeof(buf)-1);
+		memcpy(buf, data, slen);
+		buf[slen] = '\0';
+		log_warnx("unknown 9P version string: [%d]\"%s\", "
+		    "want " VERSION9P,
+		    slen, buf);
+		np_version(hdr->tag, MSIZE9P, "unknown");
+		return;
+	}
+
+	handshaked = 1;
+
+	msize = MIN(msize, MSIZE9P);
+	client_send_listener(IMSG_MSIZE, &msize, sizeof(msize));
+	np_version(hdr->tag, msize, VERSION9P);
+	return;
+
+err:
+	client_send_listener(IMSG_CLOSE, NULL, 0);
+	client_shutdown();
+}
+
+static void
+tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
+{
+	struct qid	*qid;
+	struct fid	*f;
+	uint32_t	 fid;
+	int		 fd;
+
+	if (attached) {
+		np_error(hdr->tag, "already attached");
+		return;
+	}
+
+	/* fid[4] afid[4] uname[s] aname[s] */
+
+	/* for the moment, happily ignore afid */
+
+	if ((fd = open("/", O_DIRECTORY)) == -1) {
+		np_errno(hdr->tag);
+		return;
+	}
+
+	if ((qid = new_qid(fd)) == NULL) {
+		close(fd);
+		np_error(hdr->tag, "no memory");
+		return;
+	}
+
+	memcpy(&fid, data, sizeof(fid));
+	data += sizeof(fid);
+	fid = le32toh(fid);
+
+	if ((f = new_fid(qid, fid)) == NULL) {
+		close(qid->fd);
+		free(qid);
+		np_error(hdr->tag, "no memory");
+		return;
+	}
+
+	np_attach(hdr->tag, qid);
+	attached = 1;
+	return;
+}
+
+static void
 handle_message(struct imsg *imsg, size_t len)
 {
+	struct msg {
+		uint8_t	 type;
+		void	(*fn)(struct np_msg_header *, const uint8_t *, size_t);
+	} msgs[] = {
+		{Tversion,	tversion},
+		{Tattach,	tattach},
+	};
 	struct np_msg_header	 hdr;
-	struct qid		*qid;
-	struct fid		*f;
-	int			 fd;
-	uint32_t		 fid;
-	uint16_t		 slen;
-	uint8_t			*data, *dot;
-	char			 buf[16];
+	size_t			 i;
+	uint8_t			*data;
 
 	parse_message(imsg->data, len, &hdr, &data);
 	len -= HEADERSIZE;
@@ -493,97 +590,19 @@ handle_message(struct imsg *imsg, size_t len)
 	log_debug("got request: len=%d type=%d[%s] tag=%d",
 	    hdr.len, hdr.type, pp_msg_type(hdr.type), hdr.tag);
 
-	if (!handshaked && hdr.type != Tversion)
-		goto err;
-
-	switch (hdr.type) {
-	case Tversion:
-		if (handshaked)
-			goto err;
-
-		/* msize[4] + version[s] */
-		if (len < 6)
-			goto err;
-
-		memcpy(&msize, data, sizeof(msize));
-		data += sizeof(msize);
-		msize = le32toh(msize);
-
-		memcpy(&slen, data, sizeof(slen));
-		data += sizeof(slen);
-		slen = le16toh(slen);
-
-		if ((dot = memchr(data, '.', slen)) != NULL)
-			slen -= dot - data;
-
-		if (slen != strlen(VERSION9P) ||
-		    memcmp(data, VERSION9P, slen) != 0 ||
-		    msize == 0) {
-			slen = MIN(slen, sizeof(buf)-1);
-			memcpy(buf, data, slen);
-			buf[slen] = '\0';
-			log_warnx("unknown 9P version string: [%d]\"%s\", "
-			    "want " VERSION9P,
-			    slen, buf);
-			np_version(hdr.tag, MSIZE9P, "unknown");
-			return;
-		}
-
-		handshaked = 1;
-
-		msize = MIN(msize, MSIZE9P);
-		client_send_listener(IMSG_MSIZE, &msize, sizeof(msize));
-		np_version(hdr.tag, msize, VERSION9P);
-		break;
-
-	case Tattach:
-		if (attached) {
-			np_error(hdr.tag, "already attached");
-			return;
-		}
-
-		/* fid[4] afid[4] uname[s] aname[s] */
-
-		/* for the moment, happily ignore afid */
-
-		if ((fd = open("/", O_DIRECTORY)) == -1) {
-			np_errno(hdr.tag);
-                        return;
-		}
-
-		if ((qid = new_qid(fd)) == NULL) {
-                        close(fd);
-			np_error(hdr.tag, "no memory");
-			return;
-		}
-
-		memcpy(&fid, data, sizeof(fid));
-		data += sizeof(fid);
-		fid = le32toh(fid);
-
-		if ((f = new_fid(qid, fid)) == NULL) {
-			close(qid->fd);
-			free(qid);
-			np_error(hdr.tag, "no memory");
-			return;
-		}
-
-		log_debug("qid{path=%"PRIu64" vers=%d type=0x%x}",
-		    qid->path, qid->vers, qid->type);
-		np_attach(hdr.tag, qid);
-		attached = 1;
-
-		break;
-
-	default:
-		/* for now, log the request and reply with an error. */
-		np_error(hdr.tag, "Not supported.");
-		break;
+	if (!handshaked && hdr.type != Tversion) {
+		client_send_listener(IMSG_CLOSE, NULL, 0);
+		client_shutdown();
+		return;
 	}
 
-	return;
+	for (i = 0; i < sizeof(msgs)/sizeof(msgs[0]); ++i) {
+		if (msgs[i].type != hdr.type)
+			continue;
 
-err:
-	client_send_listener(IMSG_CLOSE, NULL, 0);
-	client_shutdown();
+		msgs[i].fn(&hdr, data, len);
+		return;
+	}
+
+	np_error(hdr.tag, "Not supported.");
 }
