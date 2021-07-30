@@ -94,12 +94,14 @@ static void		do_send(void);
 static void		np_version(uint16_t, uint32_t, const char *);
 static void		np_attach(uint16_t, struct qid *);
 static void		np_clunk(uint16_t);
+static void		np_flush(uint16_t);
 static void		np_error(uint16_t, const char *);
 static void		np_errno(uint16_t);
 
 static void	tversion(struct np_msg_header *, const uint8_t *, size_t);
 static void	tattach(struct np_msg_header *, const uint8_t *, size_t);
 static void	tclunk(struct np_msg_header *, const uint8_t *, size_t);
+static void	tflush(struct np_msg_header *, const uint8_t *, size_t);
 static void	handle_message(struct imsg *, size_t);
 
 ATTR_DEAD void
@@ -515,6 +517,15 @@ np_clunk(uint16_t tag)
 }
 
 static void
+np_flush(uint16_t tag)
+{
+	uint32_t len = HEADERSIZE;
+
+	np_header(len, Rflush, tag);
+	do_send();
+}
+
+static void
 np_error(uint16_t tag, const char *errstr)
 {
 	uint32_t len = HEADERSIZE;
@@ -704,6 +715,28 @@ tclunk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 }
 
 static void
+tflush(struct np_msg_header *hdr, const uint8_t *data, size_t len)
+{
+	uint16_t	oldtag;
+
+	/*
+	 * We're doing only synchronous I/O.  Tflush is implemented
+	 * only because it's illegal to reply with a Rerror.
+	 */
+
+	/* oldtag[2] */
+	if (len != sizeof(oldtag)) {
+		log_warnx("Tclunk with the wrong size: got %zu want %zu",
+		    len, sizeof(oldtag));
+		client_send_listener(IMSG_CLOSE, NULL, 0);
+		client_shutdown();
+		return;
+	}
+
+	np_flush(hdr->tag);
+}
+
+static void
 handle_message(struct imsg *imsg, size_t len)
 {
 	struct msg {
@@ -713,6 +746,7 @@ handle_message(struct imsg *imsg, size_t len)
 		{Tversion,	tversion},
 		{Tattach,	tattach},
 		{Tclunk,	tclunk},
+		{Tflush,	tflush},
 	};
 	struct np_msg_header	 hdr;
 	size_t			 i;
