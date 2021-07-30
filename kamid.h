@@ -149,6 +149,7 @@ struct np_msg_header {
 #define NOTAG		((uint16_t)~0U)
 #define NOFID		((uint32_t)~0U)
 #define NOUID		(-1)
+#define QIDSIZE		13
 
 /* bits in Qid.type */
 #define QTDIR		0x80		/* type bit for directories */
