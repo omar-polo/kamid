@@ -436,6 +436,8 @@ err:
 static void
 np_header(uint32_t len, uint8_t type, uint16_t tag)
 {
+	len += HEADERSIZE;
+
 	len = htole32(len);
 	tag = htole16(tag);
 
@@ -482,15 +484,13 @@ do_send(void)
 static void
 np_version(uint16_t tag, uint32_t msize, const char *version)
 {
-	uint32_t len = HEADERSIZE;
 	uint16_t l;
 
 	l = strlen(version);
-	len += sizeof(msize) + sizeof(l) + l;
 
 	msize = htole32(msize);
 
-	np_header(len, Rversion, tag);
+	np_header(sizeof(msize) + sizeof(l) + l, Rversion, tag);
 	evbuffer_add(evb, &msize, sizeof(msize));
 	np_string(l, version);
 	do_send();
@@ -499,10 +499,7 @@ np_version(uint16_t tag, uint32_t msize, const char *version)
 static void
 np_attach(uint16_t tag, struct qid *qid)
 {
-	uint32_t len = HEADERSIZE;
-
-	len += 13;
-	np_header(len, Rattach, tag);
+	np_header(QIDSIZE, Rattach, tag);
 	np_qid(qid);
 	do_send();
 }
@@ -510,31 +507,25 @@ np_attach(uint16_t tag, struct qid *qid)
 static void
 np_clunk(uint16_t tag)
 {
-	uint32_t len = HEADERSIZE;
-
-	np_header(len, Rclunk, tag);
+	np_header(0, Rclunk, tag);
 	do_send();
 }
 
 static void
 np_flush(uint16_t tag)
 {
-	uint32_t len = HEADERSIZE;
-
-	np_header(len, Rflush, tag);
+	np_header(0, Rflush, tag);
 	do_send();
 }
 
 static void
 np_error(uint16_t tag, const char *errstr)
 {
-	uint32_t len = HEADERSIZE;
 	uint16_t l;
 
 	l = strlen(errstr);
-	len += sizeof(l) + l;
 
-	np_header(len, Rerror, tag);
+	np_header(sizeof(l) + l, Rerror, tag);
 	np_string(l, errstr);
 	do_send();
 }
