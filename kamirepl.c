@@ -499,7 +499,7 @@ pp_qid(const uint8_t *d, uint32_t len)
 
 	type = *d;
 
-	printf("qid{path=%"PRIu64" version=%"PRIu32" type=0x%x\"%s\"",
+	printf("qid{path=%"PRIu64" version=%"PRIu32" type=0x%x\"%s\"}",
 	    path, vers, type, pp_qid_type(type));
 }
 
