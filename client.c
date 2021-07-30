@@ -465,9 +465,9 @@ np_qid(struct qid *qid)
 	path = htole64(qid->path);
 	vers = htole32(qid->vers);
 
-	evbuffer_add(evb, &path, sizeof(path));
-	evbuffer_add(evb, &vers, sizeof(vers));
 	evbuffer_add(evb, &qid->type, sizeof(qid->type));
+	evbuffer_add(evb, &vers, sizeof(vers));
+	evbuffer_add(evb, &path, sizeof(path));
 }
 
 static void
