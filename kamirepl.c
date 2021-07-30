@@ -76,6 +76,7 @@ static void		 write_fid(uint32_t);
 
 static void		 excmd_version(const char **, int);
 static void		 excmd_attach(const char **, int);
+static void		 excmd_clunk(const char **, int);
 static void		 excmd(const char **, int);
 
 static const char	*pp_qid_type(uint8_t);
@@ -450,6 +451,32 @@ usage:
 	log_warnx("usage: attach fid uname aname");
 }
 
+/* clunk fid */
+static void
+excmd_clunk(const char **argv, int argc)
+{
+	uint32_t	 len, fid;
+	const char	*errstr;
+
+	if (argc != 2)
+		goto usage;
+
+	fid = strtonum(argv[1], 0, UINT32_MAX, &errstr);
+	if (errstr != NULL) {
+		log_warnx("fid is %s: %s", errstr, argv[1]);
+		return;
+	}
+
+	/* fid[4] */
+	len = sizeof(fid);
+	write_hdr_auto(len, Tclunk);
+	write_fid(fid);
+	return;
+
+usage:
+	log_warnx("usage: clunk fid");
+}
+
 static void
 excmd(const char **argv, int argc)
 {
@@ -459,6 +486,7 @@ excmd(const char **argv, int argc)
 	} cmds[] = {
 		{"version",	excmd_version},
 		{"attach",	excmd_attach},
+		{"clunk",	excmd_clunk},
 	};
 	size_t i;
 
@@ -559,6 +587,11 @@ pp_msg(uint32_t len, uint8_t type, uint16_t tag, const uint8_t *d)
 
 	case Rattach:
 		pp_qid(d, len);
+		break;
+
+	case Rclunk:
+		if (len != 0)
+			printf("invalid Rclunk: %"PRIu32" extra bytes", len);
 		break;
 
 	case Rerror:
