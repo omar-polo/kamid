@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #include <pwd.h>
 #include <signal.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
@@ -33,6 +34,8 @@
 #include "log.h"
 #include "sandbox.h"
 #include "utils.h"
+
+#define DEBUG_PACKETS 0
 
 #if HAVE_ARC4RANDOM
 # define RANDID() arc4random()
@@ -758,6 +761,19 @@ handle_message(struct imsg *imsg, size_t len)
 
 	log_debug("got request: len=%d type=%d[%s] tag=%d",
 	    hdr.len, hdr.type, pp_msg_type(hdr.type), hdr.tag);
+
+#if DEBUG_PACKETS
+	printf("====================\n");
+	printf("hexdump:\n");
+	for (i = 0; i < len; ++i) {
+		if (i != 0 && i % 8 == 0)
+			printf(" ");
+		if (i != 0 && i % 16 == 0)
+			printf("\n");
+		printf("%02x ", data[i]);
+	}
+	printf("\n\n");
+#endif
 
 	if (!handshaked && hdr.type != Tversion) {
 		client_send_listener(IMSG_CLOSE, NULL, 0);
