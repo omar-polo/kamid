@@ -470,10 +470,15 @@ np_error(uint16_t tag, const char *errstr)
 static void
 np_errno(uint16_t tag)
 {
+	int saved_errno;
 	char buf[64];
+
+	saved_errno = errno;
 
 	strerror_r(errno, buf, sizeof(buf));
 	np_error(tag, buf);
+
+	errno = saved_errno;
 }
 
 static void
