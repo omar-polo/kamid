@@ -530,7 +530,7 @@ pp_msg(uint32_t len, uint8_t type, uint16_t tag, const uint8_t *d)
 		memcpy(&slen, d, sizeof(slen));
 		d += sizeof(slen);
 		len -= sizeof(slen);
-		slen = le32toh(slen);
+		slen = le16toh(slen);
 
 		if (len != slen) {
 			printf("invalid: version string length doesn't "
