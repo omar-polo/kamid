@@ -569,15 +569,15 @@ pp_qid(const uint8_t *d, uint32_t len)
 		return;
 	}
 
-	memcpy(&path, d, sizeof(path));
-	d += sizeof(path);
-	path = le64toh(path);
+	type = *d++;
 
 	memcpy(&vers, d, sizeof(vers));
 	d += sizeof(vers);
 	vers = le64toh(vers);
 
-	type = *d;
+	memcpy(&path, d, sizeof(path));
+	d += sizeof(path);
+	path = le64toh(path);
 
 	printf("qid{path=%"PRIu64" version=%"PRIu32" type=0x%x\"%s\"}",
 	    path, vers, type, pp_qid_type(type));
