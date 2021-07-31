@@ -46,6 +46,7 @@ CLEANFILES =		compile_flags.txt
 
 dist_doc_DATA =		README.md LICENSE
 dist_man5_MANS =	kamid.conf.5
+dist_man7_MANS =	9p.7
 dist_man8_MANS =	kamictl.8 kamid.8
 
 compile_flags.txt:

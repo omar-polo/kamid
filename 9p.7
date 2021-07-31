@@ -1,0 +1,141 @@
+.\" Copyright (c) 2021 Omar Polo <op@omarpolo.com>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate: July 30 2021 $
+.Dt 9P 7
+.Os
+.Sh NAME
+.Nm 9P
+.Nd Simple Distributed File System
+.Sh DESCRIPTION
+.Nm
+is a protocol for distributed file systems.
+It provides primitives to manage
+.Pq create, read, write and delete
+sets of files remotely.
+These files don't necessarily need to be actually stored on a disk,
+they may be, for example, synthesise on demand from external sources.
+.Pp
+A client transmits requests
+.Pq T-messages
+to a server, which returns replies
+.Pq R-messages
+to the client.
+The combined acts of transmitting a request of a particular type and
+receiving a reply is called a transaction of that type.
+.Pp
+Each message consists of a sequence of bytes grouped in one, two, four
+and eight-byte integer fields transmitted in little-endian order
+.Pq least significant byte first .
+Data items of larger or variable lengths are represented by a two-byte
+field specifying the length followed by the actual data.
+Text strings are represented in a similar manner, with a two-byte
+count and the sequence of UNICODE codepoints encoded in UTF-8.
+Text strings in 9p are not NUL-Terminated.
+The NUL-terminator is illegal in all text strings and thus excluded
+from paths, user names and so on.
+.Pp
+Fields are hereafter denoted as
+.Bd -literal -offset indent
+type[1] tag[2] fid[4]
+.Ed
+.Pp
+to indicate that type is one byte long, tag two and fid four.
+Strings are denoted as name[s] and are sent on the wire as
+.Bd -literal -offset indent
+length[2] string[length]
+.Ed
+.Pp
+A qid, described later, is a 13-byte value that is sent on the wire as
+.Bd -literal -offset indent
+type[1] version[4] path[8]
+.Ed
+.Pp
+Every message has a header with the following fields:
+.Bd -literal -offset indent
+len[4] type[1] tag[2]
+.Ed
+.Pp
+where len indicates the overall length of the message, including
+itself; type is one byte indicating the type of the message and the
+tag is a number choosen by the client to indicate uniquely the
+request.
+Then follows the optional body of the message whose structure depends
+on the the type of the message itself.
+.Pp
+The message types are as follows:
+.Bl -tag -width versionxx
+.It Ic version
+Negotiate the version and maximum message size.
+.Bd -literal
+len[4] Tversion tag[2] msize[4] version[s]
+len[4] Rversion tag[2] msize[4] version[s]
+.Ed
+.Pp
+The
+.Ic version
+request must be the first message sent, and the client cannot issue
+further requests until it has received the Rversion reply.
+.Cm tag
+should be
+.Dv NOTAG
+.Pq \-1
+The client suggest a
+.Cm msize
+.Pq the maximum size for packets
+and the version they're using, the server replies with a
+.Cm msize
+smaller or equal to the one proposed by the client.
+The version string must always begin with the two character
+.Dq 9P .
+If the server don't understand the client required version, should
+reply with a Rversion using the version string
+.Dq unknown
+and not use a Rerror.
+.It Ic attach
+Populate the namespace
+.Bd -literal
+len[4] Tattach tag[2] fid[4] afid[4] uname[s] aname[s]
+len[4] Rattach tag[2] qid[13]
+.Ed
+.It Ic clunk
+Close fids.
+.Bd -literal
+len[4] Tclunk tag[2] fid[4]
+len[4] Rclunk tag[2]
+.Ed
+.It Ic error
+Return an error string
+.Bd -literal
+len[4] Rerror tag[2] ename[s]
+.Ed
+.Pp
+The Rerror message is used to return an error string describing the
+failure of a request.
+.Cm tag
+indicates the failed request.
+Note that there isn't a Terror, and it's not possible for a server to
+reply to a
+.Ic Tversion
+using Rerror.
+.It Ic flush
+Abort an ongoing operation.
+.Bd -literal
+len[4] Tflush tag[2] oldtag[2]
+len[4] Rflush tag[2]
+.Ed
+.El
+.Sh SEE ALSO
+.Xr utf8 7 ,
+.Xr kamid 8
