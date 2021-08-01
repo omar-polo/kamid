@@ -72,6 +72,7 @@ static void		 repl_error(struct bufferevent *, short, void *);
 static void		 write_hdr(uint32_t, uint8_t, uint16_t);
 static void		 write_hdr_auto(uint32_t, uint8_t);
 static void		 write_str(uint16_t, const char *);
+static void		 write_str_auto(const char *);
 static void		 write_fid(uint32_t);
 static void		 write_tag(uint16_t);
 
@@ -79,6 +80,7 @@ static void		 excmd_version(const char **, int);
 static void		 excmd_attach(const char **, int);
 static void		 excmd_clunk(const char **, int);
 static void		 excmd_flush(const char **, int);
+static void		 excmd_walk(const char ** , int);
 static void		 excmd(const char **, int);
 
 static const char	*pp_qid_type(uint8_t);
@@ -387,6 +389,12 @@ write_str(uint16_t len, const char *str)
 }
 
 static void
+write_str_auto(const char *str)
+{
+	write_str(strlen(str), str);
+}
+
+static void
 write_fid(uint32_t fid)
 {
 	fid = htole32(fid);
@@ -513,6 +521,50 @@ usage:
 	log_warnx("usage: flush oldtag");
 }
 
+/* walk fid newfid wnames... */
+static void
+excmd_walk(const char **argv, int argc)
+{
+	int		 i;
+	uint32_t	 len;
+	uint16_t	 fid, newfid;
+	const char	*errstr;
+
+	if (argc < 3)
+		goto usage;
+
+	/* fid[4] newfid[4] nwname[2] nwname*(wname[s]) */
+
+	/* two bytes for wnames count */
+	len = sizeof(fid) + sizeof(newfid) + 2;
+	for (i = 3; i < argc; ++i)
+		len += 2 + strlen(argv[i]);
+
+	fid = strtonum(argv[1], 0, UINT32_MAX, &errstr);
+	if (errstr != NULL) {
+		log_warnx("fid is %s: %s", errstr, argv[1]);
+		return;
+	}
+
+	newfid = strtonum(argv[2], 0, UINT32_MAX, &errstr);
+	if (errstr != NULL) {
+		log_warnx("newfid is %s: %s", errstr, argv[1]);
+		return;
+	}
+
+	write_hdr_auto(len, Twalk);
+	write_fid(fid);
+	write_fid(newfid);
+	write_tag(argc - 3);
+	for (i = 3; i < argc; ++i)
+		write_str_auto(argv[i]);
+
+	return;
+
+usage:
+	log_warnx("usage: walk fid newfid wnames...");
+}
+
 static void
 excmd(const char **argv, int argc)
 {
@@ -524,6 +576,7 @@ excmd(const char **argv, int argc)
 		{"attach",	excmd_attach},
 		{"clunk",	excmd_clunk},
 		{"flush",	excmd_flush},
+		{"walk",	excmd_walk},
 	};
 	size_t i;
 
