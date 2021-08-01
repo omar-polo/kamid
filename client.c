@@ -34,7 +34,7 @@
 #include "sandbox.h"
 #include "utils.h"
 
-#define DEBUG_PACKETS 1
+#define DEBUG_PACKETS 0
 
 STAILQ_HEAD(qidhead, qid) qids;
 struct qid {
