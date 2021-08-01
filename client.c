@@ -48,6 +48,7 @@ struct qid {
 	int			 fd;
 	int			 refcount;
 
+	char			 fpath[PATH_MAX];
 	struct stat		 sb;
 
 	STAILQ_ENTRY(qid)	 entries;
@@ -75,8 +76,11 @@ static void		client_privdrop(const char *, const char *);
 
 static int		client_send_listener(int, const void *, uint16_t);
 
+static void		 qid_set_from_sb(struct qid *);
 static int		 qid_update_stat(struct qid *);
+static struct qid	*qid_from_copy(const struct qid *);
 static struct qid	*qid_from_fd(int);
+static struct qid	*qid_from_path(const char *);
 static struct qid	*qid_incref(struct qid *);
 static void		 qid_decref(struct qid *);
 
@@ -326,12 +330,10 @@ client_send_listener(int type, const void *data, uint16_t len)
 	return ret;
 }
 
-static int
-qid_update_stat(struct qid *qid)
+/* set qid fields from the sb field */
+static void
+qid_set_from_sb(struct qid *qid)
 {
-	if (fstat(qid->fd, &qid->sb) == -1)
-		return -1;
-
 	qid->path = qid->sb.st_ino;
 
 	/*
@@ -346,8 +348,37 @@ qid_update_stat(struct qid *qid)
 		qid->type = QTDIR;
 	else if (S_ISLNK(qid->sb.st_mode))
 		qid->type = QTSYMLINK;
+}
 
+/* update qid info */
+static int
+qid_update_stat(struct qid *qid)
+{
+	if (fstat(qid->fd, &qid->sb) == -1)
+		return -1;
+
+	qid_set_from_sb(qid);
 	return 0;
+}
+
+/* create a new qid by copying info from an existing one */
+static struct qid *
+qid_from_copy(const struct qid *qid)
+{
+	struct qid *q;
+
+	if ((q = calloc(1, sizeof(*q))) == NULL)
+		return NULL;
+	q->fd = -1;
+
+	memcpy(q->fpath, qid->fpath, sizeof(q->fpath));
+
+	memcpy(&q->sb, &qid->sb, sizeof(q->sb));
+	memcpy(&q->path, &qid->path, sizeof(q->path));
+	memcpy(&q->vers, &qid->vers, sizeof(q->vers));
+	memcpy(&q->type, &qid->type, sizeof(q->type));
+
+	return q;
 }
 
 /* creates a qid given a fd */
@@ -362,7 +393,29 @@ qid_from_fd(int fd)
 	qid->fd = fd;
 	qid_update_stat(qid);
 
-        STAILQ_INSERT_HEAD(&qids, qid, entries);
+	STAILQ_INSERT_HEAD(&qids, qid, entries);
+
+	return qid;
+}
+
+static struct qid *
+qid_from_path(const char *path)
+{
+	struct qid *qid;
+
+	if ((qid = calloc(1, sizeof(*qid))) == NULL)
+		return NULL;
+
+	qid->fd = -1;
+
+	if (stat(path, &qid->sb) == -1) {
+		free(qid);
+		return NULL;
+	}
+
+	qid_set_from_sb(qid);
+
+	STAILQ_INSERT_HEAD(&qids, qid, entries);
 
 	return qid;
 }
@@ -720,7 +773,6 @@ tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	struct qid	*qid;
 	struct fid	*f;
 	uint32_t	 fid, afid;
-	int		 fd;
 	char		 aname[PATH_MAX];
 
 	if (attached) {
@@ -751,22 +803,15 @@ tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 
-	if ((fd = open(aname, O_DIRECTORY)) == -1) {
+	if ((qid = qid_from_path(aname)) == NULL) {
 		np_errno(hdr->tag);
 		log_debug("failed to attach %s: %s", aname, strerror(errno));
 		return;
 	}
 	log_debug("attached %s", aname);
 
-	if ((qid = qid_from_fd(fd)) == NULL) {
-		close(fd);
-		np_error(hdr->tag, "no memory");
-		return;
-	}
-
 	if ((f = new_fid(qid, fid)) == NULL) {
-		close(qid->fd);
-		free(qid);
+		qid_decref(qid);
 		np_error(hdr->tag, "no memory");
 		return;
 	}
@@ -827,12 +872,12 @@ tflush(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 static void
 twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 {
-	struct qid	*qid, wqid[MAXWELEM];
+	struct qid	*qid, wqid[MAXWELEM] = {0};
 	struct fid	*f, *nf;
 	uint32_t	 fid, newfid;
 	uint16_t	 nwname;
-	int		 fd, nfd, nwqid = 0;
-	char		 path[PATH_MAX+1];
+	int		 nwqid = 0;
+	char		 wnam[PATH_MAX+1], path[PATH_MAX+1];
 
 	/* fid[4] newfid[4] nwname[2] nwname*(wname[s]) */
 	if (len < 10) {
@@ -881,12 +926,20 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 
-	memset(wqid, 0, sizeof(wqid));
+	if (f->iomode != 0) {
+		np_error(hdr->tag, "fid already opened for I/O");
+		return;
+	}
 
-	qid = f->qid;
-	fd = qid->fd;
+	if (f->qid->type != QTDIR) {
+		np_error(hdr->tag, "fid doesn't represent a directory");
+		return;
+	}
+
+	strlcpy(path, f->qid->fpath, sizeof(path));
+
 	for (nwqid = 0; nwqid < nwname; nwqid++) {
-		switch (NPREADSTR("wname", path, sizeof(path), &data, &len)) {
+		switch (NPREADSTR("wname", wnam, sizeof(wnam), &data, &len)) {
 		case READSTRERR:
 			goto err;
 		case READSTRTRUNC:
@@ -894,25 +947,19 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 			return;
 		}
 
-		if ((nfd = openat(fd, path, O_RDONLY)) == -1) {
+		strlcat(path, "/", sizeof(path));
+		strlcat(path, wnam, sizeof(path));
+
+		if (stat(path, &wqid[nwqid].sb) == -1) {
 			if (nwqid == 0)
 				np_errno(hdr->tag);
 			else
 				np_walk(hdr->tag, nwqid, wqid);
-			if (fd != qid->fd)
-				close(fd);
 			return;
 		}
-
-		wqid[nwqid].fd = nfd;
-		qid_update_stat(wqid + nwqid);
-
-		if (fd != qid->fd)
-			close(fd);
-		fd = nfd;
 	}
 
-        if ((qid = qid_from_fd(fd)) == NULL)
+        if ((qid = qid_from_path(path)) == NULL)
 		fatal("qid_from_fd");
 
 	if (nf == NULL) {
