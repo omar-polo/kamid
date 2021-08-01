@@ -545,8 +545,7 @@ static void
 excmd_walk(const char **argv, int argc)
 {
 	int		 i;
-	uint32_t	 len;
-	uint16_t	 fid, newfid;
+	uint32_t	 len, fid, newfid;
 	const char	*errstr;
 
 	if (argc < 3)
