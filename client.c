@@ -677,7 +677,7 @@ tversion(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	if (handshaked)
 		goto err;
 
-	/* msize[4] + version[s] */
+	/* msize[4] version[s] */
 	if (!NPREAD32("msize", &msize, &data, &len))
 		goto err;
 
