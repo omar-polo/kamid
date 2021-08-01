@@ -34,7 +34,7 @@
 #include "sandbox.h"
 #include "utils.h"
 
-#define DEBUG_PACKETS 0
+#define DEBUG_PACKETS 1
 
 STAILQ_HEAD(qidhead, qid) qids;
 struct qid {
@@ -89,6 +89,7 @@ static void		 free_fid(struct fid *);
 static void		parse_message(const uint8_t *, size_t,
 			    struct np_msg_header *, uint8_t **);
 
+static void		np_write16(uint16_t);
 static void		np_header(uint32_t, uint8_t, uint16_t);
 static void		np_string(uint16_t, const char *);
 static void		np_qid(struct qid *);
@@ -507,6 +508,13 @@ err:
 }
 
 static void
+np_write16(uint16_t x)
+{
+	x = htole16(x);
+	evbuffer_add(evb, &x, sizeof(x));
+}
+
+static void
 np_header(uint32_t len, uint8_t type, uint16_t tag)
 {
 	len += HEADERSIZE;
@@ -601,8 +609,9 @@ np_walk(uint16_t tag, int nwqid, struct qid *wqid)
 {
 	int i;
 
-	np_header(QIDSIZE * nwqid, Rwalk, tag);
-
+	/* two bytes for the counter */
+	np_header(2 + QIDSIZE * nwqid, Rwalk, tag);
+	np_write16(nwqid);
 	for (i = 0; i < nwqid; ++i)
 		np_qid(wqid + i);
 
@@ -907,8 +916,8 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		 */
 
 		if (nf == NULL) {
-			if ((nf = new_fid(f->qid, newfid)))
-				fatal("new_fid");
+			if ((nf = new_fid(f->qid, newfid)) == NULL)
+				fatal("new_fid duplication");
 		}
 
 		np_walk(hdr->tag, 1, f->qid);
