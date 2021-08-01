@@ -287,6 +287,10 @@ client_read(struct bufferevent *bev, void *data)
 		memcpy(&len, EVBUFFER_DATA(src), sizeof(len));
 		len = le32toh(len);
 
+		if (len < HEADERSIZE)
+			fatal("incoming message is too small! (%d bytes)",
+			    len);
+
 		if (len > EVBUFFER_LENGTH(src))
 			return;
 
