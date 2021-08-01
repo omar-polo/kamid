@@ -879,13 +879,6 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	int		 nwqid = 0;
 	char		 wnam[PATH_MAX+1], path[PATH_MAX+1];
 
-	/* fid[4] newfid[4] nwname[2] nwname*(wname[s]) */
-	if (len < 10) {
-                log_warnx("Twalk with the wrong size: got %zu want %d",
-		    len, 10);
-                goto err;
-	}
-
 	if (!NPREAD32("fid", &fid, &data, &len)       ||
 	    !NPREAD32("newfid", &newfid, &data, &len) ||
 	    !NPREAD16("nwname", &nwname, &data, &len))
