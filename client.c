@@ -84,8 +84,8 @@ static struct fid	*new_fid(struct qid *, uint32_t);
 static struct fid	*fid_by_id(uint32_t);
 static void		 free_fid(struct fid *);
 
-static void		parse_message(uint8_t *, size_t, struct np_msg_header *,
-			    uint8_t **);
+static void		parse_message(const uint8_t *, size_t,
+			    struct np_msg_header *, uint8_t **);
 
 static void		np_header(uint32_t, uint8_t, uint16_t);
 static void		np_string(uint16_t, const char *);
@@ -99,6 +99,24 @@ static void		np_flush(uint16_t);
 static void		np_walk(uint16_t, int, struct qid *);
 static void		np_error(uint16_t, const char *);
 static void		np_errno(uint16_t);
+
+static int	np_read8(const char *, const char *, uint8_t *,
+		    const uint8_t **, size_t *);
+static int	np_read16(const char *, const char *, uint16_t *,
+		    const uint8_t **, size_t *);
+static int	np_read32(const char *, const char *, uint32_t *,
+		    const uint8_t **, size_t *);
+
+#define READSTRERR	-1
+#define READSTRTRUNC	-2
+static int	np_readstr(const char *, const char *, char *, size_t,
+		    const uint8_t **, size_t *);
+
+#define NPREAD8(f, dst, src, len)  np_read8(__func__, f, dst, src, len)
+#define NPREAD16(f, dst, src, len) np_read16(__func__, f, dst, src, len)
+#define NPREAD32(f, dst, src, len) np_read32(__func__, f, dst, src, len)
+
+#define NPREADSTR(f, b, bl, src, len) np_readstr(__func__, f, b, bl, src, len)
 
 static void	tversion(struct np_msg_header *, const uint8_t *, size_t);
 static void	tattach(struct np_msg_header *, const uint8_t *, size_t);
@@ -410,26 +428,17 @@ free_fid(struct fid *f)
 }
 
 static void
-parse_message(uint8_t *data, size_t len, struct np_msg_header *hdr,
+parse_message(const uint8_t *data, size_t len, struct np_msg_header *hdr,
     uint8_t **cnt)
 {
-	if (len < 4)
+	size_t olen = len;
+
+	if (!NPREAD32("len", &hdr->len, &data, &len) ||
+	    !NPREAD8("type", &hdr->type, &data, &len) ||
+	    !NPREAD16("tag", &hdr->tag, &data, &len))
 		goto err;
 
-	memcpy(&hdr->len, data, sizeof(hdr->len));
-	data += sizeof(hdr->len);
-
-	memcpy(&hdr->type, data, sizeof(hdr->type));
-	data += sizeof(hdr->type);
-
-	memcpy(&hdr->tag, data, sizeof(hdr->tag));
-	data += sizeof(hdr->tag);
-
-	hdr->len = le32toh(hdr->len);
-	/* type is one byte long, no endianness issues */
-	hdr->tag = le16toh(hdr->tag);
-
-	if (len != hdr->len)
+	if (olen != hdr->len)
 		goto err;
 
 	if (hdr->type < Tversion ||
@@ -440,7 +449,7 @@ parse_message(uint8_t *data, size_t len, struct np_msg_header *hdr,
 
 	hdr->tag = le32toh(hdr->tag);
 
-	*cnt = data;
+	*cnt = (uint8_t *)data;
 	return;
 
 err:
@@ -577,49 +586,127 @@ np_errno(uint16_t tag)
 	errno = saved_errno;
 }
 
+static int
+np_read8(const char *t, const char *f, uint8_t *dst, const uint8_t **src,
+    size_t *len)
+{
+	if (*len < sizeof(*dst)) {
+		log_warnx("%s: wanted %zu bytes for the %s field but only "
+		    "%zu are available.", t, sizeof(*dst), f, *len);
+		return -1;
+	}
+
+	memcpy(dst, *src, sizeof(*dst));
+	*src += sizeof(*dst);
+	*len -= sizeof(*dst);
+
+	return 1;
+}
+
+static int
+np_read16(const char *t, const char *f, uint16_t *dst, const uint8_t **src,
+    size_t *len)
+{
+	if (*len < sizeof(*dst)) {
+		log_warnx("%s: wanted %zu bytes for the %s field but only "
+		    "%zu are available.", t, sizeof(*dst), f, *len);
+		return -1;
+	}
+
+	memcpy(dst, *src, sizeof(*dst));
+	*src += sizeof(*dst);
+	*len -= sizeof(*dst);
+	*dst = le16toh(*dst);
+
+	return 1;
+}
+
+static int
+np_read32(const char *t, const char *f, uint32_t *dst, const uint8_t **src,
+    size_t *len)
+{
+	if (*len < sizeof(*dst)) {
+		log_warnx("%s: wanted %zu bytes for the %s field but only "
+		    "%zu are available.", t, sizeof(*dst), f, *len);
+		return -1;
+	}
+
+	memcpy(dst, *src, sizeof(*dst));
+	*src += sizeof(*dst);
+	*len -= sizeof(*dst);
+	*dst = le32toh(*dst);
+
+	return 1;
+}
+
+static int
+np_readstr(const char *t, const char *f, char *res, size_t reslen,
+    const uint8_t **src, size_t *len)
+{
+	uint16_t	sl;
+	char		buf[32];
+
+	strlcpy(buf, f, sizeof(buf));
+	strlcat(buf, "-len", sizeof(buf));
+
+	if (!np_read16(t, buf, &sl, src, len))
+		return READSTRERR;
+
+	if (*len < sl) {
+		log_warnx("%s: wanted %d bytes for the %s field but only "
+		    "%zu are available.", t, sl, f, *len);
+		return READSTRERR;
+	}
+
+	if (*len > reslen-1)
+		return READSTRTRUNC;
+
+	memcpy(res, *src, sl);
+	res[sl] = '\0';
+	*src += sl;
+	*len -= sl;
+
+	return 0;
+}
+
 static void
 tversion(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 {
-	uint16_t	 slen;
-	const uint8_t	*dot;
-	char		 buf[16];
+	char *dot, version[32];
 
 	if (handshaked)
 		goto err;
 
 	/* msize[4] + version[s] */
-	if (len < 6)
+	if (!NPREAD32("msize", &msize, &data, &len))
 		goto err;
 
-	memcpy(&msize, data, sizeof(msize));
-	data += sizeof(msize);
-	msize = le32toh(msize);
-
-	memcpy(&slen, data, sizeof(slen));
-	data += sizeof(slen);
-	slen = le16toh(slen);
-
-	if ((dot = memchr(data, '.', slen)) != NULL)
-		slen -= dot - data;
-
-	if (slen != strlen(VERSION9P) ||
-	    memcmp(data, VERSION9P, slen) != 0 ||
-	    msize == 0) {
-		slen = MIN(slen, sizeof(buf)-1);
-		memcpy(buf, data, slen);
-		buf[slen] = '\0';
-		log_warnx("unknown 9P version string: [%d]\"%s\", "
-		    "want " VERSION9P,
-		    slen, buf);
-		np_version(hdr->tag, MSIZE9P, "unknown");
-		return;
+	switch (NPREADSTR("version", version, sizeof(version), &data, &len)) {
+	case READSTRERR:
+		goto err;
+	case READSTRTRUNC:
+		log_warnx("9P version string too long, truncated");
+		goto mismatch;
 	}
 
-	handshaked = 1;
+	if ((dot = strchr(version, '.')) != NULL)
+		*dot = '\0';
 
+	if (strcmp(version, VERSION9P) != 0 ||
+	    msize == 0)
+		goto mismatch;
+
+	/* version matched */
+	handshaked = 1;
 	msize = MIN(msize, MSIZE9P);
 	client_send_listener(IMSG_MSIZE, &msize, sizeof(msize));
 	np_version(hdr->tag, msize, VERSION9P);
+	return;
+
+mismatch:
+	log_warnx("unknown 9P version string: \"%s\", want "VERSION9P,
+	    version);
+	np_version(hdr->tag, MSIZE9P, "unknown");
 	return;
 
 err:
@@ -632,8 +719,7 @@ tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 {
 	struct qid	*qid;
 	struct fid	*f;
-	uint32_t	 fid;
-	uint16_t	 size;
+	uint32_t	 fid, afid;
 	int		 fd;
 	char		 aname[PATH_MAX];
 
@@ -643,52 +729,27 @@ tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	}
 
 	/* fid[4] afid[4] uname[s] aname[s] */
-	if (len < 12) {		/* minimal case, uname and aname both "" */
-		log_warnx("%s: expecting at least %d bytes; got %zu",
-		    __func__, 12, len);
+
+	if (!NPREAD32("fid", &fid, &data, &len) ||
+	    !NPREAD32("afid", &afid, &data, &len))
 		goto err;
-	}
 
-	memcpy(&fid, data, sizeof(fid));
-	data += sizeof(fid);
-	len -= sizeof(fid);
-	fid = le32toh(fid);
-
-	/* skip afid */
-	data += 4;
-	len -= 4;
-
-	memcpy(&size, data, sizeof(size));
-	data += sizeof(size);
-	len -= sizeof(size);
-	size = le16toh(size);
-
-	if (len < size + 2) {
-		log_warnx("%s: expecting at least %d bytes for "
-		    "uname and aname; got %zu", __func__, size + 2, len);
+	/* read the uname but don't actually use it */
+	switch (NPREADSTR("uname", aname, sizeof(aname), &data, &len)) {
+	case READSTRERR:
 		goto err;
-	}
-
-	data += size;
-	len -= size;
-
-	memcpy(&size, data, sizeof(size));
-	data += sizeof(size);
-	len -= sizeof(size);
-	size = le16toh(size);
-
-	if (len != size) {
-		log_warnx("%s: expecting %d bytes for aname, got %zu",
-		    __func__, size, len);
-		goto err;
-	}
-
-	if (len > sizeof(aname)-1) {
+	case READSTRTRUNC:
 		np_error(hdr->tag, "name too long");
 		return;
 	}
-	memcpy(aname, data, len);
-	aname[len] = '\0';
+
+	switch (NPREADSTR("aname", aname, sizeof(aname), &data, &len)) {
+	case READSTRERR:
+		goto err;
+	case READSTRTRUNC:
+		np_error(hdr->tag, "name too long");
+		return;
+	}
 
 	if ((fd = open(aname, O_DIRECTORY)) == -1) {
 		np_errno(hdr->tag);
@@ -726,18 +787,11 @@ tclunk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	uint32_t	 fid;
 
 	/* fid[4] */
-	if (len != 4) {
-		log_warnx("Tclunk with the wrong size: got %zu want %d",
-		    len, 4);
+	if (!NPREAD32("fid", &fid, &data, &len)) {
 		client_send_listener(IMSG_CLOSE, NULL, 0);
 		client_shutdown();
 		return;
 	}
-
-	memcpy(&fid, data, sizeof(fid));
-	data += sizeof(fid);
-	len -= sizeof(fid);
-	fid = le32toh(fid);
 
 	if ((f = fid_by_id(fid)) == NULL) {
 		np_error(hdr->tag, "invalid fid");
@@ -787,20 +841,10 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
                 goto err;
 	}
 
-	memcpy(&fid, data, sizeof(fid));
-	data += sizeof(fid);
-	len -= sizeof(fid);
-	fid = le32toh(fid);
-
-	memcpy(&newfid, data, sizeof(newfid));
-	data += sizeof(newfid);
-	len -= sizeof(newfid);
-	newfid = le32toh(newfid);
-
-	memcpy(&nwname, data, sizeof(nwname));
-	data += sizeof(nwname);
-	len -= sizeof(nwname);
-	nwname = le16toh(nwname);
+	if (!NPREAD32("fid", &fid, &data, &len)       ||
+	    !NPREAD32("newfid", &newfid, &data, &len) ||
+	    !NPREAD16("nwname", &nwname, &data, &len))
+		goto err;
 
 	if (nwname > MAXWELEM) {
 		log_warnx("Twalk: more than %d path elements: %d",
@@ -842,32 +886,13 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	qid = f->qid;
 	fd = qid->fd;
 	for (nwqid = 0; nwqid < nwname; nwqid++) {
-                if (len < 2) {
-			log_warnx("Twalk: not enough space for the %d-th "
-			    "string length", nwqid);
+		switch (NPREADSTR("wname", path, sizeof(path), &data, &len)) {
+		case READSTRERR:
 			goto err;
-		}
-
-		memcpy(&sl, data, sizeof(sl));
-		data += sizeof(sl);
-		len -= sizeof(sl);
-		sl = le16toh(sl);
-
-		if (len < sl) {
-			log_warnx("Twalk: want %d bytes for the %d-th wname "
-			    "but only %zu are remaining", sl, nwqid, len);
-			goto err;
-		}
-
-		if (sl > PATH_MAX) {
+		case READSTRTRUNC:
 			np_error(hdr->tag, "wname too long");
 			return;
 		}
-
-		memcpy(path, data, sl);
-		data += sl;
-		len -= sl;
-		path[sl] = '\0';
 
 		if ((nfd = openat(fd, path, O_RDONLY)) == -1) {
 			if (nwqid == 0)
