@@ -830,7 +830,7 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	struct qid	*qid, wqid[MAXWELEM];
 	struct fid	*f, *nf;
 	uint32_t	 fid, newfid;
-	uint16_t	 nwname, sl;
+	uint16_t	 nwname;
 	int		 fd, nfd, nwqid = 0;
 	char		 path[PATH_MAX+1];
 
