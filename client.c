@@ -76,7 +76,7 @@ static void		client_privdrop(const char *, const char *);
 static int		client_send_listener(int, const void *, uint16_t);
 
 static int		 qid_update_stat(struct qid *);
-static struct qid	*new_qid(int);
+static struct qid	*qid_from_fd(int);
 static struct qid	*qid_incref(struct qid *);
 static void		 qid_decref(struct qid *);
 
@@ -352,7 +352,7 @@ qid_update_stat(struct qid *qid)
 
 /* creates a qid given a fd */
 static struct qid *
-new_qid(int fd)
+qid_from_fd(int fd)
 {
 	struct qid	*qid;
 
@@ -758,7 +758,7 @@ tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	}
 	log_debug("attached %s", aname);
 
-	if ((qid = new_qid(fd)) == NULL) {
+	if ((qid = qid_from_fd(fd)) == NULL) {
 		close(fd);
 		np_error(hdr->tag, "no memory");
 		return;
@@ -912,8 +912,8 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		fd = nfd;
 	}
 
-        if ((qid = new_qid(fd)) == NULL)
-		fatal("new_qid");
+        if ((qid = qid_from_fd(fd)) == NULL)
+		fatal("qid_from_fd");
 
 	if (nf == NULL) {
 		if ((nf = new_fid(qid, newfid)) == NULL)
