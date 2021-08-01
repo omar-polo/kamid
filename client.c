@@ -865,7 +865,7 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	} else
 		nf = NULL;
 
-	/* duplicate fid */
+	/* special case: fid duplication */
 	if (nwqid == 0) {
 		/*
 		 * TODO: should we forbid fids duplication when fid ==
