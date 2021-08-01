@@ -710,6 +710,36 @@ pp_msg(uint32_t len, uint8_t type, uint16_t tag, const uint8_t *d)
 			printf("invalid Rflush: %"PRIu32" extra bytes", len);
 		break;
 
+	case Rwalk:
+		if (len < 2) {
+			printf("invaild Rwalk: less than two bytes (%d)",
+			    (int)len);
+			break;
+		}
+
+		memcpy(&slen, d, sizeof(slen));
+		d += sizeof(slen);
+		len -= sizeof(slen);
+		slen = le16toh(slen);
+
+		if (len != QIDSIZE * slen) {
+			printf("invalid Rwalk: wanted %d bytes for %d qids "
+			    "but got %"PRIu32" bytes instead",
+			    QIDSIZE*slen, slen, len);
+			break;
+		}
+
+		printf("nwqid=%"PRIu16, slen);
+
+		for (; slen != 0; slen--) {
+			printf(" ");
+			pp_qid(d, len);
+			d += QIDSIZE;
+			len -= QIDSIZE;
+		}
+
+		break;
+
 	case Rerror:
 		memcpy(&slen, d, sizeof(slen));
 		d += sizeof(slen);
