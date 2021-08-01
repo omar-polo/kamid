@@ -955,6 +955,8 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 				np_walk(hdr->tag, nwqid, wqid);
 			return;
 		}
+
+		qid_set_from_sb(&wqid[nwqid]);
 	}
 
         if ((qid = qid_from_path(path)) == NULL)
