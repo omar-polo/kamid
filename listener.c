@@ -710,6 +710,12 @@ client_read(struct bufferevent *bev, void *d)
 		    "(of wich %zu already read)",
 		    len, EVBUFFER_LENGTH(src));
 
+		if (len < HEADERSIZE) {
+			log_warnx("invalid message size %d (too low)", len);
+			client_error(bev, EVBUFFER_READ, client);
+			return;
+		}
+
 		if (len > client->msize) {
 			log_warnx("incoming message bigger than msize "
 			    "(%"PRIu32" vs %"PRIu32")", len, client->msize);
