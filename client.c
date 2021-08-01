@@ -38,13 +38,6 @@
 
 #define DEBUG_PACKETS 0
 
-#if HAVE_ARC4RANDOM
-# define RANDID() arc4random()
-#else
-static uint32_t counter;
-# define RANDID() counter++
-#endif
-
 STAILQ_HEAD(qidhead, qid) qids;
 struct qid {
 	/* definition of a qid */
@@ -55,12 +48,15 @@ struct qid {
 	int			 fd;
 	int			 refcount;
 
+	struct stat		 sb;
+
 	STAILQ_ENTRY(qid)	 entries;
 };
 
 STAILQ_HEAD(fidhead, fid) fids;
 struct fid {
 	uint32_t		 fid;
+	int			 iomode;
 	struct qid		*qid;
 	STAILQ_ENTRY(fid)	 entries;
 };
@@ -79,6 +75,7 @@ static void		client_privdrop(const char *, const char *);
 
 static int		client_send_listener(int, const void *, uint16_t);
 
+static int		 qid_update_stat(struct qid *);
 static struct qid	*new_qid(int);
 static struct qid	*qid_incref(struct qid *);
 static void		 qid_decref(struct qid *);
@@ -99,6 +96,7 @@ static void		np_version(uint16_t, uint32_t, const char *);
 static void		np_attach(uint16_t, struct qid *);
 static void		np_clunk(uint16_t);
 static void		np_flush(uint16_t);
+static void		np_walk(uint16_t, int, struct qid *);
 static void		np_error(uint16_t, const char *);
 static void		np_errno(uint16_t);
 
@@ -106,6 +104,7 @@ static void	tversion(struct np_msg_header *, const uint8_t *, size_t);
 static void	tattach(struct np_msg_header *, const uint8_t *, size_t);
 static void	tclunk(struct np_msg_header *, const uint8_t *, size_t);
 static void	tflush(struct np_msg_header *, const uint8_t *, size_t);
+static void	twalk(struct np_msg_header *, const uint8_t *, size_t);
 static void	handle_message(struct imsg *, size_t);
 
 void		client_hexdump(const char *, uint8_t *data, size_t len);
@@ -309,31 +308,41 @@ client_send_listener(int type, const void *data, uint16_t len)
 	return ret;
 }
 
+static int
+qid_update_stat(struct qid *qid)
+{
+	if (fstat(qid->fd, &qid->sb) == -1)
+		return -1;
+
+	qid->path = qid->sb.st_ino;
+
+	/*
+	 * Theoretically (and hopefully!) this should be a 64 bit
+	 * number.  Unfortunately, 9P uses 32 bit timestamps.
+	 */
+	qid->vers = qid->sb.st_mtim.tv_sec;
+
+	if (S_ISREG(qid->sb.st_mode))
+		qid->type = QTFILE;
+	else if (S_ISDIR(qid->sb.st_mode))
+		qid->type = QTDIR;
+	else if (S_ISLNK(qid->sb.st_mode))
+		qid->type = QTSYMLINK;
+
+	return 0;
+}
+
 /* creates a qid given a fd */
 static struct qid *
 new_qid(int fd)
 {
-	struct stat	 sb;
 	struct qid	*qid;
-
-	if (fstat(fd, &sb) == -1) {
-		log_warn("fstat");
-		return NULL;
-	}
 
 	if ((qid = calloc(1, sizeof(*qid))) == NULL)
 		return NULL;
 
 	qid->fd = fd;
-
-	qid->path = RANDID();
-
-	if (S_ISREG(sb.st_mode))
-		qid->type = QTFILE;
-	else if (S_ISDIR(sb.st_mode))
-		qid->type = QTDIR;
-	else if (S_ISLNK(sb.st_mode))
-		qid->type = QTSYMLINK;
+	qid_update_stat(qid);
 
         STAILQ_INSERT_HEAD(&qids, qid, entries);
 
@@ -526,6 +535,19 @@ static void
 np_flush(uint16_t tag)
 {
 	np_header(0, Rflush, tag);
+	do_send();
+}
+
+static void
+np_walk(uint16_t tag, int nwqid, struct qid *wqid)
+{
+	int i;
+
+	np_header(QIDSIZE * nwqid, Rwalk, tag);
+
+	for (i = 0; i < nwqid; ++i)
+		np_qid(wqid + i);
+
 	do_send();
 }
 
@@ -749,6 +771,144 @@ tflush(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 }
 
 static void
+twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
+{
+	struct qid	*qid, wqid[MAXWELEM];
+	struct fid	*f, *nf;
+	uint32_t	 fid, newfid;
+	uint16_t	 nwname, sl;
+	int		 fd, nfd, nwqid = 0;
+	char		 path[PATH_MAX+1];
+
+	/* fid[4] newfid[4] nwname[2] nwname*(wname[s]) */
+	if (len < 10) {
+                log_warnx("Twalk with the wrong size: got %zu want %d",
+		    len, 10);
+                goto err;
+	}
+
+	memcpy(&fid, data, sizeof(fid));
+	data += sizeof(fid);
+	len -= sizeof(fid);
+	fid = le32toh(fid);
+
+	memcpy(&newfid, data, sizeof(newfid));
+	data += sizeof(newfid);
+	len -= sizeof(newfid);
+	newfid = le32toh(newfid);
+
+	memcpy(&nwname, data, sizeof(nwname));
+	data += sizeof(nwname);
+	len -= sizeof(nwname);
+	nwname = le16toh(nwname);
+
+	if (nwname > MAXWELEM) {
+		log_warnx("Twalk: more than %d path elements: %d",
+		    MAXWELEM, nwname);
+		goto err;
+	}
+
+	if ((f = fid_by_id(fid)) == NULL) {
+		np_error(hdr->tag, "invalid fid");
+		return;
+	}
+
+	if (fid == newfid)
+		nf = f;
+	else if ((nf = fid_by_id(newfid)) != NULL) {
+		np_error(hdr->tag, "newfid already in use");
+		return;
+	} else
+		nf = NULL;
+
+	/* duplicate fid */
+	if (nwqid == 0) {
+		/*
+		 * TODO: should we forbid fids duplication when fid ==
+		 * newfid?
+		 */
+
+		if (nf == NULL) {
+			if ((nf = new_fid(f->qid, newfid)))
+				fatal("new_fid");
+		}
+
+		np_walk(hdr->tag, 1, f->qid);
+		return;
+	}
+
+	memset(wqid, 0, sizeof(wqid));
+
+	qid = f->qid;
+	fd = qid->fd;
+	for (nwqid = 0; nwqid < nwname; nwqid++) {
+                if (len < 2) {
+			log_warnx("Twalk: not enough space for the %d-th "
+			    "string length", nwqid);
+			goto err;
+		}
+
+		memcpy(&sl, data, sizeof(sl));
+		data += sizeof(sl);
+		len -= sizeof(sl);
+		sl = le16toh(sl);
+
+		if (len < sl) {
+			log_warnx("Twalk: want %d bytes for the %d-th wname "
+			    "but only %zu are remaining", sl, nwqid, len);
+			goto err;
+		}
+
+		if (sl > PATH_MAX) {
+			np_error(hdr->tag, "wname too long");
+			return;
+		}
+
+		memcpy(path, data, sl);
+		data += sl;
+		len -= sl;
+		path[sl] = '\0';
+
+		if ((nfd = openat(fd, path, O_RDONLY)) == -1) {
+			if (nwqid == 0)
+				np_errno(hdr->tag);
+			else
+				np_walk(hdr->tag, nwqid, wqid);
+			if (fd != qid->fd)
+				close(fd);
+			return;
+		}
+
+		wqid[nwqid].fd = nfd;
+		qid_update_stat(wqid + nwqid);
+
+		if (fd != qid->fd)
+			close(fd);
+		fd = nfd;
+	}
+
+        if ((qid = new_qid(fd)) == NULL)
+		fatal("new_qid");
+
+	if (nf == NULL) {
+		if ((nf = new_fid(qid, newfid)) == NULL)
+			fatal("new_fid");
+	} else {
+		/* swap qid */
+		qid_decref(nf->qid);
+		nf->qid = qid_incref(qid);
+	}
+
+	np_walk(hdr->tag, nwqid, wqid);
+
+	return;
+
+err:
+	client_send_listener(IMSG_CLOSE, NULL, 0);
+	client_shutdown();
+}
+
+static void
 handle_message(struct imsg *imsg, size_t len)
 {
 	struct msg {
@@ -759,6 +919,7 @@ handle_message(struct imsg *imsg, size_t len)
 		{Tattach,	tattach},
 		{Tclunk,	tclunk},
 		{Tflush,	tflush},
+		{Twalk,		twalk},
 	};
 	struct np_msg_header	 hdr;
 	size_t			 i;
