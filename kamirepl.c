@@ -38,6 +38,8 @@
 #include "log.h"
 #include "utils.h"
 
+#define DEBUG_PACKETS 0
+
 #define PROMPT "=% "
 
 /* flags */
@@ -237,18 +239,24 @@ tls_writecb(int fd, short event, void *d)
 {
 	struct bufferevent	*bufev = d;
 	ssize_t			 ret;
+	size_t			 len;
 	short			 what = EVBUFFER_WRITE;
+	void			*data;
 
 	if (event == EV_TIMEOUT) {
 		what |= EVBUFFER_TIMEOUT;
 		goto err;
 	}
 
-	if (EVBUFFER_LENGTH(bufev->output) != 0) {
-		ret = tls_write(ctx,
-		    EVBUFFER_DATA(bufev->output),
-		    EVBUFFER_LENGTH(bufev->output));
-		switch (ret) {
+	len = EVBUFFER_LENGTH(bufev->output);
+	if (len != 0) {
+		data = EVBUFFER_DATA(bufev->output);
+
+#if DEBUG_PACKETS
+		hexdump("outgoing msg", data, len);
+#endif
+
+		switch (ret = tls_write(ctx, data, len)) {
 		case TLS_WANT_POLLIN:
 		case TLS_WANT_POLLOUT:
 			goto retry;
@@ -275,16 +283,19 @@ err:
 }
 
 static void
-client_read(struct bufferevent *bev, void *data)
+client_read(struct bufferevent *bev, void *d)
 {
 	struct evbuffer	*src = EVBUFFER_INPUT(bev);
 	uint32_t	 len;
+	uint8_t		*data;
 
 	for (;;) {
 		if (EVBUFFER_LENGTH(src) < sizeof(len))
 			return;
 
-		memcpy(&len, EVBUFFER_DATA(src), sizeof(len));
+		data = EVBUFFER_DATA(src);
+
+		memcpy(&len, data, sizeof(len));
 		len = le32toh(len);
 
 		if (len < HEADERSIZE)
@@ -294,7 +305,11 @@ client_read(struct bufferevent *bev, void *data)
 		if (len > EVBUFFER_LENGTH(src))
 			return;
 
-		handle_9p(EVBUFFER_DATA(src), len);
+#if DEBUG_PACKETS
+		hexdump("incoming msg", data, len);
+#endif
+
+		handle_9p(data, len);
 		evbuffer_drain(src, len);
 	}
 }
