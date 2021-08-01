@@ -18,13 +18,11 @@
 
 #include <sys/stat.h>
 
-#include <ctype.h>
 #include <endian.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <pwd.h>
 #include <signal.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
@@ -128,8 +126,6 @@ static void	tclunk(struct np_msg_header *, const uint8_t *, size_t);
 static void	tflush(struct np_msg_header *, const uint8_t *, size_t);
 static void	twalk(struct np_msg_header *, const uint8_t *, size_t);
 static void	handle_message(struct imsg *, size_t);
-
-void		client_hexdump(const char *, uint8_t *data, size_t len);
 
 ATTR_DEAD void
 client(int debug, int verbose)
@@ -557,7 +553,7 @@ do_send(void)
 	data = EVBUFFER_DATA(evb);
 
 #if DEBUG_PACKETS
-	client_hexdump("outgoing packet", data, len);
+	hexdump("outgoing packet", data, len);
 #endif
 	client_send_listener(IMSG_BUF, data, len);
 	evbuffer_drain(evb, len);
@@ -991,7 +987,7 @@ handle_message(struct imsg *imsg, size_t len)
 	uint8_t			*data;
 
 #if DEBUG_PACKETS
-	client_hexdump("incoming packet", imsg->data, len);
+	hexdump("incoming packet", imsg->data, len);
 #endif
 
 	parse_message(imsg->data, len, &hdr, &data);
@@ -1015,60 +1011,4 @@ handle_message(struct imsg *imsg, size_t len)
 	}
 
 	np_error(hdr.tag, "Not supported.");
-}
-
-static void
-hexdump_ppline(int x, uint8_t *data, size_t len)
-{
-	for (; x < 50; x++)
-		printf(" ");
-
-	printf("|");
-
-	for (x = 0; x < (int)len; ++x) {
-		if (isgraph(data[x]))
-			printf("%c", data[x]);
-		else
-			printf(".");
-	}
-
-	printf("|\n");
-}
-
-void
-client_hexdump(const char *label, uint8_t *data, size_t len)
-{
-	size_t	i;
-	int	x, n;
-
-	/*
-	 * Layout:
-	 * === first block === == second block ==  |........|\n
-	 * first and second block are 8 bytes long (for a total of 48
-	 * columns), plus two separator plus two | plus 16 chars, for
-	 * a total of 68 characters.
-	 */
-
-	printf("\nhexdump \"%s\": (%zu bytes)\n", label, len);
-	for (x = 0, n = 0, i = 0; i < len; ++i) {
-		if (i != 0 && i % 8 == 0) {
-			printf(" ");
-			x++;
-		}
-
-		if (n == 16) {
-			hexdump_ppline(x, &data[i - 16], 16);
-			x = 0;
-			n = 0;
-		}
-
-		printf("%02x ", data[i]);
-		x += 3;
-		n++;
-	}
-
-	if (n != 0)
-                hexdump_ppline(x, &data[i - n], n);
-
-	printf("\n");
 }

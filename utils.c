@@ -16,6 +16,8 @@
 
 #include "compat.h"
 
+#include <ctype.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -98,4 +100,60 @@ pp_msg_type(uint8_t type)
 	case Rwstat:	return "Rwstat";
 	default:	return "unknown";
 	}
+}
+
+static void
+hexdump_ppline(int x, uint8_t *data, size_t len)
+{
+	for (; x < 50; x++)
+		printf(" ");
+
+	printf("|");
+
+	for (x = 0; x < (int)len; ++x) {
+		if (isgraph(data[x]))
+			printf("%c", data[x]);
+		else
+			printf(".");
+	}
+
+	printf("|\n");
+}
+
+void
+hexdump(const char *label, uint8_t *data, size_t len)
+{
+	size_t	i;
+	int	x, n;
+
+	/*
+	 * Layout:
+	 * === first block === == second block ==  |........|\n
+	 * first and second block are 8 bytes long (for a total of 48
+	 * columns), plus two separator plus two | plus 16 chars, for
+	 * a total of 68 characters.
+	 */
+
+	printf("\nhexdump \"%s\": (%zu bytes)\n", label, len);
+	for (x = 0, n = 0, i = 0; i < len; ++i) {
+		if (i != 0 && i % 8 == 0) {
+			printf(" ");
+			x++;
+		}
+
+		if (n == 16) {
+			hexdump_ppline(x, &data[i - 16], 16);
+			x = 0;
+			n = 0;
+		}
+
+		printf("%02x ", data[i]);
+		x += 3;
+		n++;
+	}
+
+	if (n != 0)
+                hexdump_ppline(x, &data[i - n], n);
+
+	printf("\n");
 }

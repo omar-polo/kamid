@@ -26,4 +26,6 @@ void	*xmemdup(const void *, size_t);
 
 const char	*pp_msg_type(uint8_t);
 
+void		hexdump(const char *, uint8_t *data, size_t len);
+
 #endif
