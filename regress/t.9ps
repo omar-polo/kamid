@@ -1,0 +1,29 @@
+include "lib.9ps"
+
+testing "walk with invalid fid" dir "./root" {
+	mount(0, "/")
+	walk(1, 2)
+	should-fail()
+}
+
+testing "walk with invalid fid (multiple times)" dir "./root" {
+	mount(0, "/")
+
+	repeat 10 {
+		walk(1, 2)
+		should-fail()
+	}
+}
+
+testing "walk to a directory" dir "./root" {
+	mount(0, "/")
+	walk(0, 1, "dir", "subdir")
+
+	m = recv()
+	assert(
+		m.type == Rwalk,
+		m.nwqid == 2,
+		m.wqid.0.type == QTDIR,
+		m.wqid.1.type == QTDIR,
+	)
+}

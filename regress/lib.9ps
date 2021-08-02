@@ -1,0 +1,39 @@
+proc version(msize, version) {
+	send(Tversion, notag, msize:u32, version:str)
+}
+
+proc attach(fid, afid, uname, aname) {
+	send(Tversion, iota, fid:u32, afid:u32, uname:str, aname:str)
+}
+
+proc walk(fid, newfid, ...) {
+	send(Twalk, iota, fid:u32, newfid:u32, ...:str)
+}
+
+
+
+proc mount(fid, path) {
+	version(msize, np2000)
+
+	m = recv()
+	assert(
+		m.type == Tversion,
+		m.tag == notag,
+		m.msize == msize,
+		m.version == version,
+	)
+
+	attach(fid, nofid, testuser, path)
+
+	m = recv()
+	assert (
+		m.type == Rattach
+		m.qid.type == QTDIR
+	)
+}
+
+proc should-fail() {
+	m = recv()
+	assert m.type == Rerror
+	debug("got expected error %s", m)
+}
