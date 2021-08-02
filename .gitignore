@@ -10,10 +10,13 @@ install-sh
 missing
 ylwrap
 stamp-h1
-config.status
-config.log
+config.guess
 config.h
+config.log
+config.status
+config.sub
 .deps
+*~
 
 compile_flags.txt
 
@@ -23,3 +26,6 @@ kamirepl
 *.o
 kamid.conf
 parse.c
+
+*.crt
+*.pem
