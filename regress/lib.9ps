@@ -1,3 +1,13 @@
+# constants
+
+const notag = -1:u16
+const msize = 4194304:u32	# 4*1024*1024
+const np2000 = "9P2000"
+
+
+
+# 9p protocol
+
 proc version(msize, version) {
 	send(Tversion, notag, msize:u32, version:str)
 }
@@ -11,6 +21,8 @@ proc walk(fid, newfid, ...) {
 }
 
 
+
+# useful functions
 
 proc mount(fid, path) {
 	version(msize, np2000)
