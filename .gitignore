@@ -26,6 +26,7 @@ kamirepl
 *.o
 kamid.conf
 parse.c
+np.c
 
 *.crt
 *.pem

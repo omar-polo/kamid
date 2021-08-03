@@ -1,0 +1,10 @@
+proc test() {
+	dummy(30)
+}
+
+testing "dummy" dir "./root" {
+	# test()
+	assert 5 == 7
+	assert 7 == 9
+	assert 8 == 0
+}
