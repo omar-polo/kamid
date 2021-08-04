@@ -159,7 +159,7 @@ void		 push_arg(struct op *);
 struct op	*op_funcall(struct proc *);
 
 /* proc */
-void		 add_builtin_proc(const char *name, int (*)(int));
+void		 add_builtin_proc(const char *name, int (*)(int), int);
 void		 prepare_proc(void);
 /* push_arg works on procs too */
 int		 proc_setup_body(void);

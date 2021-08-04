@@ -634,13 +634,14 @@ op_funcall(struct proc *proc)
 }
 
 void
-add_builtin_proc(const char *name, int (*fn)(int))
+add_builtin_proc(const char *name, int (*fn)(int), int argc)
 {
 	struct proc *proc;
 
 	proc = xcalloc(1, sizeof(*proc));
 	proc->name = xstrdup(name);
 	proc->nativefn = fn;
+	proc->minargs = argc;
 
 	TAILQ_INSERT_HEAD(&procs, proc, entry);
 }
