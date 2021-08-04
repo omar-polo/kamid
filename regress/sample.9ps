@@ -1,8 +1,10 @@
 const npversion = "9P2000"
 
 const (
-	one = 1
+	one = 1:u8
 	two = 2
+
+	notag = -1:u8
 
 	n = 4
 )
