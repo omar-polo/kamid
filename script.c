@@ -35,7 +35,7 @@ static struct tests tests = TAILQ_HEAD_INITIALIZER(tests);
 static struct opstacks blocks = TAILQ_HEAD_INITIALIZER(blocks);
 static struct opstacks args   = TAILQ_HEAD_INITIALIZER(args);
 
-#define STACK_HEIGHT 16
+#define STACK_HEIGHT 64
 static struct value	vstack[STACK_HEIGHT];
 static int		stackh;
 
