@@ -109,7 +109,7 @@ newop(int type)
 {
 	struct op *op;
 
-        op = xcalloc(1, sizeof(*op));
+	op = xcalloc(1, sizeof(*op));
 	op->type = type;
 
 	return op;
