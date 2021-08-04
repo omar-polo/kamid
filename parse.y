@@ -464,8 +464,79 @@ findeol(void)
 	return ERROR;
 }
 
+#if 0
+int my_yylex(void);
+
 int
 yylex(void)
+{
+	int x;
+
+	switch (x = my_yylex()) {
+	case AUTH:
+		puts("auth");
+		break;
+	case CERT:
+		puts("cert");
+		break;
+	case ERROR:
+		puts("error");
+		break;
+	case INCLUDE:
+		puts("include");
+		break;
+	case KEY:
+		puts("key");
+		break;
+	case LISTEN:
+		puts("listen");
+		break;
+	case NO:
+		puts("no");
+		break;
+	case ON:
+		puts("on");
+		break;
+	case PKI:
+		puts("pki");
+		break;
+	case PORT:
+		puts("port");
+		break;
+	case TABLE:
+		puts("table");
+		break;
+	case TLS:
+		puts("tls");
+		break;
+	case YES:
+		puts("yes");
+		break;
+	case STRING:
+		printf("string \"%s\"\n", yylval.v.string);
+		break;
+	case NUMBER:
+		printf("number %"PRIi64"\n", yylval.v.number);
+	default:
+		printf("character ");
+		if (x == '\n')
+			printf("\\n");
+		else
+			printf("%c", x);
+		printf(" [0x%x]", x);
+		printf("\n");
+		break;
+	}
+
+	return x;
+}
+
+int
+my_yylex(void)
+#else
+int
+yylex(void)
+#endif
 {
 	unsigned char	 buf[8096];
 	unsigned char	*p, *val;
