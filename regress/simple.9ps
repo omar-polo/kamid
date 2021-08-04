@@ -1,10 +1,17 @@
-proc test() {
-	dummy(30)
+const npversion = "9P2000"
+
+proc test(x) {
+	skip()
 }
 
-testing "dummy" dir "./root" {
-	test()
+testing "skip called in proc" dir "./root" {
+	foo = 5:u8
+	test(3:u32)
 	assert 5 == 7
 	assert 7 == 9
 	assert 8 == 0
+}
+
+testing "casts" dir "./root" {
+	foo = 300:u8
 }
