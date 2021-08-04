@@ -591,17 +591,33 @@ main(int argc, char **argv)
 	for (i = 1; i < argc; ++i)
 		loadfile(argv[i]);
 
+	i = 0;
 	TAILQ_FOREACH(t, &tests, entry) {
-                switch (run_test(t)) {
-		case TEST_PASSED: passed++; break;
-		case TEST_FAILED: failed++; break;
-		case TEST_SKIPPED: skipped++; break;
+		printf("===> running test \"%s\"... ", t->name);
+		fflush(stdout);
+
+		switch (run_test(t)) {
+		case TEST_PASSED:
+			printf("ok!\n");
+			passed++;
+			break;
+		case TEST_FAILED:
+			failed++;
+			/* we've already printed the failure */
+			printf("\n");
+			break;
+		case TEST_SKIPPED:
+			printf("skipped!\n");
+			skipped++;
+			break;
 		}
+
+		i++;
 	}
 
-	printf("passed = %d\n", passed);
-	printf("failed = %d\n", failed);
-	printf("skipped = %d\n", skipped);
+	printf("passed %d/%d\n", passed, i);
+	printf("failed %d\n", failed);
+	printf("skipped %d\n", skipped);
 
 	return failed != 0;
 }
