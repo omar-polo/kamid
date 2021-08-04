@@ -746,10 +746,21 @@ test_done(char *name, char *dir)
 }
 
 static int
-builtin_dummy(int argc)
+builtin_pp(int argc)
 {
-	printf("dummy! yay!\n");
+	struct value v;
+
+	popv(&v);
+	pp_val(&v);
+	printf("\n");
+
 	return EVAL_OK;
+}
+
+static int
+builtin_skip(int argc)
+{
+	return EVAL_SKIP;
 }
 
 static int
@@ -777,7 +788,8 @@ main(int argc, char **argv)
 	/* prepare the global env */
 	pushenv();
 
-	add_builtin_proc("dummy", builtin_dummy);
+	add_builtin_proc("pp", builtin_pp, 1);
+	add_builtin_proc("skip", builtin_skip, 0);
 
 	for (i = 1; i < argc; ++i)
 		loadfile(argv[i]);
