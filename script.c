@@ -415,6 +415,7 @@ eval(struct op *op)
 		break;
 
 	default:
+		fprintf(stderr, "invalid op, aborting.\n");
 		abort();
 	}
 
