@@ -205,25 +205,31 @@ op_cast(struct op *expr, int totype)
 }
 
 void
-pp_val(struct value *val)
+ppf_val(FILE *f, struct value *val)
 {
 	switch (val->type) {
 	case V_SYM:
-		printf("%s", val->v.str);
+		fprintf(f, "%s", val->v.str);
 		break;
 	case V_STR:
-		printf("\"%s\"", val->v.str);
+		fprintf(f, "\"%s\"", val->v.str);
 		break;
 	case V_NUM:
 	case V_U8:
 	case V_U16:
 	case V_U32:
-		printf("%"PRIu64, val->v.num);
+		fprintf(f, "%"PRIu64, val->v.num);
 		break;
 	default:
-		printf("<unknown value>");
+		fprintf(f, "<unknown value>");
 		break;
 	}
+}
+
+void
+pp_val(struct value *val)
+{
+	ppf_val(stdout, val);
 }
 
 int
@@ -257,6 +263,61 @@ val_eq(struct value *a, struct value *b)
 	}
 
 	return 0;
+}
+
+static inline const char *
+pp_totype(int totype)
+{
+	/*
+	 * Not all of these are valid cast type thought, including
+	 * every possibility only to aid debugging.
+	 */
+	switch (totype) {
+	case V_STR: return "str";
+	case V_SYM: return "sym";
+	case V_NUM: return "num";
+	case V_QID: return "qid";
+	case V_U8:  return "u8";
+	case V_U16: return "u16";
+	case V_U32: return "u32";
+	default:    return "unknown";
+	}
+}
+
+int
+val_cast(struct value *a, int totype)
+{
+	uint64_t v;
+
+#define NUMCAST(v, totype, max) do {				\
+		if (v >= max) {					\
+			fprintf(stderr, "Can't cast %"PRIu64	\
+			    " to %s\n", v, pp_totype(totype));	\
+			return EVAL_ERR;			\
+		}						\
+		a->type = totype;				\
+		return EVAL_OK;					\
+	} while (0)
+
+	if (!val_isnum(a)) {
+		fprintf(stderr, "Can't cast ");
+		ppf_val(stderr, a);
+		fprintf(stderr, " to type %s\n", pp_totype(totype));
+		return EVAL_ERR;
+	}
+
+	v = a->v.num;
+	switch (totype) {
+	case V_U8:  NUMCAST(v, totype, UINT8_MAX);
+	case V_U16: NUMCAST(v, totype, UINT16_MAX);
+	case V_U32: NUMCAST(v, totype, UINT32_MAX);
+	default:
+		fprintf(stderr, "Can't cast %"PRIu64" to %s\n",
+		    v, pp_totype(totype));
+		return EVAL_ERR;
+	}
+
+#undef NUMCAST
 }
 
 void
@@ -399,7 +460,12 @@ eval(struct op *op)
 		break;
 
 	case OP_CAST:
-		printf("TODO: cast value\n");
+		if ((ret = eval(op->v.cast.expr)) != EVAL_OK)
+			return ret;
+		popv(&a);
+		if ((ret = val_cast(&a, op->v.cast.totype)) != EVAL_OK)
+			return ret;
+		pushv(&a);
 		break;
 
 	case OP_CMP_EQ:

@@ -17,6 +17,10 @@
 #ifndef SCRIPT_H
 #define SCRIPT_H
 
+#include "compat.h"
+
+#include <stdio.h>
+
 #include "kamid.h"
 
 enum {
@@ -127,9 +131,11 @@ struct op	*op_lit_num(uint64_t);
 struct op	*op_cmp_eq(struct op *, struct op *);
 struct op	*op_cast(struct op *, int);
 
+void		 ppf_val(FILE *, struct value *);
 void		 pp_val(struct value *);
 int		 val_trueish(struct value *);
 int		 val_eq(struct value *, struct value *);
+int		 val_cast(struct value *, int);
 void		 pp_op(struct op *);
 void		 pp_block(struct op *);
 int		 eval(struct op *);
