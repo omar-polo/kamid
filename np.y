@@ -140,7 +140,7 @@ mconst	: consti nl | mconst consti nl ;
 
 consti	: SYMBOL '=' expr {
 		if (!global_set($1, $3)) {
-			yyerror("constant expression is not a literal");
+			yyerror("can't set %s: illegal expression", $1);
 			free($1);
 			free_op($3);
 			YYERROR;
