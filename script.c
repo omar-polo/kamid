@@ -389,11 +389,25 @@ val_isnum(struct value *a)
 		|| a->type == V_U32;
 }
 
+static inline int64_t
+val_tonum(struct value *a)
+{
+	switch (a->type) {
+	case V_NUM: return a->v.num;
+	case V_U8:  return a->v.u8;
+	case V_U16: return a->v.u16;
+	case V_U32: return a->v.u32;
+	default:
+		fprintf(stderr, "%s: given value is not a number\n", __func__);
+		abort();
+	}
+}
+
 int
 val_eq(struct value *a, struct value *b)
 {
 	if (val_isnum(a) && val_isnum(b))
-		return a->v.num == b->v.num;
+		return val_tonum(a) == val_tonum(b);
 
 	if (a->type != b->type)
 		return 0;
