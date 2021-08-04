@@ -480,6 +480,8 @@ val_cast(struct value *a, int totype)
 void
 pp_op(struct op *op)
 {
+	struct op	*aux;
+
 	switch (op->type) {
 	case OP_ASSIGN:
 		printf("%s = ", op->v.assign.name);
@@ -490,7 +492,13 @@ pp_op(struct op *op)
 		pp_op(op->v.assert);
 		break;
 	case OP_FUNCALL:
-		printf("funcall()");
+		printf("funcall %s(", op->v.funcall.proc->name);
+		for (aux = op->v.funcall.argv; aux != NULL; aux = aux->next) {
+			pp_op(aux);
+			if (aux->next != NULL)
+				printf(", ");
+		}
+		printf(")");
 		break;
 	case OP_LITERAL:
                 pp_val(&op->v.literal);
