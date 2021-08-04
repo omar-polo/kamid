@@ -508,15 +508,14 @@ proc_done(char *name)
 	proc->name = name;
 	proc->minargs = argc;
 
-        for (i = 0, op = argv; i < argc; ++i) {
+        for (i = 0, op = argv; op != NULL; ++i) {
 		proc->args[i] = xstrdup(op->v.var);
 
 		next = op->next;
-		assert(next != NULL);
-
 		free_op(op);
 		op = next;
 	}
+	assert(i == argc);
 
 	proc->body = body;
 
