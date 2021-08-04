@@ -298,7 +298,7 @@ op_lit_str(char *str)
 	struct op *op;
 
 	op = newop(OP_LITERAL);
-	op->v.literal.type = V_NUM;
+	op->v.literal.type = V_STR;
 	op->v.literal.v.str = str;
 
 	return op;
