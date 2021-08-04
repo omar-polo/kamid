@@ -1,7 +1,7 @@
 # kamid -- 9p file server daemon
 
-kamid is a FREE implementation of a 9p file server daemon for
-UNIX-like systems.
+kamid is a FREE, easy-to-use and portable implementation of a 9p file
+server daemon for UNIX-like systems.
 
 
 ## Building
@@ -37,6 +37,12 @@ table users { "SHA256:..." => "op" }
 # should be <users> but there's currently a bug in the parser so...
 listen on localhost port 1337 tls pki localhost auth < users >
 ```
+
+
+## Testing
+
+`ninepscript` is a custom DSL used to tests kamid.  It's a fairly
+simple scripting language built to simulate various scenarios.
 
 
 ## License
