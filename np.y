@@ -133,7 +133,7 @@ include : INCLUDE STRING {
 	;
 
 const	: CONST consti
-	| CONST '(' optnl mconst optnl ')'
+	| CONST '(' optnl mconst ')'
 	;
 
 mconst	: consti nl | mconst consti nl ;
@@ -218,13 +218,13 @@ block	: /* empty */
 	| block assert '\n'
 	;
 
-assert	: ASSERT check		{ block_push(op_assert($2)); }
-	/* | ASSERT '(' optnl massert ')' */
+assert	: ASSERT asserti
+	| ASSERT '(' optnl massert ')'
 	;
 
-massert	: /* empty */
-	| massert ',' optnl check	{ block_push(op_assert($4)); }
-	| check				{ block_push(op_assert($1)); }
+massert	: asserti nl | massert asserti nl ;
+
+asserti	: check			{ block_push(op_assert($1)); }
 	;
 
 test	: TESTING STRING DIR STRING {
