@@ -426,7 +426,7 @@ val_cast(struct value *a, int totype)
 	uint64_t v;
 
 #define NUMCAST(v, totype, max) do {				\
-		if (v >= max) {					\
+		if (v > max) {					\
 			fprintf(stderr, "Can't cast %"PRIu64	\
 			    " to %s\n", v, pp_totype(totype));	\
 			return EVAL_ERR;			\
