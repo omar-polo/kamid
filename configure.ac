@@ -15,9 +15,9 @@ AC_ARG_WITH([libbsd],
   [with_libbsd=auto])
 if test x"$with_libbsd" != x"no"; then
   PKG_CHECK_MODULES([libbsd], [libbsd-overlay libbsd-ctor], [
-    _save_CFLAGS="$CFLAGS"
+    _save_AM_CFLAGS="$AM_CFLAGS"
     _save_LIBS="$LIBS"
-    CFLAGS="$CFLAGS $libbsd_CFLAGS"
+    AM_CFLAGS="$AM_CFLAGS $libbsd_CFLAGS"
     LIBS="$LIBS $libbsd_LIBS"
     AC_MSG_CHECKING([if libbsd can be linked correctly])
     AC_LINK_IFELSE([AC_LANG_PROGRAM([[
@@ -25,12 +25,12 @@ if test x"$with_libbsd" != x"no"; then
   @%:@include <sys/types.h>
   ]], [[]])],[
         AC_MSG_RESULT(yes)
-        LLDP_CFLAGS="$LLDP_CFLAGS $libbsd_CFLAGS"
-        LLDP_LDFLAGS="$LLDP_LDFLAGS $libbsd_LIBS"
+        AM_CFLAGS="$AM_CFLAGS $libbsd_CFLAGS"
+        AM_LDFLAGS="$AM_LDFLAGS $libbsd_LIBS"
         with_libbsd=yes
       ],[
         AC_MSG_RESULT(no)
-        CFLAGS="$_save_CFLAGS"
+        AM_CFLAGS="$_save_AM_CFLAGS"
         LIBS="$_save_LIBS"
         if test x"$with_libbsd" = x"yes"; then
            AC_MSG_FAILURE([*** no libbsd support found])
@@ -109,7 +109,7 @@ AS_CASE([$host_os],
 	[PKG_CHECK_MODULES([libevent2], [libevent_core >= 2],
 		[
 			AC_DEFINE([HAVE_EVENT2], 1, [1 if using event2])
-			CFLAGS="$libevent2_CFLAGS $CFLAGS"
+			AM_CFLAGS="$libevent2_CFLAGS $AM_CFLAGS"
 			LIBS="$libevent2_LIBS $LIBS"
 		], [AC_MSG_ERROR([requires libevent])])])
 
@@ -122,12 +122,14 @@ AC_CHECK_LIB(util, imsg_init, [], [
 # check compiler flags
 AC_DEFUN([CC_ADD_CHECK_FLAGS], [
 	AC_MSG_CHECKING([if $CC supports $1 flag])
-	old_CFLAGS="$CFLAGS"
-	CFLAGS="$CFLAGS $1"
-	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[])],
-		AC_MSG_RESULT(yes),
+	old_AM_CFLAGS="$AM_CFLAGS"
+	AM_CFLAGS="$AM_CFLAGS $1"
+	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[])], [
+		AC_MSG_RESULT(yes)
+	], [
 		AC_MSG_RESULT(no)
-		CFLAGS="$old_CFLAGS")
+		AM_CFLAGS="$old_AM_CFLAGS"
+	])
 ])
 CC_ADD_CHECK_FLAGS([-Wall])
 CC_ADD_CHECK_FLAGS([-Wextra])
