@@ -535,21 +535,33 @@ eval(struct op *op)
 	case OP_FUNCALL:
                 /* assume airity matches */
 
-		pushenv();
-
 		proc = op->v.funcall.proc;
-		for (i = 0; i < op->v.funcall.argc; ++i) {
-			t = &op->v.funcall.argv[i];
-			if ((ret = setvar(proc->args[i], t)) != EVAL_OK)
+		if (proc->nativefn != NULL) {
+			/* push arguments on the stack */
+			for (i = 0; i < op->v.funcall.argc; ++i) {
+				t = &op->v.funcall.argv[i];
+				if ((ret = eval(t)) != EVAL_OK)
+					return ret;
+			}
+			if ((ret = proc->nativefn(op->v.funcall.argc))
+			    != EVAL_OK)
 				return ret;
+		} else {
+			pushenv();
+
+			for (i = 0; i < op->v.funcall.argc; ++i) {
+				t = &op->v.funcall.argv[i];
+				if ((ret = setvar(proc->args[i], t))
+				    != EVAL_OK)
+					return ret;
+			}
+
+			if ((ret = eval(proc->body)) != EVAL_OK)
+				return ret;
+
+			popenv();
 		}
 
-		if (proc->nativefn != NULL)
-			proc->nativefn(i);
-		else if ((ret = eval(proc->body)) != EVAL_OK)
-				return ret;
-
-		popenv();
 		break;
 
 	case OP_LITERAL:
