@@ -450,6 +450,9 @@ yylex(void)
 			; /* nop */
 
 	switch (c) {
+	case ':':
+		return c;
+		break;
 	case '\'':
 	case '\"':
 		quotec = c;
@@ -492,7 +495,7 @@ yylex(void)
 
 #define allowed_to_end_number(x) \
 	(isspace(x) || x == ')' || x == ',' || x == '/' || x == '}' \
-	    || x == '=')
+	    || x == '=' || x == ':')
 
 	if (c == '-' || isdigit(c)) {
 		do {
