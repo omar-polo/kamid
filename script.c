@@ -575,7 +575,7 @@ run_test(struct test *t)
 {
 #if DEBUG
 	puts("=====================");
-	pp_block(t->proc->body);
+	pp_block(t->body);
 	puts("=====================");
 #endif
 
