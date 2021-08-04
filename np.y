@@ -133,7 +133,14 @@ include : INCLUDE STRING {
 	}
 	;
 
-const	: CONST SYMBOL '=' literal { global_set($2, $4); };
+const	: CONST SYMBOL '=' literal {
+		if (!global_set($2, $4)) {
+			yyerror("constant expression is not a literal");
+			free($2);
+			free_op($4);
+			YYERROR;
+		}
+};
 
 var	: SYMBOL '=' expr	{ $$ = op_assign($1, $3); }	;
 varref	: SYMBOL		{ $$ = op_var($1); }		;
@@ -169,6 +176,12 @@ funcall	: procname {
 		prepare_funcall();
 	} '(' args optcomma ')' {
 		$$ = op_funcall($1);
+		if ($$->v.funcall.argc != $$->v.funcall.proc->minargs) {
+			yyerror("invalid arity for `%s'",
+			    $1->name);
+			/* TODO: recursively free $$ */
+			YYERROR;
+		}
 	}
 	;
 
