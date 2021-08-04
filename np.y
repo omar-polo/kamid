@@ -115,9 +115,6 @@ optnl		: '\n' optnl		/* zero or more newlines */
 		| /*empty*/
 		;
 
-nl		: '\n' optnl		/* one or more newlines */
-		;
-
 include : INCLUDE STRING {
 		struct file	*nfile;
 
