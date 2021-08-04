@@ -267,9 +267,9 @@ lookup(char *s)
 		{"repeat",	REPEAT},
 		{"str",		STR},
 		{"testing",	TESTING},
-		{"u8",		U8},
 		{"u16",		U16},
 		{"u32",		U32},
+		{"u8",		U8},
 	};
 	const struct keywords	*p;
 
