@@ -115,6 +115,8 @@ optnl		: '\n' optnl		/* zero or more newlines */
 		| /*empty*/
 		;
 
+nl	: '\n' optnl ;
+
 include : INCLUDE STRING {
 		struct file	*nfile;
 
@@ -130,14 +132,21 @@ include : INCLUDE STRING {
 	}
 	;
 
-const	: CONST SYMBOL '=' literal {
-		if (!global_set($2, $4)) {
+const	: CONST consti
+	| CONST '(' optnl mconst optnl ')'
+	;
+
+mconst	: consti nl | mconst consti nl ;
+
+consti	: SYMBOL '=' expr {
+		if (!global_set($1, $3)) {
 			yyerror("constant expression is not a literal");
-			free($2);
-			free_op($4);
+			free($1);
+			free_op($3);
 			YYERROR;
 		}
-};
+	}
+	;
 
 var	: SYMBOL '=' expr	{ $$ = op_assign($1, $3); }	;
 varref	: SYMBOL		{ $$ = op_var($1); }		;
