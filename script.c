@@ -555,7 +555,10 @@ test_done(char *name, char *dir)
 	test->dir = dir;
 	test->body = finalize(&blocks, NULL);
 
-	TAILQ_INSERT_HEAD(&tests, test, entry);
+	if (TAILQ_EMPTY(&tests))
+		TAILQ_INSERT_HEAD(&tests, test, entry);
+	else
+		TAILQ_INSERT_TAIL(&tests, test, entry);
 }
 
 static int
