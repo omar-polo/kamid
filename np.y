@@ -207,9 +207,13 @@ funcall	: procname {
 
 optcomma: /* empty */ | ',' ;
 
+dots	: '.' '.' '.' ;
+
 args	: /* empty */
 	| args ',' expr	{ push_arg($3); }
+	| args ',' dots	{ push_arg(op_rest()); }
 	| expr		{ push_arg($1); }
+	| dots		{ push_arg(op_rest()); }
 	;
 
 proc	: PROC SYMBOL {

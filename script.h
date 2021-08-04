@@ -51,6 +51,7 @@ struct value {
 };
 
 enum {
+	OP_REST,
 	OP_ASSIGN,
 	OP_ASSERT,
 	OP_FUNCALL,
@@ -139,6 +140,7 @@ int		 global_set(char *, struct op *);
 
 struct op	*newop(int);
 void		 free_op(struct op *);
+struct op	*op_rest(void);
 struct op	*op_assign(char *, struct op *);
 struct op	*op_assert(struct op *);
 struct op	*op_var(char *);

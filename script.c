@@ -281,6 +281,12 @@ free_op(struct op *op)
 }
 
 struct op *
+op_rest(void)
+{
+	return newop(OP_REST);
+}
+
+struct op *
 op_assign(char *sym, struct op *expr)
 {
 	struct op *op;
@@ -505,6 +511,9 @@ pp_op(struct op *op)
 	struct op	*aux;
 
 	switch (op->type) {
+	case OP_REST:
+		printf("...");
+		break;
 	case OP_ASSIGN:
 		printf("%s = ", op->v.assign.name);
                 pp_op(op->v.assign.expr);
@@ -723,10 +732,10 @@ proc_setup_body(void)
 	argv = peek(&args);
 	for (i = 0, op = argv->base.next; op != NULL; i++) {
 		/*
-		 * TODO: should free the whole list but.., we're gonna
-		 * exit real soon(tm)!
+		 * TODO: should free the whole list on error but..,
+		 * we're gonna exit real soon(tm)!
 		 */
-		if (op->type != OP_VAR)
+		if (op->type != OP_VAR && op->type != OP_REST)
 			return 0;
 
 		op = op->next;
@@ -752,13 +761,19 @@ proc_done(char *name)
 	proc->minargs = argc;
 
         for (i = 0, op = argv; op != NULL; ++i) {
+		if (op->type == OP_REST) {
+			proc->vararg = 1;
+			proc->minargs = i;
+			break;
+		}
+
 		proc->args[i] = xstrdup(op->v.var);
 
 		next = op->next;
 		free_op(op);
 		op = next;
 	}
-	assert(i == argc);
+	assert(i == argc || (proc->vararg && i == proc->minargs));
 
 	proc->body = body;
 
