@@ -181,10 +181,24 @@ procname: SYMBOL {
 funcall	: procname {
 		prepare_funcall();
 	} '(' args optcomma ')' {
+		struct proc	*proc;
+		int		 argc;
+
 		$$ = op_funcall($1);
-		if ($$->v.funcall.argc != $$->v.funcall.proc->minargs) {
-			yyerror("invalid arity for `%s'",
-			    $1->name);
+		proc = $$->v.funcall.proc;
+		argc = $$->v.funcall.argc;
+
+		if (argc != proc->minargs && !proc->vararg) {
+			yyerror("invalid arity for `%s': want %d arguments "
+			    "but %d given.", $1->name, proc->minargs, argc);
+			/* TODO: recursively free $$ */
+			YYERROR;
+		}
+
+		if (argc < proc->minargs && proc->vararg) {
+			yyerror("invalid arity for `%s': want at least %d "
+			    "arguments but %d given.", $1->name, proc->minargs,
+			    argc);
 			/* TODO: recursively free $$ */
 			YYERROR;
 		}
