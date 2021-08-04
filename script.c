@@ -577,19 +577,18 @@ eval(struct op *op)
 		proc = op->v.funcall.proc;
 		if (proc->nativefn != NULL) {
 			/* push arguments on the stack */
-			for (i = 0; i < op->v.funcall.argc; ++i) {
-				t = &op->v.funcall.argv[i];
-				if ((ret = eval(t)) != EVAL_OK)
-					return ret;
-			}
+			t = op->v.funcall.argv;
+			if (t != NULL && (ret = eval(t)) != EVAL_OK)
+				return ret;
 			if ((ret = proc->nativefn(op->v.funcall.argc))
 			    != EVAL_OK)
 				return ret;
 		} else {
 			pushenv();
 
-			for (i = 0; i < op->v.funcall.argc; ++i) {
-				t = &op->v.funcall.argv[i];
+			for (t = op->v.funcall.argv, i = 0;
+			     t != NULL;
+			     t = t->next, i++) {
 				if ((ret = setvar(proc->args[i], t))
 				    != EVAL_OK)
 					return ret;
