@@ -110,9 +110,9 @@ struct test {
 };
 
 enum {
-	TEST_PASSED,
-	TEST_FAILED,
-	TEST_SKIPPED,
+	EVAL_OK,
+	EVAL_ERR,
+	EVAL_SKIP,
 };
 
 void		 global_set(char *, struct op *);

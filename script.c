@@ -363,14 +363,14 @@ eval(struct op *op)
 		break;
 
 	case OP_ASSERT:
-		if ((ret = eval(op->v.assert)) != TEST_PASSED)
+		if ((ret = eval(op->v.assert)) != EVAL_OK)
 			return ret;
                 popv(&a);
                 if (!val_trueish(&a)) {
 			printf("assertion failed: ");
 			pp_op(op->v.assert);
 			printf("\n");
-			return TEST_FAILED;
+			return EVAL_ERR;
 		}
 		break;
 
@@ -379,14 +379,14 @@ eval(struct op *op)
 
 		for (i = 0; i < op->v.funcall.argc; ++i) {
 			t = &op->v.funcall.argv[i];
-			if ((ret = eval(t)) != TEST_PASSED)
+			if ((ret = eval(t)) != EVAL_OK)
 				return ret;
 		}
 
                 proc = op->v.funcall.proc;
 		if (proc->nativefn != NULL)
 			proc->nativefn(i);
-		else if ((ret = eval(proc->body)) != TEST_PASSED)
+		else if ((ret = eval(proc->body)) != EVAL_OK)
 				return ret;
 		break;
 
@@ -403,9 +403,9 @@ eval(struct op *op)
 		break;
 
 	case OP_CMP_EQ:
-		if ((ret = eval(op->v.cmp_eq.a)) != TEST_PASSED)
+		if ((ret = eval(op->v.cmp_eq.a)) != EVAL_OK)
 			return ret;
-		if ((ret = eval(op->v.cmp_eq.b)) != TEST_PASSED)
+		if ((ret = eval(op->v.cmp_eq.b)) != EVAL_OK)
 			return ret;
 
 		popv(&b);
@@ -420,7 +420,7 @@ eval(struct op *op)
 
 	if (op->next)
 		return eval(op->next);
-	return TEST_PASSED;
+	return EVAL_OK;
 }
 
 void
@@ -565,7 +565,7 @@ static int
 builtin_dummy(int argc)
 {
 	printf("dummy! yay!\n");
-	return 0;
+	return EVAL_OK;
 }
 
 static int
@@ -600,16 +600,16 @@ main(int argc, char **argv)
 		fflush(stdout);
 
 		switch (run_test(t)) {
-		case TEST_PASSED:
+		case EVAL_OK:
 			printf("ok!\n");
 			passed++;
 			break;
-		case TEST_FAILED:
+		case EVAL_ERR:
 			failed++;
 			/* we've already printed the failure */
 			printf("\n");
 			break;
-		case TEST_SKIPPED:
+		case EVAL_SKIP:
 			printf("skipped!\n");
 			skipped++;
 			break;
