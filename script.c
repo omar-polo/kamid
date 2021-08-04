@@ -225,9 +225,13 @@ global_set(char *sym, struct op *op)
 	b->name = sym;
 
 	/* it's only a cast on a literal! */
-	if (op->type == OP_CAST && eval(op) != EVAL_OK)
-		return 0;
-	else
+	if (op->type == OP_CAST) {
+		if (eval(op) != EVAL_OK) {
+			free(b);
+			return 0;
+		}
+		popv(&b->val);
+	} else
 		memcpy(&b->val, &op->v.literal, sizeof(b->val));
 
 	e = TAILQ_LAST(&envs, envs);
