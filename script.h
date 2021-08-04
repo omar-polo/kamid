@@ -42,7 +42,10 @@ struct value {
 	int type;
 	union {
 		char		*str;
-		uint64_t	 num;
+		int64_t		 num;
+		uint8_t		 u8;
+		uint16_t	 u16;
+		uint32_t	 u32;
 		uint8_t		 qid[QIDSIZE];
 	} v;
 };

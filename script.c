@@ -351,10 +351,16 @@ ppf_val(FILE *f, struct value *val)
 		fprintf(f, "\"%s\"", val->v.str);
 		break;
 	case V_NUM:
+		fprintf(f, "%"PRIi64, val->v.num);
+		break;
 	case V_U8:
+		fprintf(f, "%"PRIu8, val->v.u8);
+		break;
 	case V_U16:
+		fprintf(f, "%"PRIu16, val->v.u16);
+		break;
 	case V_U32:
-		fprintf(f, "%"PRIu64, val->v.num);
+		fprintf(f, "%"PRIu32, val->v.u32);
 		break;
 	default:
 		fprintf(f, "<unknown value>");
@@ -423,16 +429,17 @@ pp_totype(int totype)
 int
 val_cast(struct value *a, int totype)
 {
-	uint64_t v;
+	int64_t v;
 
-#define NUMCAST(v, totype, max) do {				\
-		if (v > max) {					\
-			fprintf(stderr, "can't cast %"PRIu64	\
-			    " to %s\n", v, pp_totype(totype));	\
-			return EVAL_ERR;			\
-		}						\
-		a->type = totype;				\
-		return EVAL_OK;					\
+#define NUMCAST(val, t, c, totype, max) do {				\
+		if (val > max) {					\
+			fprintf(stderr, "can't cast %"PRIu64		\
+			    " to %s\n", val, pp_totype(totype));	\
+			return EVAL_ERR;				\
+		}							\
+		a->type = totype;					\
+		a->v.t = (c)val;					\
+		return EVAL_OK;						\
 	} while (0)
 
 	if (!val_isnum(a)) {
@@ -444,9 +451,9 @@ val_cast(struct value *a, int totype)
 
 	v = a->v.num;
 	switch (totype) {
-	case V_U8:  NUMCAST(v, totype, UINT8_MAX);
-	case V_U16: NUMCAST(v, totype, UINT16_MAX);
-	case V_U32: NUMCAST(v, totype, UINT32_MAX);
+	case V_U8:  NUMCAST(v, u8,  uint8_t,  totype, UINT8_MAX);
+	case V_U16: NUMCAST(v, u16, uint16_t, totype, UINT16_MAX);
+	case V_U32: NUMCAST(v, u32, uint32_t, totype, UINT32_MAX);
 	default:
 		fprintf(stderr, "can't cast %"PRIu64" to %s\n",
 		    v, pp_totype(totype));
