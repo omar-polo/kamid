@@ -1,5 +1,12 @@
 const npversion = "9P2000"
 
+const (
+	one = 1
+	two = 2
+
+	n = 4
+)
+
 proc test(x) {
 	skip()
 }
@@ -7,9 +14,13 @@ proc test(x) {
 testing "skip called in proc" dir "./root" {
 	foo = 5:u8
 	test(3:u32)
-	assert 5 == 7
-	assert 7 == 9
-	assert 8 == 0
+	assert 1 == 0
+
+	assert (
+		5 == 7
+		7 == 9
+		8 == 0
+	)
 }
 
 testing "casts" dir "./root" {
