@@ -217,12 +217,18 @@ global_set(char *sym, struct op *op)
 
 	/* TODO: check for duplicates */
 
-	if (op->type != OP_LITERAL)
+	if (op->type != OP_LITERAL &&
+	    (op->type == OP_CAST && op->v.cast.expr->type != OP_LITERAL))
 		return 0;
 
 	b = xcalloc(1, sizeof(*b));
 	b->name = sym;
-	memcpy(&b->val, &op->v.literal, sizeof(b->val));
+
+	/* it's only a cast on a literal! */
+	if (op->type == OP_CAST && eval(op) != EVAL_OK)
+		return 0;
+	else
+		memcpy(&b->val, &op->v.literal, sizeof(b->val));
 
 	e = TAILQ_LAST(&envs, envs);
 	TAILQ_INSERT_HEAD(&e->bindings, b, entry);
