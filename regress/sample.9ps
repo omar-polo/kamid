@@ -13,6 +13,10 @@ proc test(x) {
 	skip()
 }
 
+proc myprint(...) {
+	print(...)
+}
+
 testing "skip called in proc" dir "./root" {
 	foo = 5:u8
 	print("hello", "foo is", foo)
