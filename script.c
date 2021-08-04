@@ -45,6 +45,19 @@ static struct value v_false = {.type = V_NUM, .v = {.num = 0}};
 static struct value v_true  = {.type = V_NUM, .v = {.num = 1}};
 
 static inline void
+peekn(int depth, struct value *v)
+{
+	if (depth > stackh)
+		errx(1, "can't peek the stack at %d: underflow",
+		    depth);
+	memcpy(v, &vstack[stackh - depth], sizeof(*v));
+
+#if DEBUG
+	printf("peeking(%d) ", depth); pp_val(v); printf("\n");
+#endif
+}
+
+static inline void
 popv(struct value *v)
 {
 	if (stackh == 0)
@@ -54,6 +67,15 @@ popv(struct value *v)
 #if DEBUG
 	printf("popping "); pp_val(v); printf("\n");
 #endif
+}
+
+static inline void
+popvn(int n)
+{
+	struct value v;
+
+	while (n-- > 0)
+		popv(&v);
 }
 
 static inline void
@@ -672,7 +694,7 @@ op_funcall(struct proc *proc)
 }
 
 void
-add_builtin_proc(const char *name, int (*fn)(int), int argc)
+add_builtin_proc(const char *name, int (*fn)(int), int argc, int vararg)
 {
 	struct proc *proc;
 
@@ -680,6 +702,7 @@ add_builtin_proc(const char *name, int (*fn)(int), int argc)
 	proc->name = xstrdup(name);
 	proc->nativefn = fn;
 	proc->minargs = argc;
+	proc->vararg = vararg;
 
 	TAILQ_INSERT_HEAD(&procs, proc, entry);
 }
@@ -784,13 +807,23 @@ test_done(char *name, char *dir)
 }
 
 static int
-builtin_pp(int argc)
+builtin_print(int argc)
 {
-	struct value v;
+	struct value	v;
+	int		i;
 
-	popv(&v);
-	pp_val(&v);
+	for (i = argc; i > 0; --i) {
+		peekn(i, &v);
+		if (v.type == V_STR)
+			printf("%s", v.v.str);
+		else
+			pp_val(&v);
+		printf(" ");
+	}
+
 	printf("\n");
+
+	popvn(argc);
 
 	return EVAL_OK;
 }
@@ -826,8 +859,8 @@ main(int argc, char **argv)
 	/* prepare the global env */
 	pushenv();
 
-	add_builtin_proc("pp", builtin_pp, 1);
-	add_builtin_proc("skip", builtin_skip, 0);
+	add_builtin_proc("print", builtin_print, 1, 1);
+	add_builtin_proc("skip", builtin_skip, 0, 0);
 
 	for (i = 1; i < argc; ++i)
 		loadfile(argv[i]);

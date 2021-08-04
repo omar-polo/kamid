@@ -115,7 +115,7 @@ struct proc {
 	TAILQ_ENTRY(proc)	 entry;
 	char			*name;
 	int			 minargs;
-	int			 varargs;
+	int			 vararg;
 	char			*args[MAXWELEM];
 	struct op		*body;
 	int			(*nativefn)(int);
@@ -162,7 +162,7 @@ void		 push_arg(struct op *);
 struct op	*op_funcall(struct proc *);
 
 /* proc */
-void		 add_builtin_proc(const char *name, int (*)(int), int);
+void		 add_builtin_proc(const char *name, int (*)(int), int, int);
 void		 prepare_proc(void);
 /* push_arg works on procs too */
 int		 proc_setup_body(void);
