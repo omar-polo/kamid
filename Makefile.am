@@ -1,5 +1,6 @@
-# TODO: 9ps should be only built for tests
-bin_PROGRAMS =		kamictl kamid kamirepl ninepscript
+bin_PROGRAMS =		kamictl kamid
+check_PROGRAMS =	ninepscript
+noinst_PROGRAMS =	kamirepl
 
 EXTRA_kamid_SOURCES =	compat/ohash.h compat/imsg.h compat/queue.h compat/tree.h
 
