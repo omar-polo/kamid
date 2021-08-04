@@ -15,6 +15,7 @@ proc test(x) {
 
 testing "skip called in proc" dir "./root" {
 	foo = 5:u8
+	print("hello", "foo is", foo)
 	test(3:u32)
 	assert 1 == 0
 
