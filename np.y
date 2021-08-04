@@ -213,9 +213,9 @@ proc	: PROC SYMBOL {
 	;
 
 block	: /* empty */
-	| block var '\n'	{ block_push($2); }
-	| block funcall '\n'	{ block_push($2); }
-	| block assert '\n'
+	| block var nl		{ block_push($2); }
+	| block funcall nl	{ block_push($2); }
+	| block assert nl
 	;
 
 assert	: ASSERT asserti
