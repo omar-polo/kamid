@@ -20,7 +20,7 @@
 .Nd Simple Distributed File System
 .Sh DESCRIPTION
 .Nm
-is a protocol for distributed file systems.
+is a protocol that implements a distributed file systems.
 It provides primitives to manage
 .Pq create, read, write and delete
 sets of files remotely.
@@ -35,14 +35,17 @@ to the client.
 The combined acts of transmitting a request of a particular type and
 receiving a reply is called a transaction of that type.
 .Pp
-Each message consists of a sequence of bytes grouped in one, two, four
-and eight-byte integer fields transmitted in little-endian order
+Each message consists of a sequence of bytes mostly grouped in one,
+two or four integer fields transmitted in little-endian order
 .Pq least significant byte first .
 Data items of larger or variable lengths are represented by a two-byte
 field specifying the length followed by the actual data.
-Text strings are represented in a similar manner, with a two-byte
-count and the sequence of UNICODE codepoints encoded in UTF-8.
-Text strings in 9p are not NUL-Terminated.
+The only exception to this rule are QIDs, thirteen byte long
+objects, that are sent as-is.
+.Pp
+Text strings are represented with a two-byte count and the sequence of
+UNICODE codepoints encoded in UTF-8.
+Text strings in 9p are not NUL-terminated.
 The NUL-terminator is illegal in all text strings and thus excluded
 from paths, user names and so on.
 .Pp
@@ -61,7 +64,7 @@ A qid, described later, is a 13-byte value that is sent on the wire as
 .Bd -literal -offset indent
 type[1] version[4] path[8]
 .Ed
-.Pp
+.Sh MESSAGE STRUCTURE
 Every message has a header with the following fields:
 .Bd -literal -offset indent
 len[4] type[1] tag[2]
@@ -69,10 +72,10 @@ len[4] type[1] tag[2]
 .Pp
 where len indicates the overall length of the message, including
 itself; type is one byte indicating the type of the message and the
-tag is a number choosen by the client to indicate uniquely the
+tag is a number choosen by the client that indicate uniquely the
 request.
-Then follows the optional body of the message whose structure depends
-on the the type of the message itself.
+Then follows an optional body whose structure depends on the type of
+the message.
 .Pp
 The message types are as follows:
 .Bl -tag -width versionxx
@@ -90,11 +93,11 @@ further requests until it has received the Rversion reply.
 .Cm tag
 should be
 .Dv NOTAG
-.Pq \-1
+.Pq \-1 or 255 .
 The client suggest a
 .Cm msize
 .Pq the maximum size for packets
-and the version they're using, the server replies with a
+and the protocol version used, the server replies with a
 .Cm msize
 smaller or equal to the one proposed by the client.
 The version string must always begin with the two character
