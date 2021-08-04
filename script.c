@@ -484,6 +484,8 @@ proc_setup_body(void)
 		 */
 		if (op->type != OP_VAR)
 			return 0;
+
+		op = op->next;
 	}
 
 	assert(i == argv->counter);
