@@ -427,7 +427,7 @@ val_cast(struct value *a, int totype)
 
 #define NUMCAST(v, totype, max) do {				\
 		if (v > max) {					\
-			fprintf(stderr, "Can't cast %"PRIu64	\
+			fprintf(stderr, "can't cast %"PRIu64	\
 			    " to %s\n", v, pp_totype(totype));	\
 			return EVAL_ERR;			\
 		}						\
@@ -436,7 +436,7 @@ val_cast(struct value *a, int totype)
 	} while (0)
 
 	if (!val_isnum(a)) {
-		fprintf(stderr, "Can't cast ");
+		fprintf(stderr, "can't cast ");
 		ppf_val(stderr, a);
 		fprintf(stderr, " to type %s\n", pp_totype(totype));
 		return EVAL_ERR;
@@ -448,7 +448,7 @@ val_cast(struct value *a, int totype)
 	case V_U16: NUMCAST(v, totype, UINT16_MAX);
 	case V_U32: NUMCAST(v, totype, UINT32_MAX);
 	default:
-		fprintf(stderr, "Can't cast %"PRIu64" to %s\n",
+		fprintf(stderr, "can't cast %"PRIu64" to %s\n",
 		    v, pp_totype(totype));
 		return EVAL_ERR;
 	}
