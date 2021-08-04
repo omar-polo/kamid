@@ -39,8 +39,41 @@ static struct opstacks args   = TAILQ_HEAD_INITIALIZER(args);
 static struct value	vstack[STACK_HEIGHT];
 static int		stackh;
 
+static struct envs envs = TAILQ_HEAD_INITIALIZER(envs);
+
 static struct value v_false = {.type = V_NUM, .v = {.num = 0}};
 static struct value v_true  = {.type = V_NUM, .v = {.num = 1}};
+
+static inline void
+popv(struct value *v)
+{
+	if (stackh == 0)
+		errx(1, "can't pop the stack: underflow");
+	memcpy(v, &vstack[--stackh], sizeof(*v));
+
+#if DEBUG
+	printf("popping "); pp_val(v); printf("\n");
+#endif
+}
+
+static inline void
+pushv(struct value *v)
+{
+	if (stackh == STACK_HEIGHT)
+		errx(1, "can't push the stack: overflow");
+
+#if DEBUG
+	printf("pushing "); pp_val(v); printf("\n");
+#endif
+
+	memcpy(&vstack[stackh++], v, sizeof(*v));
+}
+
+static inline void
+pushbool(int n)
+{
+	pushv(n ? &v_true : &v_false);
+}
 
 static inline struct opstack *
 pushstack(struct opstacks *stack)
@@ -98,10 +131,103 @@ push(struct opstacks *stack, struct op *op)
 	ops->counter++;
 }
 
-void
+static inline void
+pushenv(void)
+{
+	struct env	*e;
+
+	e = xcalloc(1, sizeof(*e));
+	TAILQ_INSERT_HEAD(&envs, e, entry);
+}
+
+static inline struct env *
+currentenv(void)
+{
+	assert(!TAILQ_EMPTY(&envs));
+	return TAILQ_FIRST(&envs);
+}
+
+static void
+popenv(void)
+{
+	struct env	*e;
+	struct binding	*b, *tb;
+
+	e = currentenv();
+	TAILQ_REMOVE(&envs, e, entry);
+
+	TAILQ_FOREACH_SAFE(b, &e->bindings, entry, tb) {
+                free(b->name);
+		switch (b->val.type) {
+		case V_SYM:
+		case V_STR:
+			free(b->val.v.str);
+			break;
+		}
+		free(b);
+	}
+
+	free(e);
+}
+
+static inline int
+setvar(char *sym, struct op *op)
+{
+	struct binding	*b;
+	struct env	*e;
+	int		 ret;
+
+	if ((ret = eval(op)) != EVAL_OK)
+		return ret;
+
+	b = xcalloc(1, sizeof(*b));
+	b->name = sym;
+	popv(&b->val);
+
+	e = TAILQ_FIRST(&envs);
+	TAILQ_INSERT_HEAD(&e->bindings, b, entry);
+
+	return EVAL_OK;
+}
+
+static inline int
+getvar(const char *sym, struct value *v)
+{
+	struct env	*e;
+	struct binding	*b;
+
+	TAILQ_FOREACH(e, &envs, entry) {
+		TAILQ_FOREACH(b, &e->bindings, entry) {
+			if (!strcmp(sym, b->name)) {
+				memcpy(v, &b->val, sizeof(*v));
+				return EVAL_OK;
+			}
+		}
+	}
+
+	fprintf(stderr, "unbound variable %s\n", sym);
+	return EVAL_ERR;
+}
+
+int
 global_set(char *sym, struct op *op)
 {
-	assert(op->type == OP_LITERAL);
+	struct binding	*b;
+	struct env	*e;
+
+	/* TODO: check for duplicates */
+
+	if (op->type != OP_LITERAL)
+		return 0;
+
+	b = xcalloc(1, sizeof(*b));
+	b->name = sym;
+	memcpy(&b->val, &op->v.literal, sizeof(b->val));
+
+	e = TAILQ_LAST(&envs, envs);
+	TAILQ_INSERT_HEAD(&e->bindings, b, entry);
+
+	return 1;
 }
 
 struct op *
@@ -374,37 +500,6 @@ pp_block(struct op *op)
 	}
 }
 
-static inline void
-popv(struct value *v)
-{
-	if (stackh == 0)
-		errx(1, "can't pop the stack: underflow");
-	memcpy(v, &vstack[--stackh], sizeof(*v));
-
-#if DEBUG
-	printf("popping "); pp_val(v); printf("\n");
-#endif
-}
-
-static inline void
-pushv(struct value *v)
-{
-	if (stackh == STACK_HEIGHT)
-		errx(1, "can't push the stack: overflow");
-
-#if DEBUG
-	printf("pushing "); pp_val(v); printf("\n");
-#endif
-
-	memcpy(&vstack[stackh++], v, sizeof(*v));
-}
-
-static inline void
-pushbool(int n)
-{
-	pushv(n ? &v_true : &v_false);
-}
-
 int
 eval(struct op *op)
 {
@@ -420,7 +515,9 @@ eval(struct op *op)
 
 	switch (op->type) {
 	case OP_ASSIGN:
-		printf("TODO: assignment\n");
+		ret = setvar(op->v.assign.name, op->v.assign.expr);
+		if (ret != EVAL_OK)
+			return ret;
 		break;
 
 	case OP_ASSERT:
@@ -436,19 +533,23 @@ eval(struct op *op)
 		break;
 
 	case OP_FUNCALL:
-		/* TODO: arity check! */
+                /* assume airity matches */
 
+		pushenv();
+
+		proc = op->v.funcall.proc;
 		for (i = 0; i < op->v.funcall.argc; ++i) {
 			t = &op->v.funcall.argv[i];
-			if ((ret = eval(t)) != EVAL_OK)
+			if ((ret = setvar(proc->args[i], t)) != EVAL_OK)
 				return ret;
 		}
 
-                proc = op->v.funcall.proc;
 		if (proc->nativefn != NULL)
 			proc->nativefn(i);
 		else if ((ret = eval(proc->body)) != EVAL_OK)
 				return ret;
+
+		popenv();
 		break;
 
 	case OP_LITERAL:
@@ -456,7 +557,9 @@ eval(struct op *op)
 		break;
 
 	case OP_VAR:
-		printf("TODO: load variable\n");
+                if ((ret = getvar(op->v.var, &a)) != EVAL_OK)
+			return ret;
+		pushv(&a);
 		break;
 
 	case OP_CAST:
@@ -651,11 +754,15 @@ run_test(struct test *t)
 int
 main(int argc, char **argv)
 {
+	struct env	*e;
 	struct test	*t;
 	int		 i, passed = 0, failed = 0, skipped = 0;
 
 	log_init(1, LOG_DAEMON);
 	log_setverbose(1);
+
+	/* prepare the global env */
+	pushenv();
 
 	add_builtin_proc("dummy", builtin_dummy);
 
@@ -689,6 +796,8 @@ main(int argc, char **argv)
 	printf("passed %d/%d\n", passed, i);
 	printf("failed %d\n", failed);
 	printf("skipped %d\n", skipped);
+
+	popenv();
 
 	return failed != 0;
 }

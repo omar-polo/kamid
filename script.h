@@ -86,6 +86,19 @@ struct op {
 	} v;
 };
 
+TAILQ_HEAD(bindings, binding);
+struct binding {
+	char			*name;
+	struct value		 val;
+	TAILQ_ENTRY(binding)	 entry;
+};
+
+TAILQ_HEAD(envs, env);
+struct env {
+	TAILQ_ENTRY(env)	 entry;
+	struct bindings		 bindings;
+};
+
 TAILQ_HEAD(opstacks, opstack);
 struct opstack {
 	TAILQ_ENTRY(opstack)	 entry;
@@ -119,7 +132,7 @@ enum {
 	EVAL_SKIP,
 };
 
-void		 global_set(char *, struct op *);
+int		 global_set(char *, struct op *);
 
 struct op	*newop(int);
 void		 free_op(struct op *);
