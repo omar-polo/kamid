@@ -32,13 +32,8 @@
 static struct procs procs = TAILQ_HEAD_INITIALIZER(procs);
 static struct tests tests = TAILQ_HEAD_INITIALIZER(tests);
 
-static struct proc	*curr_proc;
-static struct test	*curr_test;
-
-static struct op	*curr_block;
-
-static struct op	*curr_argv;
-static int		 curr_argc;
+static struct opstacks blocks = TAILQ_HEAD_INITIALIZER(blocks);
+static struct opstacks args   = TAILQ_HEAD_INITIALIZER(args);
 
 #define STACK_HEIGHT 16
 static struct value	vstack[STACK_HEIGHT];
@@ -46,6 +41,62 @@ static int		stackh;
 
 static struct value v_false = {.type = V_NUM, .v = {.num = 0}};
 static struct value v_true  = {.type = V_NUM, .v = {.num = 1}};
+
+static inline struct opstack *
+pushstack(struct opstacks *stack)
+{
+	struct opstack *ops;
+
+	ops = xcalloc(1, sizeof(*ops));
+	TAILQ_INSERT_HEAD(stack, ops, entry);
+	return ops;
+}
+
+static inline struct opstack *
+peek(struct opstacks *stack)
+{
+	if (TAILQ_EMPTY(stack))
+		errx(1, "%s: args underflow", __func__);
+
+	return TAILQ_FIRST(stack);
+}
+
+static inline struct op *
+finalize(struct opstacks *stack, int *argc)
+{
+	struct opstack	*ops;
+	struct op	*op;
+
+	if (TAILQ_EMPTY(stack))
+		errx(1, "%s: args underflow", __func__);
+
+	ops = peek(stack);
+	TAILQ_REMOVE(&args, ops, entry);
+	op = ops->base.next;
+
+	if (argc != NULL)
+		*argc = ops->counter;
+
+	free(ops);
+	return op;
+}
+
+static inline void
+push(struct opstacks *stack, struct op *op)
+{
+	struct opstack *ops;
+
+	ops = peek(stack);
+	if (ops->last == NULL) {
+		ops->base.next = op;
+		ops->last = op;
+	} else {
+		ops->last->next = op;
+		ops->last = op;
+	}
+
+	ops->counter++;
+}
 
 void
 global_set(char *sym, struct op *op)
@@ -373,34 +424,29 @@ eval(struct op *op)
 }
 
 void
-prepare_funcall(struct op *base)
+prepare_funcall(void)
 {
-	if (curr_argv != NULL)
-		err(1, "can't funcall during funcall");
-
-	curr_argv = base;
-	curr_argc = 0;
+	pushstack(&args);
 }
 
 void
 push_arg(struct op *op)
 {
-	curr_argv->next = op;
-	curr_argv = op;
-	curr_argc++;
+	push(&args, op);
 }
 
 struct op *
-op_funcall(struct proc *proc, struct op *base)
+op_funcall(struct proc *proc)
 {
-	struct op *op;
+	struct op	*op, *argv;
+	int		 argc;
+
+	argv = finalize(&args, &argc);
 
 	op = newop(OP_FUNCALL);
 	op->v.funcall.proc = proc;
-	op->v.funcall.argv = base->next;
-	op->v.funcall.argc = curr_argc;
-
-	curr_argv = NULL;
+	op->v.funcall.argv = argv;
+	op->v.funcall.argc = argc;
 
 	return op;
 }
@@ -418,58 +464,66 @@ add_builtin_proc(const char *name, int (*fn)(int))
 }
 
 void
-prepare_proc(char *name)
+prepare_proc(void)
 {
-	if (curr_proc != NULL)
-		err(1, "can't recursively create a proc!");
-
-	curr_proc = xcalloc(1, sizeof(*curr_proc));
-	curr_proc->name = name;
-
-	curr_argv = &curr_proc->tmp_args;
-
-	curr_argv = NULL;
-	curr_argc = 0;
+	pushstack(&args);
 }
 
-void
+int
 proc_setup_body(void)
 {
-	struct op *next, *op = curr_proc->tmp_args.next;
-	int i;
+	struct opstack	*argv;
+	struct op	*op;
+	int		 i;
 
-	i = 0;
-	while (op != NULL) {
+	argv = peek(&args);
+	for (i = 0, op = argv->base.next; op != NULL; i++) {
+		/*
+		 * TODO: should free the whole list but.., we're gonna
+		 * exit real soon(tm)!
+		 */
 		if (op->type != OP_VAR)
-			errx(1, "invalid argument in proc definition: "
-			    "got type %d but want OP_VAR", op->type);
-		assert(i < curr_argc && curr_argc < MAXWELEM);
-		curr_proc->args[i] = xstrdup(op->v.var);
-		next = op->next;
-		free_op(op);
+			return 0;
 	}
 
-	curr_proc->minargs = curr_argc;
+	assert(i == argv->counter);
+	pushstack(&blocks);
+	return 1;
 }
 
 void
-proc_done(void)
+proc_done(char *name)
 {
-	TAILQ_INSERT_HEAD(&procs, curr_proc, entry);
+	struct proc	*proc;
+	struct op	*op, *next, *argv, *body;
+	int		 i, argc;
 
-	curr_proc = NULL;
+	argv = finalize(&args, &argc);
+	body = finalize(&blocks, NULL);
+
+	proc = xcalloc(1, sizeof(*proc));
+	proc->name = name;
+	proc->minargs = argc;
+
+        for (i = 0, op = argv; i < argc; ++i) {
+		proc->args[i] = xstrdup(op->v.var);
+
+		next = op->next;
+		assert(next != NULL);
+
+		free_op(op);
+		op = next;
+	}
+
+	proc->body = body;
+
+	TAILQ_INSERT_HEAD(&procs, proc, entry);
 }
 
 void
 block_push(struct op *op)
 {
-	if (curr_block == NULL) {
-		curr_proc->body = op;
-		curr_block = op;
-	} else {
-		curr_block->next = op;
-		curr_block = op;
-	}
+	push(&blocks, op);
 }
 
 struct proc *
@@ -486,23 +540,22 @@ proc_by_name(const char *name)
 }
 
 void
-prepare_test(char *name, char *dir)
+prepare_test(void)
 {
-	assert(curr_test == NULL);
-
-	prepare_proc(xstrdup("<test-internal>"));
-
-	curr_test = xcalloc(1, sizeof(*curr_test));
-	curr_test->name = name;
-	curr_test->dir = dir;
-	curr_test->proc = curr_proc;
+	pushstack(&blocks);
 }
 
 void
-test_done(void)
+test_done(char *name, char *dir)
 {
-	TAILQ_INSERT_HEAD(&tests, curr_test, entry);
-	curr_test = NULL;
+	struct test	*test;
+
+	test = xcalloc(1, sizeof(*test));
+	test->name = name;
+	test->dir = dir;
+	test->body = finalize(&blocks, NULL);
+
+	TAILQ_INSERT_HEAD(&tests, test, entry);
 }
 
 static int
@@ -521,7 +574,7 @@ run_test(struct test *t)
 	puts("=====================");
 #endif
 
-	return eval(t->proc->body);
+	return eval(t->body);
 }
 
 int

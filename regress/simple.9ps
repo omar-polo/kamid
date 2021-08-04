@@ -3,7 +3,7 @@ proc test() {
 }
 
 testing "dummy" dir "./root" {
-	# test()
+	test()
 	assert 5 == 7
 	assert 7 == 9
 	assert 8 == 0

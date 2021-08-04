@@ -82,6 +82,14 @@ struct op {
 	} v;
 };
 
+TAILQ_HEAD(opstacks, opstack);
+struct opstack {
+	TAILQ_ENTRY(opstack)	 entry;
+	struct op		 base;
+	struct op		*last;
+	int			 counter;
+};
+
 TAILQ_HEAD(procs, proc);
 struct proc {
 	TAILQ_ENTRY(proc)	 entry;
@@ -89,7 +97,6 @@ struct proc {
 	int			 minargs;
 	int			 varargs;
 	char			*args[MAXWELEM];
-	struct op		 tmp_args;
 	struct op		*body;
 	int			(*nativefn)(int);
 };
@@ -99,7 +106,7 @@ struct test {
 	TAILQ_ENTRY(test)	 entry;
 	char			*name;
 	char			*dir;
-	struct proc		*proc;
+	struct op		*body;
 };
 
 enum {
@@ -128,22 +135,22 @@ void		 pp_block(struct op *);
 int		 eval(struct op *);
 
 /* funcall */
-void		 prepare_funcall(struct op *);
+void		 prepare_funcall(void);
 void		 push_arg(struct op *);
-struct op	*op_funcall(struct proc *, struct op *);
+struct op	*op_funcall(struct proc *);
 
 /* proc */
 void		 add_builtin_proc(const char *name, int (*)(int));
-void		 prepare_proc(char *);
+void		 prepare_proc(void);
 /* push_arg works on procs too */
-void		 proc_setup_body(void);
-void		 proc_done(void);
+int		 proc_setup_body(void);
+void		 proc_done(char *name);
 void		 block_push(struct op *);
 struct proc	*proc_by_name(const char *);
 
 /* testing */
-void		 prepare_test(char *, char *);
-void		 test_done(void);
+void		 prepare_test(void);
+void		 test_done(char *, char *);
 
 /* np.y */
 void		 loadfile(const char *);

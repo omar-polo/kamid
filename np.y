@@ -75,8 +75,6 @@ typedef struct {
 	int		 lineno;
 } YYSTYPE;
 
-static struct op	base_arg;
-
 %}
 
 /*
@@ -168,9 +166,9 @@ procname: SYMBOL {
 	;
 
 funcall	: procname {
-		prepare_funcall(&base_arg);
+		prepare_funcall();
 	} '(' args optcomma ')' {
-		$$ = op_funcall($1, &base_arg);
+		$$ = op_funcall($1);
 	}
 	;
 
@@ -182,11 +180,16 @@ args	: /* empty */
 	;
 
 proc	: PROC SYMBOL {
-		prepare_proc($2);
+		prepare_proc();
 	} '(' args ')' {
-		proc_setup_body();
+		if (!proc_setup_body()) {
+			yyerror("invalid argument in proc `%s' definition",
+			    $2);
+			free($2);
+			YYERROR;
+		}
 	} '{' optnl block '}' {
-		proc_done();
+		proc_done($2);
 	}
 	;
 
@@ -206,9 +209,9 @@ massert	: /* empty */
 	;
 
 test	: TESTING STRING DIR STRING {
-		prepare_test($2, $4);
+		prepare_test();
 	} '{' optnl block '}' {
-		test_done();
+		test_done($2, $4);
 	}
 	;
 
