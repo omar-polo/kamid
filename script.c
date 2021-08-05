@@ -44,6 +44,8 @@ static struct envs envs = TAILQ_HEAD_INITIALIZER(envs);
 static struct value v_false = {.type = V_NUM, .v = {.num = 0}};
 static struct value v_true  = {.type = V_NUM, .v = {.num = 1}};
 
+static uint8_t lasttag;
+
 static inline void
 peekn(int depth, struct value *v)
 {
@@ -850,6 +852,19 @@ builtin_skip(int argc)
 }
 
 static int
+builtin_iota(int argc)
+{
+	struct value v;
+
+	v.type = V_U8;
+	if ((v.v.u8 = ++lasttag) == 255)
+		v.v.u8 = ++lasttag;
+
+	pushv(&v);
+	return EVAL_OK;
+}
+
+static int
 run_test(struct test *t)
 {
 #if DEBUG
@@ -876,6 +891,7 @@ main(int argc, char **argv)
 
 	add_builtin_proc("print", builtin_print, 1, 1);
 	add_builtin_proc("skip", builtin_skip, 0, 0);
+	add_builtin_proc("iota", builtin_iota, 0, 0);
 
 	for (i = 1; i < argc; ++i)
 		loadfile(argv[i]);
