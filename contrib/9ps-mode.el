@@ -36,9 +36,6 @@
     `(: (or ,@9ps-keywords))))
   "`9ps-mode' constant keywords.")
 
-(defconst 9ps--font-lock-comments
-  "")
-
 (defvar 9ps-mode-syntax-table
   (let ((st (make-syntax-table)))
     (modify-syntax-entry ?\{ "(}" st)
