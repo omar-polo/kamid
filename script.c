@@ -214,6 +214,20 @@ setvar(char *sym, struct op *op)
 	return EVAL_OK;
 }
 
+static inline void
+setvar_raw(char *sym, struct op *op)
+{
+	struct binding	*b;
+	struct env	*e;
+
+	b = xcalloc(1, sizeof(*b));
+	b->name = sym;
+	b->raw = op;
+
+	e = TAILQ_FIRST(&envs);
+	TAILQ_INSERT_HEAD(&e->bindings, b, entry);
+}
+
 static inline int
 getvar(const char *sym, struct value *v)
 {
@@ -230,6 +244,25 @@ getvar(const char *sym, struct value *v)
 	}
 
 	fprintf(stderr, "unbound variable %s\n", sym);
+	return EVAL_ERR;
+}
+
+static inline int
+getvar_raw(const char *sym, struct op **raw)
+{
+	struct env	*e;
+	struct binding	*b;
+
+	TAILQ_FOREACH(e, &envs, entry) {
+		TAILQ_FOREACH(b, &e->bindings, entry) {
+			if (!strcmp(sym, b->name)) {
+				*raw = b->raw;
+				return EVAL_OK;
+			}
+		}
+	}
+
+	fprintf(stderr, "no rest argument `...'\n");
 	return EVAL_ERR;
 }
 
@@ -586,6 +619,13 @@ eval(struct op *op)
 #endif
 
 	switch (op->type) {
+	case OP_REST:
+		if ((ret = getvar_raw("...", &t)) != EVAL_OK)
+			return ret;
+		if ((ret = eval(t)) != EVAL_OK)
+			return ret;
+		break;
+
 	case OP_ASSIGN:
 		ret = setvar(op->v.assign.name, op->v.assign.expr);
 		if (ret != EVAL_OK)
@@ -609,11 +649,25 @@ eval(struct op *op)
 
 		proc = op->v.funcall.proc;
 		if (proc->nativefn != NULL) {
-			/* push arguments on the stack */
+			/*
+			 * Push arguments on the stack for builtin
+			 * functions.  Counting the height of the
+			 * stack is done to compute the correct number
+			 * in the vararg case.  argc only counts the
+			 * "syntactical" arguments, i.e. foo(x, ...)
+			 * has argc == 2, but at runtime argc may be
+			 * 1, 2 or a greater number!
+			 */
+
+			i = stackh;
 			t = op->v.funcall.argv;
 			if (t != NULL && (ret = eval(t)) != EVAL_OK)
 				return ret;
-			if ((ret = proc->nativefn(op->v.funcall.argc))
+			i = stackh - i;
+
+			assert(i >= 0);
+
+			if ((ret = proc->nativefn(i))
 			    != EVAL_OK)
 				return ret;
 		} else {
@@ -622,6 +676,18 @@ eval(struct op *op)
 			for (t = op->v.funcall.argv, i = 0;
 			     t != NULL;
 			     t = t->next, i++) {
+				/*
+				 * Push a pseudo variable `...' (and
+				 * don't evaluate it) in the vararg
+				 * case.  A special case is when the
+				 * variable is itself `...'.
+				 */
+				if (proc->vararg && i == proc->minargs) {
+					if (t->type != OP_REST)
+						setvar_raw(xstrdup("..."), t);
+					break;
+				}
+
 				if ((ret = setvar(proc->args[i], t))
 				    != EVAL_OK)
 					return ret;
