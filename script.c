@@ -603,7 +603,7 @@ eval(struct op *op)
 		break;
 
 	case OP_FUNCALL:
-                /* assume airity matches */
+		/* assume airity matches */
 
 		proc = op->v.funcall.proc;
 		if (proc->nativefn != NULL) {
