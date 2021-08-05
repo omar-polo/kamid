@@ -48,6 +48,7 @@ static struct value v_true  = {.type = V_NUM, .v = {.num = 1}};
 static uint8_t lasttag;
 
 static int debug;
+static int syntaxcheck;
 
 static inline void
 peekn(int depth, struct value *v)
@@ -1021,13 +1022,16 @@ main(int argc, char **argv)
 	add_builtin_proc("skip", builtin_skip, 0, 0);
 	add_builtin_proc("iota", builtin_iota, 0, 0);
 
-	while ((ch = getopt(argc, argv, "v:")) != -1) {
+	while ((ch = getopt(argc, argv, "nv")) != -1) {
 		switch (ch) {
+		case 'n':
+			syntaxcheck = 1;
+			break;
 		case 'v':
 			debug = 1;
 			break;
 		default:
-			fprintf(stderr, "Usage: %s [-v] [files...]\n",
+			fprintf(stderr, "Usage: %s [-nv] [files...]\n",
 			    *argv);
 			exit(1);
 		}
@@ -1037,6 +1041,11 @@ main(int argc, char **argv)
 
 	for (i = 0; i < argc; ++i)
 		loadfile(argv[i]);
+
+	if (syntaxcheck) {
+		fprintf(stderr, "files OK\n");
+		return 0;
+	}
 
 	i = 0;
 	TAILQ_FOREACH(t, &tests, entry) {
