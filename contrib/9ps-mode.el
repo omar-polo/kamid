@@ -29,11 +29,9 @@
   '("assert" "const" "dir" "include" "proc" "str" "testing"
     "u8" "u16" "u32"))
 
-(defconst 9ps--font-lock-keywords
-  (list
-   (rx-to-string
-    `(: (or ,@9ps-keywords))))
-  "`9ps-mode' constant keywords.")
+(defconst 9ps--font-lock-defaults
+  `(((,(rx-to-string `(: (or ,@9ps-keywords))) 0 font-lock-keyword-face)
+     ("\\([[:word:]]+\\)\s*(" 1 font-lock-function-name-face))))
 
 (defvar 9ps-mode-syntax-table
   (let ((st (make-syntax-table)))
@@ -102,7 +100,7 @@
 (define-derived-mode 9ps-mode prog-mode "9ps"
   "Major mode for ninepscript files."
   :abbrev-table 9ps-mode-abbrev-table
-  (setq font-lock-defaults '((9ps--font-lock-keywords)))
+  (setq font-lock-defaults 9ps--font-lock-defaults)
   (setq-local comment-start "#")
   (setq-local comment-start-skip "#+[\t ]*")
   (setq-local indent-line-function #'9ps-indent-line))
