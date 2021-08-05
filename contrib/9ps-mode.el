@@ -40,17 +40,25 @@
     (modify-syntax-entry ?\{ "(}" st)
     (modify-syntax-entry ?\} "){" st)
     (modify-syntax-entry ?\( "()" st)
+
     ;; - and _ are word constituent
     (modify-syntax-entry ?_ "w" st)
     (modify-syntax-entry ?- "w" st)
+
     ;; both single and double quotes makes strings
     (modify-syntax-entry ?\" "\"" st)
     (modify-syntax-entry ?' "'" st)
+
     ;; one day we'll have escaping (maybe)
     (modify-syntax-entry ?\\ "\\" st)
-    ;; add comments.  is this the correct way?
+
+    ;; add comments. lua-mode does something similar, so it shouldn't
+    ;; bee *too* wrong.
     (modify-syntax-entry ?# "<" st)
     (modify-syntax-entry ?\n ">" st)
+
+    ;; '==' as punctuation
+    (modify-syntax-entry ?= ".")
     st))
 
 (defun 9ps-indent-line ()
