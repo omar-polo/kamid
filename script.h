@@ -92,9 +92,16 @@ struct op {
 
 TAILQ_HEAD(bindings, binding);
 struct binding {
+	TAILQ_ENTRY(binding)	 entry;
 	char			*name;
 	struct value		 val;
-	TAILQ_ENTRY(binding)	 entry;
+
+	/*
+	 * Hack to support varargs.  We set a special variable named
+	 * "..." that contains the list of ops that will evaluate to
+	 * the arguments.
+	 */
+	struct op		*raw;
 };
 
 TAILQ_HEAD(envs, env);
