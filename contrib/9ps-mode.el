@@ -103,7 +103,8 @@
   (setq font-lock-defaults 9ps--font-lock-defaults)
   (setq-local comment-start "#")
   (setq-local comment-start-skip "#+[\t ]*")
-  (setq-local indent-line-function #'9ps-indent-line))
+  (setq-local indent-line-function #'9ps-indent-line)
+  (setq-local indent-tabs-mode t))
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.9ps" . 9ps-mode))
