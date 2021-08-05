@@ -13,11 +13,11 @@ proc version(msize, version) {
 }
 
 proc attach(fid, afid, uname, aname) {
-	send(Tversion, iota, fid:u32, afid:u32, uname:str, aname:str)
+	send(Tversion, iota(), fid:u32, afid:u32, uname:str, aname:str)
 }
 
 proc walk(fid, newfid, ...) {
-	send(Twalk, iota, fid:u32, newfid:u32, ...:str)
+	send(Twalk, iota(), fid:u32, newfid:u32, ...:str)
 }
 
 
