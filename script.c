@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
+#include <unistd.h>
 
 #include "utils.h"
 #include "script.h"
@@ -45,6 +46,8 @@ static struct value v_false = {.type = V_NUM, .v = {.num = 0}};
 static struct value v_true  = {.type = V_NUM, .v = {.num = 1}};
 
 static uint8_t lasttag;
+
+static int debug;
 
 static inline void
 peekn(int depth, struct value *v)
@@ -960,6 +963,16 @@ builtin_print(int argc)
 }
 
 static int
+builtin_debug(int argc)
+{
+	if (debug)
+		return builtin_print(argc);
+
+	popvn(argc);
+	return EVAL_OK;
+}
+
+static int
 builtin_skip(int argc)
 {
 	return EVAL_SKIP;
@@ -995,7 +1008,7 @@ main(int argc, char **argv)
 {
 	struct env	*e;
 	struct test	*t;
-	int		 i, passed = 0, failed = 0, skipped = 0;
+	int		 ch, i, passed = 0, failed = 0, skipped = 0;
 
 	log_init(1, LOG_DAEMON);
 	log_setverbose(1);
@@ -1004,10 +1017,25 @@ main(int argc, char **argv)
 	pushenv();
 
 	add_builtin_proc("print", builtin_print, 1, 1);
+	add_builtin_proc("debug", builtin_debug, 1, 1);
 	add_builtin_proc("skip", builtin_skip, 0, 0);
 	add_builtin_proc("iota", builtin_iota, 0, 0);
 
-	for (i = 1; i < argc; ++i)
+	while ((ch = getopt(argc, argv, "v:")) != -1) {
+		switch (ch) {
+		case 'v':
+			debug = 1;
+			break;
+		default:
+			fprintf(stderr, "Usage: %s [-v] [files...]\n",
+			    *argv);
+			exit(1);
+		}
+	}
+	argc -= optind;
+	argv += optind;
+
+	for (i = 0; i < argc; ++i)
 		loadfile(argv[i]);
 
 	i = 0;
