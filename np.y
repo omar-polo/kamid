@@ -96,7 +96,7 @@ typedef struct {
 %token	<v.str>		STRING SYMBOL
 %token	<v.num>		NUMBER
 
-%type	<v.op>		cast cexpr check expr funcall
+%type	<v.op>		cast cexpr check expr faccess funcall
 %type	<v.op>		literal var varref
 
 %type	<v.proc>	procname
@@ -157,15 +157,19 @@ literal	: STRING		{ $$ = op_lit_str($1); }
  * `expr '=' '=' expr` is ambiguous.  furthermore, we're not
  * interested in checking all the possibilities here.
  */
-cexpr	: literal | varref | funcall ;
+cexpr	: literal | varref | funcall | faccess ;
 check	: cexpr '=' '=' cexpr	{ $$ = op_cmp_eq($1, $4); }	;
 
-expr	: literal | funcall | varref | check | cast ;
+expr	: literal | funcall | varref | check | cast | faccess ;
 
 cast	: expr ':' U8	{ $$ = op_cast($1, V_U8); }
 	| expr ':' U16	{ $$ = op_cast($1, V_U16); }
 	| expr ':' U32	{ $$ = op_cast($1, V_U32); }
 	| expr ':' STR	{ $$ = op_cast($1, V_STR); }
+	;
+
+faccess	: varref '.' SYMBOL	{ $$ = op_faccess($1, $3); }
+	| faccess '.' SYMBOL	{ $$ = op_faccess($1, $3); }
 	;
 
 procname: SYMBOL {

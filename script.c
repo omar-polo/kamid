@@ -403,6 +403,18 @@ op_cast(struct op *expr, int totype)
 	return op;
 }
 
+struct op *
+op_faccess(struct op *expr, char *field)
+{
+	struct op *op;
+
+	op = newop(OP_FACCESS);
+	op->v.faccess.expr = expr;
+	op->v.faccess.field = field;
+
+	return op;
+}
+
 void
 ppf_val(FILE *f, struct value *val)
 {
@@ -540,6 +552,28 @@ val_cast(struct value *a, int totype)
 #undef NUMCAST
 }
 
+int
+val_faccess(struct value *a, const char *field, struct value *ret)
+{
+	switch (a->type) {
+	case V_QID:
+		/* TODO: add path.  needs uint64_t values thought! */
+		if (!strcmp(field, "vers")) {
+			ret->type = V_U32;
+			memcpy(&ret->v.u32, a->v.qid+1, 4);
+		} else if (!strcmp(field, "type")) {
+			ret->type = V_U8;
+			ret->v.u8 = *a->v.qid;
+		} else
+			return EVAL_ERR;
+		break;
+	default:
+		return EVAL_ERR;
+	}
+
+	return EVAL_OK;
+}
+
 void
 pp_op(struct op *op)
 {
@@ -587,6 +621,10 @@ pp_op(struct op *op)
 		pp_op(op->v.cmp_eq.a);
 		printf(" == ");
 		pp_op(op->v.cmp_eq.b);
+		break;
+	case OP_FACCESS:
+		pp_op(op->v.faccess.expr);
+		printf(".%s", op->v.faccess.field);
 		break;
 	default:
 		printf(" ???[%d] ", op->type);
@@ -730,6 +768,16 @@ eval(struct op *op)
 		popv(&a);
 		pushbool(val_eq(&a, &b));
 
+		break;
+
+	case OP_FACCESS:
+		if ((ret = eval(op->v.faccess.expr)) != EVAL_OK)
+			return ret;
+		popv(&a);
+		if ((ret = val_faccess(&a, op->v.faccess.field, &b))
+		    != EVAL_OK)
+			return ret;
+		pushv(&b);
 		break;
 
 	default:
