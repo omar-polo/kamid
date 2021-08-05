@@ -25,13 +25,12 @@
 (eval-when-compile
   (require 'rx))
 
-(defconst 9ps-keywords
-  '("assert" "const" "dir" "include" "proc" "str" "testing"
-    "u8" "u16" "u32"))
-
 (defconst 9ps--font-lock-defaults
-  `(((,(rx-to-string `(: (or ,@9ps-keywords))) 0 font-lock-keyword-face)
-     ("\\([[:word:]]+\\)\s*(" 1 font-lock-function-name-face))))
+  (let ((keywords '("assert" "const" "dir" "include" "proc" "testing"))
+        (types '("str" "u8" "u16" "u32")))
+    `(((,(rx-to-string `(: (or ,@keywords))) 0 font-lock-keyword-face)
+       ("\\([[:word:]]+\\)\s*(" 1 font-lock-function-name-face)
+       (,(rx-to-string `(: (or ,@types))) 0 font-lock-type-face)))))
 
 (defvar 9ps-mode-syntax-table
   (let ((st (make-syntax-table)))
