@@ -28,11 +28,11 @@ proc mount(fid, path) {
 	version(msize, np2000)
 
 	m = recv()
-	assert(
-		m.type == Tversion,
-		m.tag == notag,
-		m.msize == msize,
-		m.version == version,
+	assert (
+		m.type == Tversion
+		m.tag == notag
+		m.msize == msize
+		m.version == version
 	)
 
 	attach(fid, nofid, testuser, path)
