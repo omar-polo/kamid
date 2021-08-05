@@ -47,5 +47,5 @@ proc mount(fid, path) {
 proc should-fail() {
 	m = recv()
 	assert m.type == Rerror
-	debug("got expected error %s", m)
+	debug("got expected error", m)
 }
