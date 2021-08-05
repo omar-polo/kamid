@@ -92,9 +92,16 @@
     (when move-eol-p
       (move-end-of-line nil))))
 
+(defvar 9ps-mode-abbrev-table nil
+  "Abbreviation table used in `9ps-mode' buffers.")
+
+(define-abbrev-table '9ps-mode-abbrev-table
+  '())
+
 ;;;###autoload
 (define-derived-mode 9ps-mode prog-mode "9ps"
   "Major mode for ninepscript files."
+  :abbrev-table 9ps-mode-abbrev-table
   (setq font-lock-defaults '((9ps--font-lock-keywords)))
   (setq-local comment-start "#")
   (setq-local comment-start-skip "#+[\t ]*")
