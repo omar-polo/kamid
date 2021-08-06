@@ -157,3 +157,28 @@ hexdump(const char *label, uint8_t *data, size_t len)
 
 	printf("\n");
 }
+
+void
+imsg_event_add(struct imsgev *iev)
+{
+	iev->events = EV_READ;
+	if (iev->ibuf.w.queued)
+		iev->events |= EV_WRITE;
+
+	event_del(&iev->ev);
+	event_set(&iev->ev, iev->ibuf.fd, iev->events, iev->handler, iev);
+	event_add(&iev->ev, NULL);
+}
+
+int
+imsg_compose_event(struct imsgev *iev, uint16_t type, uint32_t peerid,
+    pid_t pid, int fd, const void *data, uint16_t datalen)
+{
+	int	ret;
+
+	if ((ret = imsg_compose(&iev->ibuf, type, peerid, pid, fd, data,
+	    datalen) != -1))
+		imsg_event_add(iev);
+
+	return ret;
+}

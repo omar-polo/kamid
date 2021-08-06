@@ -209,9 +209,6 @@ enum {
 extern int verbose;
 int	main_imsg_compose_listener(int, int, uint32_t, const void *, uint16_t);
 void	merge_config(struct kd_conf *, struct kd_conf *);
-void	imsg_event_add(struct imsgev *);
-int	imsg_compose_event(struct imsgev *, uint16_t, uint32_t, pid_t,
-	    int, const void *, uint16_t);
 
 struct kd_conf	*config_new_empty(void);
 void		 config_clear(struct kd_conf *);

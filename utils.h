@@ -19,6 +19,8 @@
 
 #include "compat.h"
 
+struct imsgev;
+
 void	*xmalloc(size_t);
 void	*xcalloc(size_t, size_t);
 char	*xstrdup(const char *);
@@ -27,5 +29,9 @@ void	*xmemdup(const void *, size_t);
 const char	*pp_msg_type(uint8_t);
 
 void		hexdump(const char *, uint8_t *data, size_t len);
+
+void	imsg_event_add(struct imsgev *);
+int	imsg_compose_event(struct imsgev *, uint16_t, uint32_t, pid_t,
+	    int, const void *, uint16_t);
 
 #endif
