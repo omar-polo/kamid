@@ -1,5 +1,7 @@
+# default protocol version
 const npversion = "9P2000"
 
+# some constants
 const (
 	one = 1:u8
 	two = 2
@@ -9,17 +11,28 @@ const (
 	n = 4
 )
 
+proc unreachable(qid) {		# and useless
+	type = qid.type
+	assert (
+		type == qid.type
+	)
+}
+
 proc test(x) {
 	skip()
 }
 
-proc myprint(...) {
+proc myrealprint(...) {
 	print(...)
+}
+
+proc myprint(...) {
+	myrealprint(...)
 }
 
 testing "skip called in proc" dir "./root" {
 	foo = 5:u8
-	print("hello", "foo is", foo)
+	myprint("hello", "foo is", foo)
 	test(3:u32)
 	assert 1 == 0
 
@@ -32,4 +45,10 @@ testing "skip called in proc" dir "./root" {
 
 testing "casts" dir "./root" {
 	foo = 300:u8
+}
+
+proc empty() {
+}
+
+testing "foobar" dir "./root" {
 }
