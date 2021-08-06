@@ -50,6 +50,17 @@ static uint8_t lasttag;
 static int debug;
 static int syntaxcheck;
 
+static const char	*filler;
+
+static inline void
+before_printing(void)
+{
+	if (filler != NULL) {
+		printf("%s", filler);
+		filler = NULL;
+	}
+}
+
 static inline void
 peekn(int depth, struct value *v)
 {
@@ -247,6 +258,7 @@ getvar(const char *sym, struct value *v)
 		}
 	}
 
+	before_printing();
 	fprintf(stderr, "unbound variable %s\n", sym);
 	return EVAL_ERR;
 }
@@ -266,6 +278,7 @@ getvar_raw(const char *sym, struct op **raw)
 		}
 	}
 
+	before_printing();
 	fprintf(stderr, "no rest argument `...'\n");
 	return EVAL_ERR;
 }
@@ -477,6 +490,7 @@ val_tonum(struct value *a)
 	case V_U16: return a->v.u16;
 	case V_U32: return a->v.u32;
 	default:
+		before_printing();
 		fprintf(stderr, "%s: given value is not a number\n", __func__);
 		abort();
 	}
@@ -526,6 +540,7 @@ val_cast(struct value *a, int totype)
 
 #define NUMCAST(val, t, c, totype, max) do {				\
 		if (val > max) {					\
+			before_printing();				\
 			fprintf(stderr, "can't cast %"PRIu64		\
 			    " to %s\n", val, pp_totype(totype));	\
 			return EVAL_ERR;				\
@@ -536,6 +551,7 @@ val_cast(struct value *a, int totype)
 	} while (0)
 
 	if (!val_isnum(a)) {
+		before_printing();
 		fprintf(stderr, "can't cast ");
 		ppf_val(stderr, a);
 		fprintf(stderr, " to type %s\n", pp_totype(totype));
@@ -548,6 +564,7 @@ val_cast(struct value *a, int totype)
 	case V_U16: NUMCAST(v, u16, uint16_t, totype, UINT16_MAX);
 	case V_U32: NUMCAST(v, u32, uint32_t, totype, UINT32_MAX);
 	default:
+		before_printing();
 		fprintf(stderr, "can't cast %"PRIu64" to %s\n",
 		    v, pp_totype(totype));
 		return EVAL_ERR;
@@ -679,6 +696,7 @@ eval(struct op *op)
 			return ret;
                 popv(&a);
                 if (!val_trueish(&a)) {
+			before_printing();
 			printf("assertion failed: ");
 			pp_op(op->v.assert);
 			printf("\n");
@@ -785,6 +803,7 @@ eval(struct op *op)
 		break;
 
 	default:
+		before_printing();
 		fprintf(stderr, "invalid op, aborting.\n");
 		abort();
 	}
@@ -947,6 +966,8 @@ builtin_print(int argc)
 	struct value	v;
 	int		i;
 
+	before_printing();
+
 	for (i = argc; i > 0; --i) {
 		peekn(i, &v);
 		if (v.type == V_STR)
@@ -996,6 +1017,7 @@ static int
 run_test(struct test *t)
 {
 #if DEBUG
+	before_printing();
 	puts("=====================");
 	pp_block(t->body);
 	puts("=====================");
@@ -1009,7 +1031,7 @@ main(int argc, char **argv)
 {
 	struct env	*e;
 	struct test	*t;
-	int		 ch, i, passed = 0, failed = 0, skipped = 0;
+	int		 ch, i, r, passed = 0, failed = 0, skipped = 0;
 
 	log_init(1, LOG_DAEMON);
 	log_setverbose(1);
@@ -1052,25 +1074,31 @@ main(int argc, char **argv)
 		printf("===> running test \"%s\"... ", t->name);
 		fflush(stdout);
 
-		switch (run_test(t)) {
+		filler = "\n";
+		r = run_test(t);
+		if (filler == NULL)
+			printf("=> test ");
+
+		switch (r) {
 		case EVAL_OK:
 			printf("ok!\n");
 			passed++;
 			break;
 		case EVAL_ERR:
 			failed++;
-			/* we've already printed the failure */
-			printf("\n");
+			printf("failed\n");
 			break;
 		case EVAL_SKIP:
-			printf("skipped!\n");
+			printf("skipped\n");
 			skipped++;
 			break;
 		}
 
+		printf("\n");
 		i++;
 	}
 
+	printf("\n");
 	printf("passed %d/%d\n", passed, i);
 	printf("failed %d\n", failed);
 	printf("skipped %d\n", skipped);
