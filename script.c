@@ -1136,14 +1136,6 @@ builtin_send(int argc)
 
 	imsg_close(&ibuf, buf);
 
-#if DEBUG
-	{
-		void *data = TAILQ_FIRST(&ibuf.w.bufs)->buf;
-		size_t len = TAILQ_FIRST(&ibuf.w.bufs)->size;
-		hexdump("IMSG_BUF", data, len);
-	}
-#endif
-
 	if (imsg_flush(&ibuf) == -1) {
 		i = errno;
 		before_printing();
@@ -1190,6 +1182,7 @@ disconnect:
 		return EVAL_ERR;
 	}
 
+nextmessage:
 	/* read only one message */
 	if ((n = imsg_get(&ibuf, &imsg)) == -1)
 		fatal("imsg_get");
@@ -1213,6 +1206,10 @@ disconnect:
 		printf("subprocess closed the connection\n");
 		imsg_free(&imsg);
 		return EVAL_ERR;
+
+	case IMSG_MSIZE:
+		imsg_free(&imsg);
+		goto nextmessage;
 
 	default:
 		before_printing();
@@ -1314,6 +1311,9 @@ run_test(struct test *t)
 	pid = spawn_client_proc();
         prepare_child_for_test(t);
 	ret = eval(t->body);
+
+	imsg_compose(&ibuf, IMSG_CONN_GONE, 0, 0, -1, NULL, 0);
+	imsg_flush(&ibuf);
 
 	while (waitpid(pid, NULL, 0) != pid)
 		; /* nop */
