@@ -1,7 +1,7 @@
 const (
 	version = "9P2000"
 	msize = 4194304:u32
-	notag = -1:u8
+	notag = -1:u16
 
 	Tversion = 100:u8
 	Rversion = 101:u8
