@@ -1105,7 +1105,9 @@ builtin_send(int argc)
 	if ((buf = imsg_create(&ibuf, IMSG_BUF, 0, 0, len)) == NULL)
 		fatal("imsg_create(%d)", len);
 
+	len = htole32(len);
 	imsg_add(buf, &len, sizeof(len));
+
 	for (i = argc; i > 0; --i) {
 		peekn(i, &v);
 		switch (v.type) {
