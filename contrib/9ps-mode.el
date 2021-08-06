@@ -68,14 +68,12 @@
       (back-to-indentation)
       (setq indent (car (syntax-ppss))
             boi-p (= point (point)))
-      ;; don't indent empty lines, but only when they don't have the
-      ;; cursor in it.
+      ;; don't indent empty lines if they don't have the in it
       (when (and (eq (char-after) ?\n)
                  (not boi-p))
         (setq indent 0))
       ;; check whether we want to move to the end of line
-      (when (and (eq (char-after) ?\n)
-                 boi-p)
+      (when boi-p
         (setq move-eol-p t))
       ;; decrement the indent if the first character on the line is a
       ;; closer.
