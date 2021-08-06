@@ -731,6 +731,13 @@ eval(struct op *op)
 			    != EVAL_OK)
 				return ret;
 		} else {
+			if (proc->body == NULL) {
+				before_printing();
+				printf("warn: calling the empty proc `%s'\n",
+				    proc->name);
+				break;
+			}
+
 			pushenv();
 
 			for (t = op->v.funcall.argv, i = 0;
@@ -1022,6 +1029,12 @@ run_test(struct test *t)
 	pp_block(t->body);
 	puts("=====================");
 #endif
+
+	if (t->body == NULL) {
+		before_printing();
+		printf("no instructions, skipping...\n");
+		return EVAL_SKIP;
+	}
 
 	return eval(t->body);
 }
