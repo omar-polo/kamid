@@ -656,7 +656,7 @@ eval(struct op *op)
 	int		 i, ret;
 
 #if DEBUG
-        pp_op(op);
+	pp_op(op);
 	printf("\n");
 #endif
 
