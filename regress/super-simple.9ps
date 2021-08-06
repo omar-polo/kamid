@@ -1,0 +1,14 @@
+const (
+	version = "9P2000"
+	msize = 4194304:u32
+	notag = -1:u8
+
+	Tversion = 100:u8
+	Rversion = 101:u8
+)
+
+testing "if version works" dir "./root" {
+	send(Tversion, notag, msize, version)
+	m = recv()
+	print("the response is", m)
+}
