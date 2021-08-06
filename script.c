@@ -24,9 +24,9 @@
 #include <syslog.h>
 #include <unistd.h>
 
-#include "utils.h"
-#include "script.h"
 #include "log.h"
+#include "script.h"
+#include "utils.h"
 
 #define DEBUG 0
 
