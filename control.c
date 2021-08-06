@@ -30,10 +30,11 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "log.h"
-#include "kamid.h"
 #include "control.h"
+#include "kamid.h"
 #include "listener.h"
+#include "log.h"
+#include "utils.h"
 
 #define	CONTROL_BACKLOG	5
 

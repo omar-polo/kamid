@@ -41,9 +41,13 @@ kamirepl_SOURCES =	kamid.h		\
 			utils.c		\
 			utils.h
 
-ninepscript_SOURCES =	log.c		\
+ninepscript_SOURCES =	client.c	\
+			client.h	\
+			compat.h	\
+			log.c		\
 			log.h		\
 			np.y		\
+			sandbox.c	\
 			script.c	\
 			script.h	\
 			utils.c		\

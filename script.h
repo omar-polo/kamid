@@ -30,6 +30,7 @@ enum {
 	V_NUM,
 
 	/* foreign */
+	V_MSG,
 	V_QID,
 
 	/* casted */
@@ -46,6 +47,10 @@ struct value {
 		uint8_t		 u8;
 		uint16_t	 u16;
 		uint32_t	 u32;
+		struct {
+			uint8_t	*msg;
+			size_t	 len;
+		} msg;
 		uint8_t		 qid[QIDSIZE];
 	} v;
 };

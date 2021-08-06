@@ -16,19 +16,41 @@
 
 #include "compat.h"
 
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+
 #include <assert.h>
+#include <endian.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <inttypes.h>
+#include <poll.h>
+#include <pwd.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
 #include <unistd.h>
 
+#include "client.h"
 #include "log.h"
 #include "script.h"
 #include "utils.h"
 
 #define DEBUG 0
+
+#ifndef INFTIM
+#define INFTIM -1
+#endif
+
+static const char	*argv0;
+
+static uint8_t		*lastmsg;
+
+static struct imsgbuf	 ibuf;
+static int		 ibuf_inuse;
 
 static struct procs procs = TAILQ_HEAD_INITIALIZER(procs);
 static struct tests tests = TAILQ_HEAD_INITIALIZER(tests);
@@ -435,6 +457,8 @@ op_faccess(struct op *expr, char *field)
 void
 ppf_val(FILE *f, struct value *val)
 {
+	size_t	i;
+
 	switch (val->type) {
 	case V_SYM:
 		fprintf(f, "%s", val->v.str);
@@ -453,6 +477,13 @@ ppf_val(FILE *f, struct value *val)
 		break;
 	case V_U32:
 		fprintf(f, "%"PRIu32, val->v.u32);
+		break;
+	case V_MSG:
+		fprintf(f, "(");
+		for (i = 0; i < val->v.msg.len; ++i)
+			fprintf(f, "%x%s", val->v.msg.msg[i],
+			    i == val->v.msg.len-1 ? "" : " ");
+		fprintf(f, ")");
 		break;
 	default:
 		fprintf(f, "<unknown value>");
@@ -1021,8 +1052,250 @@ builtin_iota(int argc)
 }
 
 static int
+builtin_send(int argc)
+{
+	struct ibuf	*buf;
+	struct value	 v;
+	uint32_t	 len;
+	uint16_t	 slen;
+	int		 i;
+
+	/*
+	 * Compute the length of the packet.  4 is for the initial
+	 * length field
+	 */
+	len = 4;
+
+	for (i = argc; i > 0; --i) {
+		peekn(i, &v);
+		switch (v.type) {
+		case V_STR:
+			len += 2; /* count */
+			len += strlen(v.v.str);
+			break;
+
+		case V_U8:
+			len += 1;
+			break;
+
+		case V_U16:
+			len += 2;
+			break;
+
+		case V_U32:
+			len += 4;
+			break;
+
+		default:
+			before_printing();
+			printf("%s: can't serialize ", __func__);
+			pp_val(&v);
+			printf("\n");
+			return EVAL_ERR;
+		}
+	}
+
+	if (len > UINT16_MAX) {
+		before_printing();
+		printf("%s: message size too long: got %d when max is %d\n",
+		    __func__, len, UINT16_MAX);
+		return EVAL_ERR;
+	}
+
+	if ((buf = imsg_create(&ibuf, IMSG_BUF, 0, 0, len)) == NULL)
+		fatal("imsg_create(%d)", len);
+
+	imsg_add(buf, &len, sizeof(len));
+	for (i = argc; i > 0; --i) {
+		peekn(i, &v);
+		switch (v.type) {
+		case V_STR:
+			slen = strlen(v.v.str);
+			slen = htole16(slen);
+			imsg_add(buf, &slen, sizeof(slen));
+			imsg_add(buf, v.v.str, strlen(v.v.str));
+			break;
+
+		case V_U8:
+			imsg_add(buf, &v.v.u8, 1);
+			break;
+
+		case V_U16:
+			v.v.u16 = htole16(v.v.u16);
+			imsg_add(buf, &v.v.u16, 2);
+			break;
+
+		case V_U32:
+			v.v.u32 = htole32(v.v.u32);
+			imsg_add(buf, &v.v.u32, 4);
+			break;
+		}
+	}
+
+	imsg_close(&ibuf, buf);
+
+#if DEBUG
+	{
+		void *data = TAILQ_FIRST(&ibuf.w.bufs)->buf;
+		size_t len = TAILQ_FIRST(&ibuf.w.bufs)->size;
+		hexdump("IMSG_BUF", data, len);
+	}
+#endif
+
+	if (imsg_flush(&ibuf) == -1) {
+		i = errno;
+		before_printing();
+		printf("%s: imsg_flush failed: %s\n", __func__, strerror(i));
+		return EVAL_ERR;
+	}
+
+	return EVAL_OK;
+}
+
+static int
+builtin_recv(int argc)
+{
+	struct pollfd	pfd;
+        struct value	v;
+	struct imsg	imsg;
+	ssize_t		n, datalen;
+	int		serrno;
+
+	if (lastmsg != NULL) {
+		free(lastmsg);
+		lastmsg = NULL;
+	}
+
+	pfd.fd = ibuf.fd;
+	pfd.events = POLLIN;
+	if (poll(&pfd, 1, INFTIM) == -1) {
+		serrno = errno;
+		before_printing();
+		printf("%s: poll failed: %s\n", __func__, strerror(serrno));
+		return EVAL_ERR;
+	}
+
+again:
+	if ((n = imsg_read(&ibuf)) == -1) {
+		if (errno == EAGAIN)
+			goto again;
+		fatal("imsg_read");
+	}
+	if (n == 0) {
+disconnect:
+		before_printing();
+		printf("child disconnected\n");
+		return EVAL_ERR;
+	}
+
+	/* read only one message */
+	if ((n = imsg_get(&ibuf, &imsg)) == -1)
+		fatal("imsg_get");
+	if (n == 0)
+		goto disconnect;
+
+	datalen = imsg.hdr.len - IMSG_HEADER_SIZE;
+	switch (imsg.hdr.type) {
+	case IMSG_BUF:
+		v.type = V_MSG;
+		if ((v.v.msg.msg = malloc(datalen)) == NULL)
+			fatal("malloc");
+		memcpy(v.v.msg.msg, imsg.data, datalen);
+		v.v.msg.len = datalen;
+		pushv(&v);
+		imsg_free(&imsg);
+                return EVAL_OK;
+
+	case IMSG_CLOSE:
+		before_printing();
+		printf("subprocess closed the connection\n");
+		imsg_free(&imsg);
+		return EVAL_ERR;
+
+	default:
+		before_printing();
+		printf("got unknown message from subprocess: %d\n",
+		    imsg.hdr.type);
+		imsg_free(&imsg);
+		return EVAL_ERR;
+	}
+}
+
+static pid_t
+spawn_client_proc(void)
+{
+	const char	*argv[4];
+	int		 p[2], argc = 0;
+	pid_t		 pid;
+
+	if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK,
+	    PF_UNSPEC, p) == -1)
+		fatal("socketpair");
+
+	switch (pid = fork()) {
+	case -1:
+		fatal("cannot fork");
+	case 0:
+		break;
+	default:
+		close(p[1]);
+		if (ibuf_inuse) {
+			msgbuf_clear(&ibuf.w);
+			close(ibuf.fd);
+		}
+		imsg_init(&ibuf, p[0]);
+		ibuf_inuse = 1;
+		return pid;
+	}
+
+	close(p[0]);
+
+	if (p[1] != 3) {
+		if (dup2(p[1], 3) == -1)
+			fatal("cannot setup imsg fd");
+	} else if (fcntl(F_SETFD, 0) == -1)
+		fatal("cannot setup imsg fd");
+
+	argv[argc++] = argv0;
+	argv[argc++] = "-Tc";
+
+#if DEBUG
+	argv[argc++] = "-v";
+#endif
+
+	argv[argc++] = NULL;
+
+	execvp(argv0, (char *const *)argv);
+	fatal("execvp");
+}
+
+static void
+prepare_child_for_test(struct test *t)
+{
+	struct passwd	*pw;
+	struct stat	 sb;
+
+	if (stat(t->dir, &sb) == -1)
+		fatal("stat(\"%s\")", t->dir);
+
+	if ((pw = getpwuid(sb.st_uid)) == NULL)
+		fatal("getpwuid(%d)", sb.st_uid);
+
+	imsg_compose(&ibuf, IMSG_AUTH, 0, 0, -1,
+	    pw->pw_name, strlen(pw->pw_name)+1);
+	imsg_compose(&ibuf, IMSG_AUTH_DIR, 0, 0, -1,
+	    t->dir, strlen(t->dir)+1);
+
+	if (imsg_flush(&ibuf) == -1)
+		fatal("imsg_flush");
+}
+
+static int
 run_test(struct test *t)
 {
+	pid_t	pid;
+	int	ret;
+
 #if DEBUG
 	before_printing();
 	puts("=====================");
@@ -1036,7 +1309,14 @@ run_test(struct test *t)
 		return EVAL_SKIP;
 	}
 
-	return eval(t->body);
+	pid = spawn_client_proc();
+        prepare_child_for_test(t);
+	ret = eval(t->body);
+
+	while (waitpid(pid, NULL, 0) != pid)
+		; /* nop */
+
+	return ret;
 }
 
 int
@@ -1045,6 +1325,11 @@ main(int argc, char **argv)
 	struct env	*e;
 	struct test	*t;
 	int		 ch, i, r, passed = 0, failed = 0, skipped = 0;
+	int		 runclient = 0;
+
+	assert(argv0 = argv[0]);
+
+	signal(SIGPIPE, SIG_IGN);
 
 	log_init(1, LOG_DAEMON);
 	log_setverbose(1);
@@ -1056,11 +1341,17 @@ main(int argc, char **argv)
 	add_builtin_proc("debug", builtin_debug, 1, 1);
 	add_builtin_proc("skip", builtin_skip, 0, 0);
 	add_builtin_proc("iota", builtin_iota, 0, 0);
+	add_builtin_proc("send", builtin_send, 2, 1);
+	add_builtin_proc("recv", builtin_recv, 0, 0);
 
-	while ((ch = getopt(argc, argv, "nv")) != -1) {
+	while ((ch = getopt(argc, argv, "nT:v")) != -1) {
 		switch (ch) {
 		case 'n':
 			syntaxcheck = 1;
+			break;
+		case 'T':
+			assert(*optarg == 'c');
+                        runclient = 1;
 			break;
 		case 'v':
 			debug = 1;
@@ -1074,6 +1365,9 @@ main(int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 
+	if (runclient)
+		client(1, debug);
+
 	for (i = 0; i < argc; ++i)
 		loadfile(argv[i]);
 
@@ -1081,6 +1375,10 @@ main(int argc, char **argv)
 		fprintf(stderr, "files OK\n");
 		return 0;
 	}
+
+	/* Check for root privileges. */
+        if (geteuid())
+                fatalx("need root privileges");
 
 	i = 0;
 	TAILQ_FOREACH(t, &tests, entry) {
