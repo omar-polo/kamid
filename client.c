@@ -181,7 +181,7 @@ client_shutdown(void)
 
         free(iev_listener);
 
-	log_info("client exiting");
+	log_debug("client exiting");
 	exit(0);
 }
 
@@ -283,7 +283,7 @@ client_dispatch_listener(int fd, short event, void *d)
 	else {
 		/* This pipe is dead.  Remove its event handler. */
 		event_del(&iev->ev);
-		log_warnx("pipe closed, shutting down...");
+		log_debug("pipe closed, shutting down...");
 		event_loopexit(NULL);
 	}
 }
