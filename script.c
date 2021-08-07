@@ -699,9 +699,8 @@ val_faccess(struct value *a, const char *field, struct value *ret)
                         memcpy(&ret->v.u16, &a->v.msg.msg[5], 2);
 			ret->v.u16 = le16toh(ret->v.u16);
 			return EVAL_OK;
-		} else if (!strcmp(field, "msize")) {
-			if (MSGTYPE(a->v.msg) != Rversion)
-				break;
+		} else if (!strcmp(field, "msize") &&
+		    MSGTYPE(a->v.msg) == Rversion) {
 			ret->type = V_U32;
 			memcpy(&ret->v.u32, &a->v.msg.msg[7], 4);
 			ret->v.u32 = le32toh(ret->v.u32);
