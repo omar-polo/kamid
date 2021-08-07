@@ -26,7 +26,9 @@
 #include "compat.h"
 
 #include <ctype.h>
+#include <errno.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -548,21 +550,24 @@ yylex(void)
 				yyerror("string too long");
 				return findeol();
 			}
-		} while ((c = lgetc(0)) != EOF && isdigit(c));
+		} while ((c = lgetc(0)) != EOF && (isdigit(c) || c == 'x'));
 		lungetc(c);
 		if (p == buf + 1 && buf[0] == '-')
 			goto nodigits;
 		if (c == EOF || allowed_to_end_number(c)) {
-			const char *errstr = NULL;
+			char *ep;
 
 			*p = '\0';
-			yylval.v.num = strtonum(buf, INT64_MIN, INT64_MAX,
-			    &errstr);
-			if (errstr) {
-				yyerror("\"%s\" invalid number: %s",
-				    buf, errstr);
+			errno = 0;
+			yylval.v.num = strtoll(buf, &ep, 0);
+			if (*ep != '\0' || errno == ERANGE &&
+			    (yylval.v.num == LONG_MAX ||
+			    yylval.v.num == LONG_MIN)) {
+				yyerror("\"%s\" invalid number or out of range",
+				    buf);
 				return findeol();
 			}
+
 			return NUMBER;
 		} else {
 nodigits:
