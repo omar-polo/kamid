@@ -1567,6 +1567,7 @@ main(int argc, char **argv)
 	    passed, i, skipped, failed);
 
 	popenv();
+	free(lastmsg);
 
 	return failed != 0;
 }
