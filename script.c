@@ -102,8 +102,11 @@ check_for_output(void)
 		return;
 
 	for (;;) {
-		if ((r = read(child_out, buf, sizeof(buf))) == -1)
+		if ((r = read(child_out, buf, sizeof(buf))) == -1) {
+			if (errno == EAGAIN)
+				break;
 			fatal("read");
+		}
 		if (r == 0)
 			break;
 		before_printing();
