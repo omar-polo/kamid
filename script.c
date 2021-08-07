@@ -55,6 +55,8 @@ static int		 ibuf_inuse;
 static struct procs procs = TAILQ_HEAD_INITIALIZER(procs);
 static struct tests tests = TAILQ_HEAD_INITIALIZER(tests);
 
+static int ntests;
+
 static struct opstacks blocks = TAILQ_HEAD_INITIALIZER(blocks);
 static struct opstacks args   = TAILQ_HEAD_INITIALIZER(args);
 
@@ -1033,6 +1035,8 @@ test_done(char *name, char *dir)
 		TAILQ_INSERT_HEAD(&tests, test, entry);
 	else
 		TAILQ_INSERT_TAIL(&tests, test, entry);
+
+	ntests++;
 }
 
 static int
@@ -1421,7 +1425,8 @@ main(int argc, char **argv)
 
 	i = 0;
 	TAILQ_FOREACH(t, &tests, entry) {
-		printf("===> running test \"%s\"... ", t->name);
+		printf("===> [%d/%d] running test \"%s\"... ", i, ntests,
+		    t->name);
 		fflush(stdout);
 
 		filler = "\n";
@@ -1431,7 +1436,7 @@ main(int argc, char **argv)
 
 		switch (r) {
 		case EVAL_OK:
-			printf("passed!\n");
+			printf("passed\n");
 			passed++;
 			break;
 		case EVAL_ERR:
@@ -1449,9 +1454,9 @@ main(int argc, char **argv)
 	}
 
 	printf("\n");
-	printf("passed %d/%d\n", passed, i);
-	printf("failed %d\n", failed);
-	printf("skipped %d\n", skipped);
+	printf("passed:		%d/%d\n", passed, i);
+	printf("failed:		%d\n", failed);
+	printf("skipped:	%d\n", skipped);
 
 	popenv();
 
