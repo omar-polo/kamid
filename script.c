@@ -1180,7 +1180,6 @@ builtin_iota(int argc)
 	if ((v.v.u16 = ++lasttag) == 255)
 		v.v.u16 = ++lasttag;
 
-	v.v.u16 = htole16(v.v.u16);
 	pushv(&v);
 	return EVAL_OK;
 }
