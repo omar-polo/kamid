@@ -63,5 +63,9 @@ dist_man5_MANS =	kamid.conf.5
 dist_man7_MANS =	9p.7
 dist_man8_MANS =	kamictl.8 kamid.8
 
+EXTRA_DIST =		regress
+TESTS =			run-tests.sh
+run-tests.sh:		ninepscript
+
 compile_flags.txt:
 	printf "%s\n" ${CFLAGS} > compile_flags.txt

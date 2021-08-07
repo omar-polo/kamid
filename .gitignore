@@ -18,6 +18,9 @@ config.sub
 .deps
 *~
 
+*.log
+*.trs
+
 compile_flags.txt
 
 kamid
