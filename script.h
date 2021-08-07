@@ -142,6 +142,7 @@ struct proc {
 TAILQ_HEAD(tests, test);
 struct test {
 	TAILQ_ENTRY(test)	 entry;
+	int			 shouldfail;
 	char			*name;
 	char			*dir;
 	struct op		*body;
@@ -193,7 +194,7 @@ struct proc	*proc_by_name(const char *);
 
 /* testing */
 void		 prepare_test(void);
-void		 test_done(char *, char *);
+void		 test_done(int, char *, char *);
 
 /* np.y */
 void		 loadfile(const char *);

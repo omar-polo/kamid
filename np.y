@@ -65,6 +65,8 @@ int		 lgetc(int);
 void		 lungetc(int);
 int		 findeol(void);
 
+static int	shouldfail;
+
 typedef struct {
 	union {
 		struct op	*op;
@@ -89,7 +91,7 @@ typedef struct {
 %token	INCLUDE
 %token	PROC
 %token	REPEAT
-%token	STR
+%token	SHOULD_FAIL STR
 %token	TESTING
 %token	U8 U16 U32
 
@@ -251,9 +253,14 @@ asserti	: check			{ block_push(op_assert($1)); }
 
 test	: TESTING STRING DIR STRING {
 		prepare_test();
-	} '{' optnl block '}' {
-		test_done($2, $4);
+	} testopt '{' optnl block '}' {
+		test_done(shouldfail, $2, $4);
+		shouldfail = 0;
 	}
+	;
+
+testopt	: /* empty */
+	| SHOULD_FAIL	{ shouldfail = 1; }
 	;
 
 %%
@@ -296,6 +303,7 @@ lookup(char *s)
 		{"include",	INCLUDE},
 		{"proc",	PROC},
 		{"repeat",	REPEAT},
+		{"should-fail",	SHOULD_FAIL},
 		{"str",		STR},
 		{"testing",	TESTING},
 		{"u16",		U16},

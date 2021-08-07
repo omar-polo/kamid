@@ -1022,11 +1022,12 @@ prepare_test(void)
 }
 
 void
-test_done(char *name, char *dir)
+test_done(int shouldfail, char *name, char *dir)
 {
 	struct test	*test;
 
 	test = xcalloc(1, sizeof(*test));
+	test->shouldfail = shouldfail;
 	test->name = name;
 	test->dir = dir;
 	test->body = finalize(&blocks, NULL);
@@ -1358,6 +1359,15 @@ run_test(struct test *t)
 
 	while (waitpid(pid, NULL, 0) != pid)
 		; /* nop */
+
+	if (t->shouldfail) {
+		if (ret == EVAL_OK) {
+			before_printing();
+			printf("test was expected to fail\n");
+			return EVAL_ERR;
+		} else if (ret == EVAL_ERR)
+			return EVAL_OK;
+	}
 
 	return ret;
 }
