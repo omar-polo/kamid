@@ -167,6 +167,16 @@ pushbool(int n)
 	pushv(n ? &v_true : &v_false);
 }
 
+static inline void
+pushnum(int64_t n)
+{
+	struct value v;
+
+	v.type = V_NUM;
+	v.v.num = n;
+	pushv(&v);
+}
+
 static inline struct opstack *
 pushstack(struct opstacks *stack)
 {
@@ -498,6 +508,16 @@ op_sfail(struct op *expr, char *msg)
 	return op;
 }
 
+struct op *
+op_vargs(void)
+{
+	struct op	*op;
+
+	op = newop(OP_VARGS);
+
+	return op;
+}
+
 void
 ppf_val(FILE *f, struct value *val)
 {
@@ -782,6 +802,9 @@ pp_op(struct op *op)
 		if (op->v.sfail.msg != NULL)
 			printf(": \"%s\"", op->v.sfail.msg);
 		break;
+	case OP_VARGS:
+		printf("vargs");
+		break;
 	default:
 		printf(" ???[%d] ", op->type);
 	}
@@ -973,6 +996,15 @@ eval(struct op *op)
 		}
 		if (ret == EVAL_SKIP)
 			return ret;
+		break;
+
+	case OP_VARGS:
+		if ((ret = getvar_raw("...", &t)) == EVAL_OK) {
+                        for (i = 0; t != NULL; t = t->next)
+				i++;
+			pushnum(i);
+		} else
+			pushnum(0);
 		break;
 
 	default:
