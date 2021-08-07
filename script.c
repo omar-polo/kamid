@@ -672,6 +672,7 @@ val_cast(struct value *a, int totype)
 int
 val_faccess(struct value *a, const char *field, struct value *ret)
 {
+	uint8_t	mtype;
 
 #define MSGTYPE(m) *(m.msg + 4)	/* skip the length */
 
@@ -690,6 +691,7 @@ val_faccess(struct value *a, const char *field, struct value *ret)
 		break;
 
 	case V_MSG:
+		mtype = MSGTYPE(a->v.msg);
 		if (!strcmp(field, "type")) {
 			ret->type = V_U8;
 			ret->v.u8 = MSGTYPE(a->v.msg);
@@ -699,11 +701,14 @@ val_faccess(struct value *a, const char *field, struct value *ret)
                         memcpy(&ret->v.u16, &a->v.msg.msg[5], 2);
 			ret->v.u16 = le16toh(ret->v.u16);
 			return EVAL_OK;
-		} else if (!strcmp(field, "msize") &&
-		    MSGTYPE(a->v.msg) == Rversion) {
+		} else if (!strcmp(field, "msize") && mtype == Rversion) {
 			ret->type = V_U32;
 			memcpy(&ret->v.u32, &a->v.msg.msg[7], 4);
 			ret->v.u32 = le32toh(ret->v.u32);
+			return EVAL_OK;
+		} else if (!strcmp(field, "qid") && mtype == Rattach) {
+			ret->type = V_QID;
+			memcpy(&ret->v.qid, &a->v.msg.msg[7], QIDSIZE);
 			return EVAL_OK;
 		}
 		break;
