@@ -687,6 +687,11 @@ val_faccess(struct value *a, const char *field, struct value *ret)
 			ret->type = V_U8;
 			ret->v.u8 = *(a->v.msg.msg + 4); /* skip the length */
 			return EVAL_OK;
+		} else if (!strcmp(field, "tag")) {
+			ret->type = V_U16;
+                        memcpy(&ret->v.u16, &a->v.msg.msg[5], 2);
+			ret->v.u16 = le16toh(ret->v.u16);
+			return EVAL_OK;
 		}
 		break;
 	default:
