@@ -1543,7 +1543,8 @@ main(int argc, char **argv)
 			break;
 		}
 
-		printf("\n");
+		if (filler == NULL)
+			printf("\n");
 		i++;
 	}
 
