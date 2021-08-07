@@ -19,3 +19,8 @@ testing "fails when sending a R-message" dir "./root" should-fail {
 	# the client should close the connection
 	recv()
 }
+
+testing "fails when sending a R-message (second try)" dir "./root" {
+	send(Rversion, notag, msize, version)
+	should-fail recv() : "the client should have closed the connection"
+}
