@@ -1,0 +1,39 @@
+const (
+	np2000	= "9P2000"
+	msize	= 4194304:u32	# 4*1024*1024
+	notag	= -1:u16
+	nofid	= -1:u32
+
+	QTDIR	= 0x80
+	# ...
+	QTFILE	= 0x0
+
+	Tversion	= 100:u8
+	Rversion	= 101:u8
+	Tauth		= 102:u8
+	Rauth		= 103:u8
+	Tattach		= 104:u8
+	Rattach		= 105:u8
+	Terror		= 106:u8 # illegal
+	Rerror		= 107:u8
+	Tflush		= 108:u8
+	Rflush		= 109:u8
+	Twalk		= 110:u8
+	Rwalk		= 111:u8
+	Topen		= 112:u8
+	Ropen		= 113:u8
+	Tcreate		= 114:u8
+	Rcreate		= 115:u8
+	Tread		= 116:u8
+	Rread		= 117:u8
+	Twrite		= 118:u8
+	Rwrite		= 119:u8
+	Tclunk		= 120:u8
+	Rclunk		= 121:u8
+	Tremove		= 122:u8
+	Rremove		= 123:u8
+	Tstat		= 124:u8
+	Rstat		= 125:u8
+	Twstat		= 126:u8
+	Rwstat		= 127:u8
+)

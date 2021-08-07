@@ -1,10 +1,4 @@
-# constants
-
-const notag = -1:u16
-const msize = 4194304:u32	# 4*1024*1024
-const np2000 = "9P2000"
-
-
+include "consts.9ps"
 
 # 9p protocol
 
@@ -17,7 +11,7 @@ proc attach(fid, afid, uname, aname) {
 }
 
 proc walk(fid, newfid, ...) {
-	send(Twalk, iota(), fid:u32, newfid:u32, ...:str)
+	send(Twalk, iota(), fid:u32, newfid:u32, ...)
 }
 
 
@@ -29,7 +23,7 @@ proc mount(fid, path) {
 
 	m = recv()
 	assert (
-		m.type == Tversion
+		m.type == Rversion
 		m.tag == notag
 		m.msize == msize
 		m.version == version
@@ -44,7 +38,7 @@ proc mount(fid, path) {
 	)
 }
 
-proc should-fail() {
+proc expect-error() {
 	m = recv()
 	assert m.type == Rerror
 	debug("got expected error", m)

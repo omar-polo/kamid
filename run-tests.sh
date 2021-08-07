@@ -6,4 +6,4 @@ set -e
 
 cd regress
 
-./../ninepscript super-simple.9ps
+./../ninepscript t.9ps
