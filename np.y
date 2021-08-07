@@ -99,7 +99,7 @@ typedef struct {
 %token	<v.num>		NUMBER
 
 %type	<v.op>		cast cexpr check expr faccess funcall
-%type	<v.op>		literal var varref
+%type	<v.op>		literal sfail var varref
 
 %type	<v.proc>	procname
 
@@ -240,6 +240,11 @@ block	: /* empty */
 	| block var nl		{ block_push($2); }
 	| block funcall nl	{ block_push($2); }
 	| block assert nl
+	| block sfail nl	{ block_push($2); }
+	;
+
+sfail	: SHOULD_FAIL expr		{ $$ = op_sfail($2, NULL); }
+	| SHOULD_FAIL expr ':' STRING	{ $$ = op_sfail($2, $4); }
 	;
 
 assert	: ASSERT asserti

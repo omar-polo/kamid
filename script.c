@@ -465,6 +465,18 @@ op_faccess(struct op *expr, char *field)
 	return op;
 }
 
+struct op *
+op_sfail(struct op *expr, char *msg)
+{
+	struct op	*op;
+
+	op = newop(OP_SFAIL);
+	op->v.sfail.expr = expr;
+	op->v.sfail.msg = msg;
+
+	return op;
+}
+
 void
 ppf_val(FILE *f, struct value *val)
 {
@@ -717,6 +729,12 @@ pp_op(struct op *op)
 		pp_op(op->v.faccess.expr);
 		printf(".%s", op->v.faccess.field);
 		break;
+	case OP_SFAIL:
+		printf("should-fail ");
+		pp_op(op->v.sfail.expr);
+		if (op->v.sfail.msg != NULL)
+			printf(": \"%s\"", op->v.sfail.msg);
+		break;
 	default:
 		printf(" ???[%d] ", op->type);
 	}
@@ -877,6 +895,22 @@ eval(struct op *op)
 		    != EVAL_OK)
 			return ret;
 		pushv(&b);
+		break;
+
+	case OP_SFAIL:
+		if ((ret = eval(op->v.sfail.expr)) == EVAL_OK) {
+			before_printing();
+			printf("expecting failure");
+			if (op->v.sfail.msg != NULL)
+				printf(" \"%s\"", op->v.sfail.msg);
+			printf("\n");
+			printf("expression: ");
+			pp_op(op->v.sfail.expr);
+			printf("\n");
+			return EVAL_ERR;
+		}
+		if (ret == EVAL_SKIP)
+			return ret;
 		break;
 
 	default:

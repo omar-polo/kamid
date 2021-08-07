@@ -65,6 +65,7 @@ enum {
 	OP_CAST,
 	OP_CMP_EQ,
 	OP_FACCESS,
+	OP_SFAIL,
 };
 
 struct proc;
@@ -97,6 +98,10 @@ struct op {
 			struct op	*expr;
 			char		*field;
 		} faccess;
+		struct {
+			char		*msg;
+			struct op	*expr;
+		} sfail;
 	} v;
 };
 
@@ -167,6 +172,7 @@ struct op	*op_lit_num(uint64_t);
 struct op	*op_cmp_eq(struct op *, struct op *);
 struct op	*op_cast(struct op *, int);
 struct op	*op_faccess(struct op *, char *);
+struct op	*op_sfail(struct op *, char *);
 
 void		 ppf_val(FILE *, struct value *);
 void		 pp_val(struct value *);
