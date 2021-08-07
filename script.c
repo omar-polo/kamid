@@ -640,6 +640,9 @@ val_cast(struct value *a, int totype)
 		return EVAL_OK;						\
 	} while (0)
 
+	if (a->type == totype)
+		return EVAL_OK;
+
 	if (!val_isnum(a)) {
 		before_printing();
 		fprintf(stderr, "can't cast ");
