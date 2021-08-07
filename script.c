@@ -334,8 +334,6 @@ getvar_raw(const char *sym, struct op **raw)
 		}
 	}
 
-	before_printing();
-	fprintf(stderr, "no rest argument `...'\n");
 	return EVAL_ERR;
 }
 
@@ -816,10 +814,13 @@ eval(struct op *op)
 
 	switch (op->type) {
 	case OP_REST:
-		if ((ret = getvar_raw("...", &t)) != EVAL_OK)
-			return ret;
-		if ((ret = eval(t)) != EVAL_OK)
-			return ret;
+		/*
+		 * Try to load the rest argument.  Note that it can be
+		 * empty!
+		 */
+                if ((ret = getvar_raw("...", &t)) == EVAL_OK)
+			if ((ret = eval(t)) != EVAL_OK)
+				return ret;
 		break;
 
 	case OP_ASSIGN:
