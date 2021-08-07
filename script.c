@@ -619,6 +619,13 @@ val_faccess(struct value *a, const char *field, struct value *ret)
 		} else
 			return EVAL_ERR;
 		break;
+	case V_MSG:
+		if (!strcmp(field, "type")) {
+			ret->type = V_U8;
+			ret->v.u8 = *(a->v.msg.msg + 4); /* skip the length */
+		} else
+			return EVAL_ERR;
+		break;
 	default:
 		return EVAL_ERR;
 	}
