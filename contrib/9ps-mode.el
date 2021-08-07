@@ -27,7 +27,7 @@
 
 (defconst 9ps--font-lock-defaults
   (let ((keywords '("assert" "const" "dir" "include" "proc" "should-fail"
-                    "testing"))
+                    "testing" "vargs"))
         (types '("str" "u8" "u16" "u32")))
     `(((,(rx-to-string `(: (or ,@keywords))) 0 font-lock-keyword-face)
        ("\\([[:word:]]+\\)\s*(" 1 font-lock-function-name-face)
