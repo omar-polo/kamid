@@ -1422,7 +1422,7 @@ main(int argc, char **argv)
 
 		switch (r) {
 		case EVAL_OK:
-			printf("ok!\n");
+			printf("passed!\n");
 			passed++;
 			break;
 		case EVAL_ERR:
