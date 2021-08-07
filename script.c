@@ -1378,6 +1378,9 @@ run_test(struct test *t)
 	puts("=====================");
 #endif
 
+        if (stackh != 0)
+		popvn(stackh);
+
 	if (t->body == NULL) {
 		before_printing();
 		printf("no instructions, skipping...\n");
