@@ -246,13 +246,7 @@ popenv(void)
 	TAILQ_REMOVE(&envs, e, entry);
 
 	TAILQ_FOREACH_SAFE(b, &e->bindings, entry, tb) {
-                free(b->name);
-		switch (b->val.type) {
-		case V_SYM:
-		case V_STR:
-			free(b->val.v.str);
-			break;
-		}
+		free(b->name);
 		free(b);
 	}
 
