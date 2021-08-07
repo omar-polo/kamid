@@ -10,5 +10,6 @@ const (
 testing "if version works" dir "./root" {
 	send(Tversion, notag, msize, version)
 	m = recv()
+	assert m.type == Rversion
 	print("the response is", m)
 }
