@@ -780,7 +780,7 @@ eval(struct op *op)
 {
 	struct value	 a, b;
 	struct proc	*proc;
-	struct op	*t;
+	struct op	*t, *tnext;
 	int		 i, ret;
 
 #if DEBUG
@@ -866,8 +866,20 @@ eval(struct op *op)
 					break;
 				}
 
-				if ((ret = setvar(proc->args[i], t))
-				    != EVAL_OK)
+				/*
+				 * The arguments are a linked list of
+				 * ops.  Setvar will call eval that
+				 * will evaluate *all* the arguments.
+				 * The dance here that sets next to
+				 * NULL and then restores it is to
+				 * avoid this behaviour.
+				 */
+				tnext = t->next;
+				t->next = NULL;
+				ret = setvar(proc->args[i], t);
+				t->next = tnext;
+
+				if (ret != EVAL_OK)
 					return ret;
 			}
 
