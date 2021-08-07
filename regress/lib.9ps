@@ -7,11 +7,11 @@ proc version(msize, version) {
 }
 
 proc attach(fid, afid, uname, aname) {
-	send(Tversion, iota(), fid:u32, afid:u32, uname:str, aname:str)
+	send(Tattach, iota(), fid:u32, afid:u32, uname:str, aname:str)
 }
 
 proc walk(fid, newfid, ...) {
-	send(Twalk, iota(), fid:u32, newfid:u32, ...)
+	send(Twalk, iota(), fid:u32, newfid:u32, vargs:u16, ...)
 }
 
 
@@ -26,10 +26,10 @@ proc mount(fid, path) {
 		m.type == Rversion
 		m.tag == notag
 		m.msize == msize
-		m.version == version
+		# m.version == version
 	)
 
-	attach(fid, nofid, testuser, path)
+	attach(fid, nofid, "op", path)
 
 	m = recv()
 	assert (
