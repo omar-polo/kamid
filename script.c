@@ -236,10 +236,19 @@ setvar(char *sym, struct op *op)
 {
 	struct binding	*b;
 	struct env	*e;
-	int		 ret;
+	int		 ret, height;
 
+	height = stackh;
 	if ((ret = eval(op)) != EVAL_OK)
 		return ret;
+
+	if (stackh != height + 1) {
+		before_printing();
+		printf("trying to assign to `%s' a void value: ", sym);
+		pp_op(op);
+		printf("\n");
+		return EVAL_ERR;
+	}
 
 	b = xcalloc(1, sizeof(*b));
 	b->name = sym;
