@@ -497,6 +497,22 @@ pp_val(struct value *val)
 	ppf_val(stdout, val);
 }
 
+const char *
+val_type(struct value *v)
+{
+	switch (v->type) {
+	case V_SYM: return "symbol";
+	case V_STR: return "string";
+	case V_NUM: return "number";
+	case V_MSG: return "message";
+	case V_QID: return "qid";
+	case V_U8: return "u8";
+	case V_U16: return "u16";
+	case V_U32: return "u32";
+	default: return "unknown";
+	}
+}
+
 int
 val_trueish(struct value *a)
 {
@@ -613,24 +629,29 @@ val_faccess(struct value *a, const char *field, struct value *ret)
 		if (!strcmp(field, "vers")) {
 			ret->type = V_U32;
 			memcpy(&ret->v.u32, a->v.qid+1, 4);
+			return EVAL_OK;
 		} else if (!strcmp(field, "type")) {
 			ret->type = V_U8;
 			ret->v.u8 = *a->v.qid;
-		} else
-			return EVAL_ERR;
+			return EVAL_OK;
+		}
 		break;
 	case V_MSG:
 		if (!strcmp(field, "type")) {
 			ret->type = V_U8;
 			ret->v.u8 = *(a->v.msg.msg + 4); /* skip the length */
-		} else
-			return EVAL_ERR;
+			return EVAL_OK;
+		}
 		break;
 	default:
-		return EVAL_ERR;
+		break;
 	}
 
-	return EVAL_OK;
+	before_printing();
+	printf("can't access field `%s' on type %s (", field, val_type(a));
+	pp_val(a);
+	printf(")\n");
+	return EVAL_ERR;
 }
 
 void
