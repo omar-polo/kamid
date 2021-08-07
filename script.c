@@ -51,6 +51,7 @@ static uint8_t		*lastmsg;
 
 static struct imsgbuf	 ibuf;
 static int		 ibuf_inuse;
+static int		 child_out = -1;
 
 static struct procs procs = TAILQ_HEAD_INITIALIZER(procs);
 static struct tests tests = TAILQ_HEAD_INITIALIZER(tests);
@@ -82,6 +83,31 @@ before_printing(void)
 	if (filler != NULL) {
 		printf("%s", filler);
 		filler = NULL;
+	}
+}
+
+static inline void
+check_for_output(void)
+{
+	static char	buf[BUFSIZ];
+	struct pollfd	pfd;
+	ssize_t		r;
+
+	pfd.fd = child_out;
+	pfd.events = POLLIN;
+	if (poll(&pfd, 1, 0) == -1)
+		fatal("poll");
+
+	if (!(pfd.revents & POLLIN))
+		return;
+
+	for (;;) {
+		if ((r = read(child_out, buf, sizeof(buf))) == -1)
+			fatal("read");
+		if (r == 0)
+			break;
+		before_printing();
+		fwrite(buf, 1, r, stdout);
 	}
 }
 
@@ -1136,6 +1162,8 @@ builtin_send(int argc)
 	uint16_t	 slen;
 	int		 i;
 
+	check_for_output();
+
 	/*
 	 * Compute the length of the packet.  4 is for the initial
 	 * length field
@@ -1219,6 +1247,7 @@ builtin_send(int argc)
 		return EVAL_ERR;
 	}
 
+	check_for_output();
 	return EVAL_OK;
 }
 
@@ -1259,6 +1288,8 @@ disconnect:
 	}
 
 nextmessage:
+	check_for_output();
+
 	/* read only one message */
 	if ((n = imsg_get(&ibuf, &imsg)) == -1)
 		fatal("imsg_get");
@@ -1300,11 +1331,18 @@ static pid_t
 spawn_client_proc(void)
 {
 	const char	*argv[4];
-	int		 p[2], argc = 0;
+	int		 p[2], out[2], argc = 0;
 	pid_t		 pid;
+
+	if (child_out != -1)
+		close(child_out);
 
 	if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK,
 	    PF_UNSPEC, p) == -1)
+		fatal("socketpair");
+
+	if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK,
+	    PF_UNSPEC, out) == -1)
 		fatal("socketpair");
 
 	switch (pid = fork()) {
@@ -1314,6 +1352,8 @@ spawn_client_proc(void)
 		break;
 	default:
 		close(p[1]);
+		close(out[1]);
+		child_out = out[0];
 		if (ibuf_inuse) {
 			msgbuf_clear(&ibuf.w);
 			close(ibuf.fd);
@@ -1324,6 +1364,11 @@ spawn_client_proc(void)
 	}
 
 	close(p[0]);
+	close(out[0]);
+
+	if (dup2(out[1], 1) == -1 ||
+	    dup2(out[1], 2) == -1)
+		fatal("dup2");
 
 	if (p[1] != 3) {
 		if (dup2(p[1], 3) == -1)
@@ -1396,6 +1441,8 @@ run_test(struct test *t)
 
 	while (waitpid(pid, NULL, 0) != pid)
 		; /* nop */
+
+	check_for_output();
 
 	if (t->shouldfail) {
 		if (ret == EVAL_OK) {
