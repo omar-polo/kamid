@@ -11,5 +11,11 @@ testing "if version works" dir "./root" {
 	send(Tversion, notag, msize, version)
 	m = recv()
 	assert m.type == Rversion
-	print("the response is", m)
+	# print("the response is", m)
+}
+
+testing "fails when sending a R-message" dir "./root" should-fail {
+	send(Rversion, notag, msize, version)
+	# the client should close the connection
+	recv()
 }
