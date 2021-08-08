@@ -12,8 +12,6 @@ testing "fails when sending a R-message" dir "./root" {
 }
 
 testing "walk to a directory" dir "./root" {
-	skip()			# we can't parse Rwalks yet
-
 	mount(0, "/")
 	walk(0, 1, "dir", "subdir")
 
