@@ -547,6 +547,9 @@ ppf_val(FILE *f, struct value *val)
 			    i == val->v.msg.len-1 ? "" : " ");
 		fprintf(f, ")");
 		break;
+	case V_QIDVEC:
+		fprintf(f, "qids[n=%zu]", val->v.qidvec.len);
+		break;
 	default:
 		fprintf(f, "<unknown value>");
 		break;
@@ -688,7 +691,9 @@ val_cast(struct value *a, int totype)
 int
 val_faccess(struct value *a, const char *field, struct value *ret)
 {
-	uint8_t	mtype;
+	uint8_t		 mtype;
+	uint16_t	 len;
+	const char	*errstr;
 
 #define MSGTYPE(m) *(m.msg + 4)	/* skip the length */
 
@@ -726,8 +731,41 @@ val_faccess(struct value *a, const char *field, struct value *ret)
 			ret->type = V_QID;
 			memcpy(&ret->v.qid, &a->v.msg.msg[7], QIDSIZE);
 			return EVAL_OK;
+		} else if (!strcmp(field, "nwqid") && mtype == Rwalk) {
+			ret->type = V_U16;
+			memcpy(&ret->v.u16, &a->v.msg.msg[7], 2);
+			ret->v.u16 = le16toh(ret->v.u16);
+			return EVAL_OK;
+		} else if (!strcmp(field, "wqid") && mtype == Rwalk) {
+			ret->type = V_QIDVEC;
+			ret->v.qidvec.start = &a->v.msg.msg[9];
+			memcpy(&len, &a->v.msg.msg[7], 2);
+			len = le16toh(len);
+			ret->v.qidvec.len = len;
+			return EVAL_OK;
 		}
 		break;
+
+	case V_QIDVEC:
+		len = strtonum(field, 0, MAXWELEM, &errstr);
+		if (errstr != NULL) {
+			before_printing();
+			printf("can't access qid #%s: %s\n", field, errstr);
+			return EVAL_ERR;
+		}
+
+		if (len >= a->v.qidvec.len) {
+			before_printing();
+			printf("can't access qid #%d: out-of-bound "
+			    "(max %zu)\n", len, a->v.qidvec.len);
+			return EVAL_ERR;
+		}
+
+		ret->type = V_QID;
+		memcpy(&ret->v.qid, a->v.qidvec.start + len * QIDSIZE,
+		    QIDSIZE);
+
+                return EVAL_OK;
 
 	default:
 		break;

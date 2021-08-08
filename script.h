@@ -31,6 +31,7 @@ enum {
 
 	/* foreign */
 	V_MSG,
+	V_QIDVEC,
 	V_QID,
 
 	/* casted */
@@ -51,6 +52,10 @@ struct value {
 			uint8_t	*msg;
 			size_t	 len;
 		} msg;
+		struct {
+			uint8_t	*start;
+			size_t	 len;
+		} qidvec;
 		uint8_t		 qid[QIDSIZE];
 	} v;
 };
@@ -66,6 +71,7 @@ enum {
 	OP_CMP_EQ,
 	OP_FACCESS,
 	OP_SFAIL,
+	OP_VARGS,
 };
 
 struct proc;
@@ -173,6 +179,7 @@ struct op	*op_cmp_eq(struct op *, struct op *);
 struct op	*op_cast(struct op *, int);
 struct op	*op_faccess(struct op *, char *);
 struct op	*op_sfail(struct op *, char *);
+struct op	*op_vargs(void);
 
 void		 ppf_val(FILE *, struct value *);
 void		 pp_val(struct value *);
