@@ -258,10 +258,8 @@ popenv(void)
 	e = currentenv();
 	TAILQ_REMOVE(&envs, e, entry);
 
-	TAILQ_FOREACH_SAFE(b, &e->bindings, entry, tb) {
-		free(b->name);
+	TAILQ_FOREACH_SAFE(b, &e->bindings, entry, tb)
 		free(b);
-	}
 
 	free(e);
 }
