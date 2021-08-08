@@ -138,6 +138,12 @@ Abort an ongoing operation.
 len[4] Tflush tag[2] oldtag[2]
 len[4] Rflush tag[2]
 .Ed
+.It Ic walk
+Traverse a file tree.
+.Bd -literal
+len[4] Twalk tag[2] fid[4] newfid[4] nwname[2] nwname*(wname[s])
+len[4] Rwalk tag[2] nwqid[2] nwqid*(qid[13])
+.Ed
 .El
 .Sh SEE ALSO
 .Xr utf8 7 ,
