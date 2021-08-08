@@ -96,12 +96,13 @@ typedef struct {
 %token	SHOULD_FAIL STR
 %token	TESTING
 %token	U8 U16 U32
+%token	VARGS
 
 %token	<v.str>		STRING SYMBOL
 %token	<v.num>		NUMBER
 
 %type	<v.op>		cast cexpr check expr faccess funcall
-%type	<v.op>		literal sfail var varref
+%type	<v.op>		literal sfail var varref vargs
 
 %type	<v.proc>	procname
 
@@ -164,7 +165,9 @@ literal	: STRING		{ $$ = op_lit_str($1); }
 cexpr	: literal | varref | funcall | faccess ;
 check	: cexpr '=' '=' cexpr	{ $$ = op_cmp_eq($1, $4); }	;
 
-expr	: literal | funcall | varref | check | cast | faccess ;
+expr	: literal | funcall | varref | check | cast | faccess | vargs ;
+
+vargs	: VARGS		{ $$ = op_vargs(); }			;
 
 cast	: expr ':' U8	{ $$ = op_cast($1, V_U8); }
 	| expr ':' U16	{ $$ = op_cast($1, V_U16); }
@@ -316,6 +319,7 @@ lookup(char *s)
 		{"u16",		U16},
 		{"u32",		U32},
 		{"u8",		U8},
+		{"vargs",	VARGS},
 	};
 	const struct keywords	*p;
 
