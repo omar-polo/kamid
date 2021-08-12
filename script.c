@@ -388,9 +388,61 @@ newop(int type)
 }
 
 void
+free_op_rec(struct op *op)
+{
+	struct op *n;
+
+	while (op != NULL) {
+		n = op->next;
+		free_op(op);
+		op = n;
+	}
+}
+
+void
 free_op(struct op *op)
 {
-	/* TODO: probably more... */
+	if (op == NULL)
+		return;
+
+	switch (op->type) {
+	case OP_REST:
+	case OP_LITERAL:
+	case OP_VARGS:
+		break;
+	case OP_ASSIGN:
+		free(op->v.assign.name);
+		free_op_rec(op->v.assign.expr);
+		break;
+	case OP_ASSERT:
+		free_op_rec(op->v.assert);
+		break;
+	case OP_FUNCALL:
+		free_op_rec(op->v.funcall.argv);
+		break;
+	case OP_VAR:
+		free(op->v.var);
+		break;
+	case OP_CAST:
+		free_op_rec(op->v.cast.expr);
+		break;
+	case OP_CMP_EQ:
+		free_op_rec(op->v.cmp_eq.a);
+		free_op_rec(op->v.cmp_eq.b);
+		break;
+	case OP_FACCESS:
+		free_op_rec(op->v.faccess.expr);
+		free(op->v.faccess.field);
+		break;
+	case OP_SFAIL:
+		free(op->v.sfail.msg);
+		free_op_rec(op->v.sfail.expr);
+		break;
+	default:
+		/* unreachable */
+		abort();
+	}
+
 	free(op);
 }
 
