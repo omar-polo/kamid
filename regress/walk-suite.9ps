@@ -18,7 +18,6 @@ testing "walk to a file" dir "./root" {
 	walk(0, 1, "dir", "subdir", "file")
 
 	m = recv()
-	print("nwqid =", m.nwqid)
 	assert (
 		m.type == Rwalk
 		m.nwqid == 3
