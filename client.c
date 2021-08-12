@@ -43,11 +43,12 @@ struct qid {
 	uint32_t		 vers;
 	uint8_t			 type;
 
-	int			 fd;
 	int			 refcount;
 
-	char			 fpath[PATH_MAX];
-	struct stat		 sb;
+	int			 dir;
+	int			 fd;
+
+	char			 fpath[PATH_MAX+1];
 
 	STAILQ_ENTRY(qid)	 entries;
 };
@@ -74,11 +75,8 @@ static void		client_privdrop(const char *, const char *);
 
 static int		client_send_listener(int, const void *, uint16_t);
 
-static void		 qid_set_from_sb(struct qid *);
-static int		 qid_update_stat(struct qid *);
-static struct qid	*qid_from_copy(const struct qid *);
-static struct qid	*qid_from_fd(int);
-static struct qid	*qid_from_path(const char *);
+static void		 qid_update_from_sb(struct qid *, struct stat *);
+static struct qid	*qid_from_fd(int, const char *, struct stat *);
 static struct qid	*qid_incref(struct qid *);
 static void		 qid_decref(struct qid *);
 
@@ -327,90 +325,55 @@ client_send_listener(int type, const void *data, uint16_t len)
 	return ret;
 }
 
-/* set qid fields from the sb field */
+/* set qid fields from sb */
 static void
-qid_set_from_sb(struct qid *qid)
+qid_update_from_sb(struct qid *qid, struct stat *sb)
 {
-	qid->path = qid->sb.st_ino;
+	qid->path = sb->st_ino;
 
 	/*
 	 * Theoretically (and hopefully!) this should be a 64 bit
 	 * number.  Unfortunately, 9P uses 32 bit timestamps.
 	 */
-	qid->vers = qid->sb.st_mtim.tv_sec;
+	qid->vers = sb->st_mtim.tv_sec;
 
-	if (S_ISREG(qid->sb.st_mode))
+	if (S_ISREG(sb->st_mode))
 		qid->type = QTFILE;
-	else if (S_ISDIR(qid->sb.st_mode))
+	else if (S_ISDIR(sb->st_mode))
 		qid->type = QTDIR;
-	else if (S_ISLNK(qid->sb.st_mode))
+	else if (S_ISLNK(sb->st_mode))
 		qid->type = QTSYMLINK;
-}
-
-/* update qid info */
-static int
-qid_update_stat(struct qid *qid)
-{
-	if (fstat(qid->fd, &qid->sb) == -1)
-		return -1;
-
-	qid_set_from_sb(qid);
-	return 0;
-}
-
-/* create a new qid by copying info from an existing one */
-static struct qid *
-qid_from_copy(const struct qid *qid)
-{
-	struct qid *q;
-
-	if ((q = calloc(1, sizeof(*q))) == NULL)
-		return NULL;
-	q->fd = -1;
-
-	memcpy(q->fpath, qid->fpath, sizeof(q->fpath));
-
-	memcpy(&q->sb, &qid->sb, sizeof(q->sb));
-	memcpy(&q->path, &qid->path, sizeof(q->path));
-	memcpy(&q->vers, &qid->vers, sizeof(q->vers));
-	memcpy(&q->type, &qid->type, sizeof(q->type));
-
-	return q;
 }
 
 /* creates a qid given a fd */
 static struct qid *
-qid_from_fd(int fd)
+qid_from_fd(int fd, const char *path, struct stat *s)
 {
 	struct qid	*qid;
+	struct stat	 sb;
+	int		 r;
 
 	if ((qid = calloc(1, sizeof(*qid))) == NULL)
 		return NULL;
+
+	if (path != NULL)
+		strlcpy(qid->fpath, path, sizeof(qid->fpath));
 
 	qid->fd = fd;
-	qid_update_stat(qid);
 
-	STAILQ_INSERT_HEAD(&qids, qid, entries);
-
-	return qid;
-}
-
-static struct qid *
-qid_from_path(const char *path)
-{
-	struct qid *qid;
-
-	if ((qid = calloc(1, sizeof(*qid))) == NULL)
-		return NULL;
-
-	qid->fd = -1;
-
-	if (stat(path, &qid->sb) == -1) {
-		free(qid);
-		return NULL;
+	if (s == NULL) {
+		s = &sb;
+		if (path == NULL)
+			r = fstat(fd, s);
+		else
+			r = fstatat(fd, path, s, 0);
+		if (r == -1) {
+			free(qid);
+			return NULL;
+		}
 	}
 
-	qid_set_from_sb(qid);
+	qid_update_from_sb(qid, s);
 
 	STAILQ_INSERT_HEAD(&qids, qid, entries);
 
@@ -778,6 +741,7 @@ tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	struct qid	*qid;
 	struct fid	*f;
 	uint32_t	 fid, afid;
+	int		 fd;
 	char		 aname[PATH_MAX];
 
 	if (attached) {
@@ -808,21 +772,27 @@ tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 
-	if ((qid = qid_from_path(aname)) == NULL) {
-		np_errno(hdr->tag);
-		log_debug("failed to attach %s: %s", aname, strerror(errno));
-		return;
-	}
+	if ((fd = open(aname, O_RDONLY|O_DIRECTORY)) == -1)
+		goto fail;
+
+	if ((qid = qid_from_fd(fd, NULL, NULL)) == NULL)
+		goto fail;
+
 	log_debug("attached %s", aname);
 
 	if ((f = new_fid(qid, fid)) == NULL) {
 		qid_decref(qid);
-		np_error(hdr->tag, "no memory");
-		return;
+		goto fail;
 	}
 
 	np_attach(hdr->tag, qid);
 	attached = 1;
+	return;
+
+fail:
+	np_errno(hdr->tag);
+	log_warn("failed to attach %s", aname);
+	return;
 	return;
 
 err:
@@ -877,12 +847,13 @@ tflush(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 static void
 twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 {
+	struct stat	 sb;
 	struct qid	*qid, wqid[MAXWELEM] = {0};
 	struct fid	*f, *nf;
 	uint32_t	 fid, newfid;
 	uint16_t	 nwname;
-	int		 nwqid = 0;
-	char		 wnam[PATH_MAX+1], path[PATH_MAX+1];
+	int		 fd, oldfd, no, nwqid = 0;
+	char		 wnam[PATH_MAX+1];
 
 	if (!NPREAD32("fid", &fid, &data, &len)       ||
 	    !NPREAD32("newfid", &newfid, &data, &len) ||
@@ -934,7 +905,7 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 
-	strlcpy(path, f->qid->fpath, sizeof(path));
+	oldfd = f->qid->fd;
 
 	for (nwqid = 0; nwqid < nwname; nwqid++) {
 		switch (NPREADSTR("wname", wnam, sizeof(wnam), &data, &len)) {
@@ -945,21 +916,44 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 			return;
 		}
 
-		strlcat(path, "/", sizeof(path));
-		strlcat(path, wnam, sizeof(path));
-
-		if (stat(path, &wqid[nwqid].sb) == -1) {
-			if (nwqid == 0)
-				np_errno(hdr->tag);
-			else
-				np_walk(hdr->tag, nwqid, wqid);
-			return;
+		if ((fd = openat(oldfd, wnam, O_RDONLY|O_DIRECTORY)) == -1 &&
+		    errno != ENOTDIR) {
+			nwqid--;
+			goto cantopen;
 		}
 
-		qid_set_from_sb(&wqid[nwqid]);
+		if ((fd == -1 && fstatat(oldfd, wnam, &sb, 0) == -1) ||
+		    (fd != -1 && fstat(fd, &sb) == -1)) {
+			nwqid--;
+			goto cantopen;
+		}
+
+		qid_update_from_sb(&wqid[nwqid], &sb);
+
+		/* reached a file but we still have other components */
+		if (fd == -1 && nwqid+1 < nwname)
+			goto cantopen;
+
+		/* reached the end and found a file */
+		if (fd == -1 && nwqid+1 == nwname)
+			continue;
+
+		if (oldfd != f->qid->fd)
+			close(oldfd);
+		oldfd = fd;
 	}
 
-        if ((qid = qid_from_path(path)) == NULL)
+	/*
+	 * There can be two possibilities: fd == -1 means that we've
+	 * reached a file and we should save BOTH the dirfd (oldfd)
+	 * and the path (wnam); or we just reached another directory,
+	 * in which case we can just create a new qid using fd.
+	 */
+	if (fd == -1)
+		qid = qid_from_fd(oldfd, wnam, &sb);
+	else
+		qid = qid_from_fd(oldfd, NULL, &sb);
+	if (qid == NULL)
 		fatal("qid_from_fd");
 
 	if (nf == NULL) {
@@ -972,7 +966,16 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	}
 
 	np_walk(hdr->tag, nwqid, wqid);
+	return;
 
+cantopen:
+	if (oldfd != f->qid->fd)
+		close(oldfd);
+	no = errno;
+	if (nwqid == 0)
+		np_error(hdr->tag, strerror(no));
+	else
+		np_walk(hdr->tag, nwqid, wqid);
 	return;
 
 err:
