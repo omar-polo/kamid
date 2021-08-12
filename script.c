@@ -1615,7 +1615,6 @@ run_test(struct test *t)
 int
 main(int argc, char **argv)
 {
-	struct env	*e;
 	struct test	*t;
 	int		 ch, i, r, passed = 0, failed = 0, skipped = 0;
 	int		 runclient = 0;
