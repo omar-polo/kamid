@@ -168,6 +168,7 @@ enum {
 int		 global_set(char *, struct op *);
 
 struct op	*newop(int);
+void		 free_op_rec(struct op *);
 void		 free_op(struct op *);
 struct op	*op_rest(void);
 struct op	*op_assign(char *, struct op *);
@@ -183,6 +184,7 @@ struct op	*op_vargs(void);
 
 void		 ppf_val(FILE *, struct value *);
 void		 pp_val(struct value *);
+const char	*val_type(struct value *);
 int		 val_trueish(struct value *);
 int		 val_eq(struct value *, struct value *);
 int		 val_cast(struct value *, int);
