@@ -411,7 +411,7 @@ listener_imsg_compose_main(int type, uint32_t peerid, const void *data,
     uint16_t datalen)
 {
 	return imsg_compose_event(iev_main, type, peerid, 0, -1, data,
-		datalen);
+	    datalen);
 }
 
 static void
