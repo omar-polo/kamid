@@ -180,7 +180,6 @@ nl		: '\n' optnl		/* one or more newlines */
 arrow		: '=' '>' ;
 
 comma		: ',' optnl
-		| nl
 		;
 
 varset		: STRING '=' string		{
@@ -207,7 +206,7 @@ pki		: PKI STRING CERT STRING { add_cert($2, $4); }
 		| PKI STRING KEY STRING  { add_key($2, $4); }
 		;
 
-table_kp	: string arrow string {
+table_kp	: string arrow string optnl {
 			if (table_add(table, $1, $3) == -1)
 				yyerror("can't add to table %s",
 				    table->t_name);
@@ -251,7 +250,7 @@ table		: TABLE STRING STRING {
 		}
 		| TABLE STRING {
 			add_table($2, "static", NULL);
-		} '{' table_vals '}' {
+		} '{' optnl table_vals '}' {
 			table = NULL;
 		}
 		;
