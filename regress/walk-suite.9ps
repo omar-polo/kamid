@@ -1,5 +1,7 @@
 include "lib.9ps"
 
+# TODO: add a test that tries to do a walk after opening a fid for i/o.
+
 testing "walk to a directory" dir "./root" {
 	mount(0, "/")
 	walk(0, 1, "dir", "subdir")
