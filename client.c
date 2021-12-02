@@ -871,6 +871,11 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 
+	if (f->iomode != 0) {
+		np_error(hdr->tag, "fid already opened for I/O");
+		return;
+	}
+
 	if (fid == newfid)
 		nf = f;
 	else if ((nf = fid_by_id(newfid)) != NULL) {
@@ -889,11 +894,6 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 			fatal("new_fid duplication");
 
 		np_walk(hdr->tag, 1, f->qid);
-		return;
-	}
-
-	if (f->iomode != 0) {
-		np_error(hdr->tag, "fid already opened for I/O");
 		return;
 	}
 
