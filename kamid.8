@@ -71,3 +71,7 @@ The
 .Nm
 program was written by
 .An Omar Polo Aq Mt op@omarpolo.com .
+.Sh CAVEATS
+.Nm
+doesn't handle very well when a user directory is over multiple
+devices since it uses the inode of files to build the QID path field.
