@@ -78,7 +78,7 @@ Then follows an optional body whose structure depends on the type of
 the message.
 .Pp
 The message types are as follows:
-.Pq the header was removed for brevity
+.Pq the header is omitted for brevity
 .Bl -tag -width versionxx
 .It Ic version
 Negotiate the version and maximum message size.
@@ -90,7 +90,7 @@ msize[4] version[s]
 The
 .Ic version
 request must be the first message sent, and the client cannot issue
-further requests until it has received the Rversion reply.
+further requests until receiving the Rversion reply.
 .Cm tag
 should be
 .Dv NOTAG
