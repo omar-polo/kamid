@@ -63,7 +63,7 @@ dist_man5_MANS =	kamid.conf.5
 dist_man7_MANS =	9p.7
 dist_man8_MANS =	kamictl.8 kamid.8
 
-EXTRA_DIST =		regress
+EXTRA_DIST =		regress ninepscript.5 ninepscript.8
 TESTS =			run-tests.sh
 run-tests.sh:		ninepscript
 
