@@ -633,7 +633,9 @@ val_type(struct value *v)
 int
 val_trueish(struct value *a)
 {
-	return a->type == V_NUM && a->v.num;
+	if (val_isnum(a))
+		return val_tonum(a);
+	return 1;
 }
 
 int
