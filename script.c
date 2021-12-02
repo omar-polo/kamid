@@ -636,7 +636,7 @@ val_trueish(struct value *a)
 	return a->type == V_NUM && a->v.num;
 }
 
-static inline int
+int
 val_isnum(struct value *a)
 {
 	return a->type == V_NUM
@@ -645,7 +645,7 @@ val_isnum(struct value *a)
 		|| a->type == V_U32;
 }
 
-static inline int64_t
+int64_t
 val_tonum(struct value *a)
 {
 	switch (a->type) {

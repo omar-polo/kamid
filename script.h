@@ -184,8 +184,11 @@ struct op	*op_vargs(void);
 
 void		 ppf_val(FILE *, struct value *);
 void		 pp_val(struct value *);
+void		 pp_val(struct value *);
 const char	*val_type(struct value *);
 int		 val_trueish(struct value *);
+int		 val_isnum(struct value *);
+int64_t		 val_tonum(struct value *);
 int		 val_eq(struct value *, struct value *);
 int		 val_cast(struct value *, int);
 int		 val_faccess(struct value *, const char *, struct value *);
