@@ -1,0 +1,258 @@
+.\" Copyright (c) 2021 Omar Polo <op@omarpolo.com>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate: December 02 2021$
+.Dt NINEPSCRIPT 5
+.Os
+.Sh NAME
+.Nm ninepscript
+.Nd kamid regress test scripting language
+.Sh DESCRIPTION
+.Nm
+is a custom DSL
+.Pq domain specific language
+used to write the regression suite of
+.Xr kamid 8 .
+it has a fairly simple and regular syntax that features constant
+declarations, routines, test cases.
+It does not support conditional or loops.
+.Pp
+Additional files can be included with the
+.Ic include
+keyword, for example
+.Bd -literal -offset Ds
+include "lib.9ps"
+.Ed
+.Pp
+Comments can be placed anywhere, start with the # character and extend
+until the end of the line.
+.Pp
+An expression is a fundamental building block.
+It is something that yields a value.
+An expression may be either a:
+.Bl -tag -width variable_reference
+.It literal
+a bare number or string.
+A string is a sequence of characters enclosed in single or double quotes
+.Sq like this
+or
+.Dq like this .
+.It routine call
+Evaluate the routine code and return the value computed by it.
+The syntax is
+.Bd -literal -offset Ds
+.Ar routine Ns Po Ar arguments... Pc
+.Ed
+.Pp
+The
+.Ql ...
+special syntax expands to the list of variable arguments of the
+current routine.
+Be aware that the implementation of the variable arguments is quirky
+and has a lot of corner cases, use with care!
+.It variable reference
+a variable
+.Pq or constant
+reference is the name of a previously defined variable or constant.
+It evaluates to the value of the variable or constant in the current
+scope.
+.It comparison
+The syntax is
+.Ql Ar expression Cm == Ar expression
+and yields a true value if the two expressions are considered to be
+.Sq equal
+or a false value otherwise.
+Two values are equal if they are both number and represent the same
+value
+.Pq regardless of the size
+or if they're both the same string.
+.It cast
+convert one value to another type.
+The syntax is
+.Ql Ar expression : Ns Ar type
+where type is one of
+.Sq u8 ,
+.Sq u16 ,
+.Sq u32
+or
+.Sq str .
+.It field access
+Access a field of a complex object.
+The syntax is
+.Ql Ar object . Ns Ar field .
+See the
+.Sx OBJECTS AND FIELDS
+section for the description of objects types and fields allowed.
+.El
+.Pp
+An expression is considered to be
+.Dq false
+if evaluates to a number and its value is zero.
+Otherwise, it's considered to be
+.Dq true .
+.Pp
+The top-level declarations are:
+.Bl -tag -width Ds
+.It Ic const Ar identifier No = Ar value
+Declare
+.Ar identifier
+to be a constant that evaluates to
+.Ar value .
+.Ar value
+must be a literal or a cast from a literal.
+Multiple constant can be declared at the same time using the following
+syntax:
+.Bd -literal -offset Ds
+.Ic const (
+	foo = 5
+	bar = 7
+)
+.Ed
+.Pp
+Note that newlines are mandatory after an
+.Ar identifier No = Ar value
+line in this case.
+.It Ic proc Ar name Ns Po Ar arguments ... Pc Brq code ...
+Define a routine called
+.Ar name
+that accepts the comma-separated list of
+.Ar arguments .
+When a routine is called, its
+.Ar code
+gets evaluated in a lexical scope where
+.Ar arguments
+are defined to the value passed by the caller.
+A routine may be called only within another routine body or inside a
+.Ic testing
+body.
+.It Ic testing Ar reason Ic dir Ar path Brq code ...
+Define a test case.
+.Ar reason
+is what the test block is about and
+.Ar path
+is the path to the root directory where the test will be executed.
+.Ar reason
+and
+.Ar path
+must be string literals.
+.El
+.Pp
+Inside a
+.Ic proc
+or
+.Ic testing
+code block the following instructions are allowed:
+.Bl -tag -width Ds
+.It Ar variable Cm = Ar expression
+Set a local lexical
+.Ar variable
+to the value yielded by
+.Ar expression .
+The
+.Ar variable
+lifetime last from this declaration until the end of the current
+block.
+.It Ar procedure Ns Pq Ar arguments ...
+Execute
+.Ar procedure
+with the given
+.Ar arguments .
+.It Ic assert Ar expression
+Evaluate
+.Ar expression
+and if it not yields a true-ish value terminate the current running
+test and mark it as failed.
+Multiple assertion can be done in one single
+.Ic assert
+block using the following syntax:
+.Bd -literal -offset Ds
+.Ic assert (
+	expression_1
+	expression_2
+	...
+	expression_n
+)
+.Ed
+.Pp
+Note that newlines are mandatory after every
+.Ar expression
+in this case.
+.It Ic should-fail Ar expression Op : Ar reason
+Evaluate
+.Ar expression
+and continue only if the evaluation produced an error.
+If the execution of
+.Ar expression
+is successful, terminate the current test.
+.Ar reason
+is optional and, if present, must be a literal string.
+It is similar to the
+.Sq try-catch
+statement of other programming languages.
+.El
+.Sh BUILT IN FUNCTIONS
+These functions are built into the language and provided by the
+interpreter:
+.Bl -tag -width Ds
+.It Ic debug Ns Po Ar arg, ... Pc
+Print the argument list separated by a space and followed by a newline
+if the interpreter runs with the verbose flag set.
+.It Ic iota Ns Pq
+Return distinct u16 integer every time it's called.
+Starts at zero and goes up to 254 to then wrap around to zero again.
+255 is skipped because
+.Ic iota
+is intended to be used to provide the tag for
+.Ic send
+and 255 is the special
+.Sq NOTAG
+value in 9P200.
+.It Ic print Ns Po Ar arg, ... Pc
+Print the argument list separated by a space and followed by a
+newline.
+.It Ic recv Ns Pq
+Receive a message from the server and return it as an object.
+A
+.Dv Terror
+doesn't stop the execution of the test, rather, an error object is
+returned.
+See
+.Sx OBJECTS AND FIELDS
+for the complete list of objects.
+.It Ic send Ns Po Ar type, tag, ... Pc
+Send a 9P message with the given
+.Ar type
+and
+.Ar tag .
+Other arguments, if given, are packed into the message and sent as
+well, respecting the given order.
+The overall length of the message is computed automatically.
+.It Ic skip Ns Pq
+Terminate the execution of the current test suite immediately.
+The test won't be counted as passed nor failed, but as skipped.
+.El
+.Sh OBJECTS AND FIELDS
+List of objects and fields...
+.Sh SEE ALSO
+.Xr 9p 7 ,
+.Xr kamid 8 ,
+.Xr ninepscript 8
+.Sh AUTHORS
+.An -nosplit
+.Nm
+was designed and implemented by
+.An Omar Polo Aq Mt op@omarpolo.com
+for the
+.Xr kamid 8
+daemon regression suite.
