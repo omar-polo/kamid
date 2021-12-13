@@ -1676,7 +1676,7 @@ main(int argc, char **argv)
 
 	i = 0;
 	TAILQ_FOREACH(t, &tests, entry) {
-		printf("===> [%d/%d] running test \"%s\"... ", i, ntests,
+		printf("===> [%d/%d] running test \"%s\"... ", i+1, ntests,
 		    t->name);
 		fflush(stdout);
 
