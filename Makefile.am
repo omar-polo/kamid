@@ -53,6 +53,7 @@ ninepscript_SOURCES =	client.c	\
 			utils.c		\
 			utils.h
 
+AM_CFLAGS =		@AM_CFLAGS@
 LDADD =			$(LIBOBJS)
 
 BUILT_SOURCES =		compile_flags.txt

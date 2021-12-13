@@ -139,6 +139,8 @@ CC_ADD_CHECK_FLAGS([-Wstrict-prototypes])
 CC_ADD_CHECK_FLAGS([-Wwrite-strings])
 CC_ADD_CHECK_FLAGS([-Wno-unused-parameter])
 
+AC_SUBST([AM_CFLAGS])
+
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([
 	Makefile
