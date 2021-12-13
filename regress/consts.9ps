@@ -8,6 +8,13 @@ const (
 	# ...
 	QTFILE	= 0x0
 
+	OREAD	= 0
+	OWRITE	= 1
+	ORDWR	= 2
+	OEXEC	= 3
+	OTRUNC	= 16
+	ORCLOSE	= 64
+
 	Tversion	= 100:u8
 	Rversion	= 101:u8
 	Tauth		= 102:u8

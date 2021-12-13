@@ -57,10 +57,9 @@ struct fid {
 
 	/*
 	 * 0 when the fid was not yet opened for I/O otherwise set to
-	 * the bitwise or of KFIO_R for read and KFIO_W for write
+	 * the flags passed to open(2).  O_CLOEXEC means ORCLOSE, that
+	 * is to unlink the file upon Tclunk.
 	 */
-#define KFIO_W	0x02
-#define KFIO_R	0x04
 	int			 iomode;
 
 	/*
@@ -100,6 +99,7 @@ static void		parse_message(const uint8_t *, size_t,
 			    struct np_msg_header *, uint8_t **);
 
 static void		np_write16(uint16_t);
+static void		np_write32(uint32_t);
 static void		np_header(uint32_t, uint8_t, uint16_t);
 static void		np_string(uint16_t, const char *);
 static void		np_qid(struct qid *);
@@ -110,6 +110,7 @@ static void		np_attach(uint16_t, struct qid *);
 static void		np_clunk(uint16_t);
 static void		np_flush(uint16_t);
 static void		np_walk(uint16_t, int, struct qid *);
+static void		np_open(uint16_t, struct qid *, uint32_t);
 static void		np_error(uint16_t, const char *);
 static void		np_errno(uint16_t);
 
@@ -136,6 +137,7 @@ static void	tattach(struct np_msg_header *, const uint8_t *, size_t);
 static void	tclunk(struct np_msg_header *, const uint8_t *, size_t);
 static void	tflush(struct np_msg_header *, const uint8_t *, size_t);
 static void	twalk(struct np_msg_header *, const uint8_t *, size_t);
+static void	topen(struct np_msg_header *, const uint8_t *, size_t);
 static void	handle_message(struct imsg *, size_t);
 
 ATTR_DEAD void
@@ -447,6 +449,13 @@ fid_by_id(uint32_t fid)
 static void
 free_fid(struct fid *f)
 {
+	if (f->fd != -1) {
+		close(f->fd);
+		/* try to honour ORCLOSE if requested */
+		if (f->iomode & O_CLOEXEC)
+			unlinkat(f->qid->fd, f->qid->fpath, 0);
+	}
+
 	qid_decref(f->qid);
 
 	STAILQ_REMOVE(&fids, f, fid, entries);
@@ -487,6 +496,13 @@ static void
 np_write16(uint16_t x)
 {
 	x = htole16(x);
+	evbuffer_add(evb, &x, sizeof(x));
+}
+
+static void
+np_write32(uint32_t x)
+{
+	x = htole32(x);
 	evbuffer_add(evb, &x, sizeof(x));
 }
 
@@ -591,6 +607,15 @@ np_walk(uint16_t tag, int nwqid, struct qid *wqid)
 	for (i = 0; i < nwqid; ++i)
 		np_qid(wqid + i);
 
+	do_send();
+}
+
+static void
+np_open(uint16_t tag, struct qid *qid, uint32_t iounit)
+{
+	np_header(QIDSIZE + sizeof(iounit), Ropen, tag);
+	np_qid(qid);
+	np_write32(iounit);
 	do_send();
 }
 
@@ -993,6 +1018,84 @@ err:
 	client_shutdown();
 }
 
+static inline int
+npmode_to_unix(uint8_t mode, int *flags)
+{
+	switch (mode & 0x0F) {
+	case KOREAD:
+		*flags = O_RDONLY;
+		break;
+	case KOWRITE:
+		*flags = O_WRONLY;
+		break;
+	case KORDWR:
+		*flags = O_RDWR;
+		break;
+	case KOEXEC:
+		log_warnx("tried to open something with KOEXEC");
+		/* fallthrough */
+	default:
+		return -1;
+	}
+
+	if (mode & KOTRUNC)
+		*flags |= O_TRUNC;
+	if (mode & KORCLOSE)
+		*flags |= O_CLOEXEC;
+
+	return 0;
+}
+
+static void
+topen(struct np_msg_header *hdr, const uint8_t *data, size_t len)
+{
+	struct stat	 sb;
+	struct qid	 qid;
+	struct fid	*f;
+	uint32_t	 fid;
+	uint8_t		 mode;
+
+	/* fid[4] mode[1] */
+	if (!NPREAD32("fid", &fid, &data, &len) ||
+	    !NPREAD8("mode", &mode, &data, &len)) {
+		client_send_listener(IMSG_CLOSE, NULL, 0);
+		client_shutdown();
+		return;
+	}
+
+	if ((f = fid_by_id(fid)) == NULL || f->fd != -1) {
+		np_error(hdr->tag, "invalid fid");
+		return;
+	}
+
+	if (f->qid->type & QTDIR) {
+		/*
+	 	 * XXX: real 9P2000 uses reads on directories to list the
+		 * files, but 9P2000.L (and possibly .U too) uses
+		 * Treaddir.  It's my intention to support the 9p-style
+		 * read-on-dir, just not yet.
+		 */
+		np_error(hdr->tag, "can't do I/O on directories yet");
+		return;
+	}
+
+	if (npmode_to_unix(mode, &f->iomode) == -1) {
+		np_error(hdr->tag, "invalid mode");
+		return;
+	}
+
+	if ((f->fd = openat(f->qid->fd, f->qid->fpath, f->iomode)) == -1) {
+		np_error(hdr->tag, strerror(errno));
+		return;
+	}
+
+	if (fstat(f->fd, &sb) == -1)
+		fatal("fstat");
+
+	qid_update_from_sb(&qid, &sb);
+	np_open(hdr->tag, &qid, sb.st_blksize);
+}
+
 static void
 handle_message(struct imsg *imsg, size_t len)
 {
@@ -1005,6 +1108,7 @@ handle_message(struct imsg *imsg, size_t len)
 		{Tclunk,	tclunk},
 		{Tflush,	tflush},
 		{Twalk,		twalk},
+		{Topen,		topen},
 	};
 	struct np_msg_header	 hdr;
 	size_t			 i;

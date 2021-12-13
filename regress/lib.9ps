@@ -14,6 +14,14 @@ proc walk(fid, newfid, ...) {
 	send(Twalk, iota(), fid:u32, newfid:u32, vargs:u16, ...)
 }
 
+proc open(fid, mode) {
+	send(Topen, iota(), fid:u32, mode:u8)
+}
+
+proc clunk(fid) {
+	send(Tclunk, iota(), fid:u32)
+}
+
 
 
 # useful functions
@@ -36,6 +44,11 @@ proc mount(fid, path) {
 		m.type == Rattach
 		m.qid.type == QTDIR
 	)
+}
+
+proc walk-ok() {
+	m = recv()
+	assert m.type == Rwalk
 }
 
 proc expect-error() {

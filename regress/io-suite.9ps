@@ -1,0 +1,15 @@
+include "lib.9ps"
+
+testing "open + clunk works" dir "./root" {
+	mount(0, "/")
+	walk(0, 1, "dir", "subdir", "file")
+	walk-ok()
+
+	open(1, OREAD)
+	m = recv()
+	assert m.type == Ropen
+
+	clunk(1)
+	m = recv()
+	assert m.type == Rclunk
+}

@@ -162,6 +162,14 @@ struct np_msg_header {
 #define QTSYMLINK	0x02		/* type bit for symbolic link */
 #define QTFILE		0x00		/* type bits for plain file */
 
+/* Topen mode/flags */
+#define KOREAD		0x00
+#define KOWRITE		0x01
+#define KORDWR		0x02
+#define KOEXEC		0x03
+#define KOTRUNC		0x10
+#define KORCLOSE	0x40
+
 /* 9p message types */
 enum {
 	Tversion =	100,

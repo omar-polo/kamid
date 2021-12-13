@@ -149,6 +149,12 @@ Traverse a file tree.
 fid[4] newfid[4] nwname[2] nwname*(wname[s])
 nwqid[2] nwqid*(qid[13])
 .Ed
+.It Ic open
+Prepare a fid for I/O
+.Bd -literal
+fid[4] mode[1]
+qid[13] iounit[4]
+.Ed
 .El
 .Sh SEE ALSO
 .Xr utf8 7 ,
