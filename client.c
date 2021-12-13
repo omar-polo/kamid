@@ -45,9 +45,7 @@ struct qid {
 
 	int			 refcount;
 
-	int			 dir;
 	int			 fd;
-
 	char			 fpath[PATH_MAX+1];
 
 	STAILQ_ENTRY(qid)	 entries;
@@ -56,7 +54,21 @@ struct qid {
 STAILQ_HEAD(fidhead, fid) fids;
 struct fid {
 	uint32_t		 fid;
+
+	/*
+	 * 0 when the fid was not yet opened for I/O otherwise set to
+	 * the bitwise or of KFIO_R for read and KFIO_W for write
+	 */
+#define KFIO_W	0x02
+#define KFIO_R	0x04
 	int			 iomode;
+
+	/*
+	 * if iomode is set, this fid was opened and fd represents its
+	 * file descriptor.
+	 */
+	int			 fd;
+
 	struct qid		*qid;
 	STAILQ_ENTRY(fid)	 entries;
 };
