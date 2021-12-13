@@ -424,6 +424,7 @@ new_fid(struct qid *qid, uint32_t fid)
 
 	f->qid = qid_incref(qid);
 	f->fid = fid;
+	f->fd = -1;
 
 	STAILQ_INSERT_HEAD(&fids, f, entries);
 
