@@ -76,7 +76,7 @@ static struct imsgev	*iev_listener;
 static struct evbuffer	*evb;
 static uint32_t		 peerid;
 
-static int		 handshaked, attached;
+static int		 handshaked;
 uint32_t		 msize;
 
 static ATTR_DEAD void	client_shutdown(void);
@@ -411,9 +411,6 @@ qid_decref(struct qid *qid)
 
 	close(qid->fd);
 	free(qid);
-
-	if (STAILQ_EMPTY(&qids))
-		attached = 0;
 }
 
 static struct fid *
@@ -782,11 +779,6 @@ tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	int		 fd;
 	char		 aname[PATH_MAX];
 
-	if (attached) {
-		np_error(hdr->tag, "already attached");
-		return;
-	}
-
 	/* fid[4] afid[4] uname[s] aname[s] */
 
 	if (!NPREAD32("fid", &fid, &data, &len) ||
@@ -810,13 +802,18 @@ tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 
+	if (fid_by_id(fid) != NULL || afid != NOFID) {
+		np_error(hdr->tag, "invalid fid or afid");
+		return;
+	}
+
 	if ((fd = open(aname, O_RDONLY|O_DIRECTORY)) == -1)
 		goto fail;
 
 	if ((qid = qid_from_fd(fd, NULL, NULL)) == NULL)
 		goto fail;
 
-	log_debug("attached %s", aname);
+	log_debug("attached %s to %d", aname, fid);
 
 	if ((f = new_fid(qid, fid)) == NULL) {
 		qid_decref(qid);
@@ -824,7 +821,6 @@ tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	}
 
 	np_attach(hdr->tag, qid);
-	attached = 1;
 	return;
 
 fail:
