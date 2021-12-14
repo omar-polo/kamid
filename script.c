@@ -1706,7 +1706,7 @@ main(int argc, char **argv)
 	}
 
 	printf("\n");
-	printf("passed %d/%d (%d skipped and %d failed)\n",
+	printf("%d/%d passed (%d skipped and %d failed)\n",
 	    passed, i, skipped, failed);
 
 	popenv();
