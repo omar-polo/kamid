@@ -1,4 +1,4 @@
-bin_PROGRAMS =		kamictl kamid
+bin_PROGRAMS =		kamictl kamid kamiftp
 check_PROGRAMS =	ninepscript
 noinst_PROGRAMS =	kamirepl
 
@@ -67,10 +67,13 @@ ninepscript_SOURCES =	client.c	\
 AM_CFLAGS =		@AM_CFLAGS@
 LDADD =			$(LIBOBJS)
 
+kamiftp_LDFLAGS =	@KAMIFTP_LIBS@
+
 BUILT_SOURCES =		compile_flags.txt
 CLEANFILES =		compile_flags.txt
 
 dist_doc_DATA =		README.md LICENSE
+dist_man1_MANS =	kamiftp.1
 dist_man5_MANS =	kamid.conf.5
 dist_man7_MANS =	9p.7
 dist_man8_MANS =	kamictl.8 kamid.8

@@ -1,0 +1,59 @@
+.\" Copyright (c) 2021 Omar Polo <op@omarpolo.com>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate: December 14 2021 $
+.Dt KAMIFTP 1
+.Os
+.Sh NAME
+.Nm kamiftp
+.Nd 9p client
+.Sh SYNOPSIS
+.Nm
+.Op Fl c
+.Op Fl C Ar cert
+.Op Fl K Ar key
+.Ar host Op Ar path
+.Sh DESCRIPTION
+.Nm
+is a
+.Xr 9p 7
+client.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl c
+Use TLS for the connection.
+.Fl K
+and
+.Fl C
+are mandatory if
+.Fl c
+is used.
+.It Fl C Ar certificate
+Specify the path to the client
+.Ar certificate
+to be use during the TLS handsahke.
+.It Fl K Ar key
+Specify the path to the client certificate
+.Ar key
+to be used during the TLS handshake.
+.El
+.Sh SEE ALSO
+.Xr 9p 7
+.Xr kamid 8
+.Sh AUTHORS
+The
+.Nm
+utility was written by
+.An Omar Polo Aq Mt op@omarpolo.com .

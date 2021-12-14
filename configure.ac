@@ -104,6 +104,15 @@ AC_CHECK_LIB(tls, tls_init, [], [
 	AC_MSG_ERROR([requires libtls])
 ])
 
+# small hack to avoid linking *everything* to readline.
+libs_orig="${LIBS}"
+AC_CHECK_LIB(readline, readline, [], [
+	AC_MSG_ERROR([requires readline])
+])
+KAMIFTP_LIBS="${LIBS}"
+LIBS="${libs_orig}"
+AC_SUBST([KAMIFTP_LIBS])
+
 AS_CASE([$host_os],
 	[*openbsd*], [AC_CHECK_LIB([event], [event_init], [],
 			[AC_MSG_ERROR([requires libevent])])],
