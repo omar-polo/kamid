@@ -43,6 +43,15 @@ kamiftp_SOURCES =	9pclib.c	\
 			utils.c		\
 			utils.h
 
+kamirepl_SOURCES =	9pclib.c	\
+			9pclib.h	\
+			kamid.h		\
+			kamirepl.c	\
+			log.c		\
+			log.h		\
+			utils.c		\
+			utils.h
+
 ninepscript_SOURCES =	client.c	\
 			client.h	\
 			compat.h	\
