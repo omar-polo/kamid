@@ -44,7 +44,7 @@ The regression suite needs to be run with root privileges, since it
 has to spawn a subprocess that needs to `chroot(2)` itself.  To run
 the tests, issue
 
-	# make check
+	$ make ninepscript && sudo ./run-tests.sh
 
 The regression uses a custom DSL, `ninepscript`, to run the tests.
 See `regress/sample.9ps` for an example of the grammar.
