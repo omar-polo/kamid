@@ -1053,6 +1053,7 @@ topen(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	struct fid	*f;
 	uint32_t	 fid;
 	uint8_t		 mode;
+	const char	*path;
 
 	/* fid[4] mode[1] */
 	if (!NPREAD32("fid", &fid, &data, &len) ||
@@ -1083,7 +1084,11 @@ topen(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 
-	if ((f->fd = openat(f->qid->fd, f->qid->fpath, f->iomode)) == -1) {
+	path = f->qid->fpath;
+	if (*path == '\0')
+		path = ".";
+
+	if ((f->fd = openat(f->qid->fd, path, f->iomode)) == -1) {
 		np_error(hdr->tag, strerror(errno));
 		return;
 	}
