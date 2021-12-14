@@ -959,16 +959,12 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		}
 
 		if ((fd = openat(oldfd, wnam, O_RDONLY|O_DIRECTORY)) == -1 &&
-		    errno != ENOTDIR) {
-			nwqid--;
+		    errno != ENOTDIR)
 			goto cantopen;
-		}
 
 		if ((fd == -1 && fstatat(oldfd, wnam, &sb, 0) == -1) ||
-		    (fd != -1 && fstat(fd, &sb) == -1)) {
-			nwqid--;
+		    (fd != -1 && fstat(fd, &sb) == -1))
 			goto cantopen;
-		}
 
 		qid_update_from_sb(&wqid[nwqid], &sb);
 
