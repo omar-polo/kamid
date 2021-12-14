@@ -10,3 +10,33 @@ testing "fails when sending a R-message" dir "./root" {
 	send(Rversion, notag, msize, np2000)
 	should-fail recv() : "the connection should have been closed"
 }
+
+testing "multiple attach" dir "./root" {
+	version(msize, np2000)
+
+	m = recv()
+	assert (
+		m.type == Rversion
+		m.tag == notag
+		m.msize == msize
+	)
+
+	fid1 = 0
+	fid2 = 1
+
+	# attach the first fid
+	attach(fid1, nofid, "op", "/")
+	m = recv()
+	assert (
+		m.type == Rattach
+		m.qid.type == QTDIR
+	)
+
+	# attach the second fid
+	attach(fid2, nofid, "op", "/")
+	m = recv()
+	assert (
+		m.type == Rattach
+		m.qid.type == QTDIR
+	)
+}
