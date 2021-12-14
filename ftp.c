@@ -28,8 +28,10 @@
 #include <tls.h>
 #include <unistd.h>
 
+#if HAVE_READLINE
 #include <readline/readline.h>
 #include <readline/history.h>
+#endif
 
 #include "9pclib.h"
 #include "kamid.h"
@@ -47,6 +49,42 @@ struct tls		*ctx;
 int			 sock;
 
 #define PWDFID		0
+
+#if HAVE_READLINE
+static char *
+read_line(const char *prompt)
+{
+	char *line;
+
+again:
+	if ((line = readline(prompt)) == NULL)
+		return NULL;
+	/* XXX: trim spaces? */
+	if (*line == '\0') {
+		free(line);
+		goto again;
+	}
+
+	add_history(line);
+	return line;
+}
+#else
+static char *
+read_line(const char *prompt)
+{
+	char *ch, *line = NULL;
+	size_t linesize = 0;
+	ssize_t linelen;
+
+	linelen = getline(&line, &linesize, stdin);
+	if (linelen == -1)
+		return NULL;
+
+	if ((ch = strchr(line, '\n')) != NULL)
+		*ch = '\0';
+	return line;
+}
+#endif
 
 static void ATTR_DEAD
 usage(int ret)
@@ -165,12 +203,9 @@ main(int argc, char **argv)
 	for (;;) {
 		char *line;
 
-		if ((line = readline("ftp> ")) == NULL)
+		if ((line = read_line("ftp> ")) == NULL)
 			break;
-		/* XXX: trim spaces */
-		if (*line == '\0')
-			continue;
-		add_history(line);
+		printf("read: %s\n", line);
 	}
 
 	printf("\n");

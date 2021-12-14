@@ -107,7 +107,7 @@ AC_CHECK_LIB(tls, tls_init, [], [
 # small hack to avoid linking *everything* to readline.
 libs_orig="${LIBS}"
 AC_CHECK_LIB(readline, readline, [], [
-	AC_MSG_ERROR([requires readline])
+	AC_DEFINE([HAVE_READLINE], 0, [1 if readline is found])
 ])
 KAMIFTP_LIBS="${LIBS}"
 LIBS="${libs_orig}"
