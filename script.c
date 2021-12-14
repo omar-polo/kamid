@@ -27,6 +27,7 @@
 #include <inttypes.h>
 #include <poll.h>
 #include <pwd.h>
+#include <regex.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1620,6 +1621,8 @@ main(int argc, char **argv)
 	struct test	*t;
 	int		 ch, i, r, passed = 0, failed = 0, skipped = 0;
 	int		 runclient = 0;
+	const char	*pat = NULL;
+	regex_t		 reg;
 
 	assert(argv0 = argv[0]);
 
@@ -1638,7 +1641,7 @@ main(int argc, char **argv)
 	add_builtin_proc("send", builtin_send, 2, 1);
 	add_builtin_proc("recv", builtin_recv, 0, 0);
 
-	while ((ch = getopt(argc, argv, "nT:v")) != -1) {
+	while ((ch = getopt(argc, argv, "nT:vx:")) != -1) {
 		switch (ch) {
 		case 'n':
 			syntaxcheck = 1;
@@ -1649,6 +1652,9 @@ main(int argc, char **argv)
 			break;
 		case 'v':
 			debug = 1;
+			break;
+		case 'x':
+			pat = optarg;
 			break;
 		default:
 			fprintf(stderr, "Usage: %s [-nv] [files...]\n",
@@ -1661,6 +1667,12 @@ main(int argc, char **argv)
 
 	if (runclient)
 		client(1, debug);
+
+	if (pat == NULL)
+		pat = ".*";
+
+	if (regcomp(&reg, pat, REG_BASIC | REG_ICASE | REG_NOSUB) != 0)
+		fatalx("invalid regexp: %s", pat);
 
 	for (i = 0; i < argc; ++i)
 		loadfile(argv[i]);
@@ -1676,6 +1688,9 @@ main(int argc, char **argv)
 
 	i = 0;
 	TAILQ_FOREACH(t, &tests, entry) {
+		if (regexec(&reg, t->name, 0, NULL, 0) != 0)
+			continue;
+
 		printf("===> [%d/%d] running test \"%s\"... ", i+1, ntests,
 		    t->name);
 		fflush(stdout);
@@ -1711,6 +1726,7 @@ main(int argc, char **argv)
 
 	popenv();
 	free(lastmsg);
+	regfree(&reg);
 
 	return failed != 0;
 }

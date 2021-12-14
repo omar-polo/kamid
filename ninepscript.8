@@ -21,6 +21,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl nv
+.Op Fl x Ar pattern
 .Ar
 .Sh DESCRIPTION
 .Nm
@@ -38,6 +39,9 @@ don't run the test, check only the syntax of the provided
 .Ar files .
 .It Fl v
 verbose logging, print more information during the tests execution.
+.It Fl x Ar pattern
+Run only the tests that match the given
+.Ar pattern .
 .El
 .Pp
 .Nm
