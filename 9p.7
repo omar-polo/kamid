@@ -113,14 +113,44 @@ Populate the namespace
 fid[4] afid[4] uname[s] aname[s]
 qid[13]
 .Ed
+.Pp
+The
+.Ic attach
+message binds the given
+.Ar fid
+to the root of the file tree identified by
+.Ar aname .
+.Ar uname
+identifies the user and
+.Ar afid
+specifies a fid previously established by an auth message, or the
+special
+.Dv NOFID 
+value
+.Pq defined as (u32int)~0
+if the authentication is not required.
 .It Ic clunk
 Close fids.
 .Bd -literal
 fid[4]
 .Aq empty response
 .Ed
+.Pp
+Once a fid has been clunked
+.Pq closed
+it becomes
+.Dq free
+and the same value can be used for subsequential
+.Ic walk
+or
+.Ic attach
+requests.
+.Pp
+The actual file on the disk is not remove unless it was opened with the
+.Dv ORCLOSE
+flag.
 .It Ic error
-Return an error string
+Return an error string.
 .Bd -literal
 ename[s]
 .Ed
@@ -130,11 +160,14 @@ failure of a request.
 The
 .Cm tag
 indicates the failed request.
+.Pp
 Note that there isn't a
 .Ic Terror
-request and it's not possible for a
-server to reply to a
+request for obvious reason and it's not possible for a server to reply to
+a
 .Ic Tversion
+or
+.Ic Tflush
 using
 .Ic Rerror .
 .It Ic flush
@@ -143,18 +176,94 @@ Abort an ongoing operation.
 oldtag[2]
 .Aq empty response
 .Ed
+.Pp
+Given the asynchronous nature of the protocol, the server may respond to
+the pending request before responding to the
+.Ic Tflush
+and is possible for a client to send multiple
+.Ic Tflush
+for the same operation.
+The client must wait to receive a corresponding
+.Ic Rflush
+before reusing
+.Ar oldtag
+for subsequent messages.
+.Pp
+If a response for
+.Ar oldtag
+is received before the
+.Ic Rflush
+reply, the client must assume that the operation was completed with success
+.Pq fid allocated, files created, ...
+If no response is received before the
+.Ic Rflush
+then the transaction is considered to have been successfully cancelled.
+.Pp
+Note that the tag of this request and the corresponding reply is NOT
+.Ar oldtag
+but a new tag value.
 .It Ic walk
 Traverse a file tree.
 .Bd -literal
 fid[4] newfid[4] nwname[2] nwname*(wname[s])
 nwqid[2] nwqid*(qid[13])
 .Ed
+.Pp
+The
+.Ar nwname
+components are walked in order starting from
+.Ar fid
+.Pq which must point to a directory
+and, if successful,
+.Ar newfid
+is associated to the reached file.
+.Pp
+It is possible for
+.Ar fid
+and
+.Ar newfid
+to be equal, in this case the fid is
+.Dq mutated ,
+otherwise
+.Ar newfid
+must be unused.
+As a special case, a walk of zero components duplicates the fid.
+.Pp
+If the first element cannot be walked for any reason an
+.Ic Rerror
+is returned.
+Otherwise,
+.Ic Rwalk
+is returned with a number of qids equal to the file viside by the walk.
+A client can thus detect a walk when that the replied
+.Ar nwqid
+number is not equal to the
+.Ar nwname
+field in the request.
+Only when walk return successfully
+.Ar newfid
+will be affected.
+.Pp
+A maximum of 16 component can be used per walk request.
 .It Ic open
-Prepare a fid for I/O
+Prepare a fid for I/O.
 .Bd -literal
 fid[4] mode[1]
 qid[13] iounit[4]
 .Ed
+.Pp
+.Ar mode
+determines the type of I/O:
+.Bl -tag -width Ds -offset indent -compact
+.It 0 Dt OREAD
+.It 1 Dt OWRITE
+.It 2 Dt ORDWD
+.It 3 Dt OEXEC
+.El
+.Pp
+The returned
+.Ar iounit
+is the optimal blocksize for I/O.
 .El
 .Sh SEE ALSO
 .Xr utf8 7 ,
