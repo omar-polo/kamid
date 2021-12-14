@@ -12,16 +12,111 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: July 07 2021 $
+.Dd $Mdocdate: December 14 2021 $
 .Dt KAMID.CONF 5
 .Os
 .Sh NAME
 .Nm kamid.conf
 .Nd 9p file server daemon configuration file
 .Sh DESCRIPTION
-The
+.Nm
+is the configuration file for the 9p file server daemon
+.Xr kamid 8 .
+.Pp
+The format of the configuration file is fairly flexible.
+The current line can be extended over multiple lines using a backslash
+.Pq Sq \e .
+Comments can be put anywhere in the file using a hash mark
+.Pq Sq # ,
+and extend to the end of the current line.
+Care should be taken when commenting out multi-line text: the comment is
+effective until the end of the entire block.
+Arguments names not beginning with a letter, digit, or underscore, as
+well as reserved words
+(such as
+.Ic listen ,
+.Ic pki
+and
+.Ic table )
+must be quoted.
+Arguments containing whitespace should be surrounded by double quotes
+.Pq \&" .
+.Pp
+Macros can be defined that are later expanded in context.
+Macro names must start with a letter, digit, or underscore, and may
+contain any of those characters, but may not be reserved words.
+Macros are not expanded inside quotes.
+For example:
+.Bd -literal -offset indent
+lan_addr = "192.168.0.1"
+listen on $lan_addr
+listen on $lan_addr tls auth <users>
+.Ed
+.Pp
+Additional configuration files can be included with the
+.Ic include
+keyword, for example:
+.Bd -literal -offset indent
+include "/etc/kamid.conf.local"
+.Ed
+.Pp
+The syntax of
+.Nm
+is described below.
+.Bl -tag -width Ds
+.It Ic listen Op Ar options...
+The options are as follows:
+.Bl -tag -width Ds
+.It Ic on Ar address Ic port Ar number
+Listen on the
+.Ar address
+for incoming connection on the given port
+.Ar number .
+.Ar address
+can be an IP address or a domain name.
+.It Ic tls Ic pki Ar name
+Use the tls certificate
+.Ar name
+previously defined with the
+.Ic pki
+rule.
+.It Ic auth Pf < Ar table Ns >
+Use the given authentication
+.Ar table
+to authorize the clients.
+.El
+.It Ic pki Ar pkiname Ic cert Ar certfile
+Associate certificate file
+.Ar certfile
+with pki entry
+.Ar pkiname .
+The pki entry defines a keypair configuration that can be referenced in
+listener rules.
+.It Ic pki Ar pkiname Ic key Ar keyfile
+Associate the key located in
+.Ar keyfile
+with pki entry
+.Ar pkiname .
+.\" TODO: document the other syntax for the table
+.It Ic table Ar name Brq Ar value Cm => Ar value Oo , Ar ... Oc
+Tables provide additional configuration information for
 .Xr kamid 8
-daemon is a 9p file server daemon.
+in the form of key-value mappings.
+.Pp
+Declare a mapping table containing the given static
+.Ar key Ns Pf - Ar value
+pairs.
+.El
+.Sh EXAMPLES
+A sample configuration file:
+.Bd -literal -offset indent
+pki localhost cert "/etc/ssl/localhost.crt"
+pki localhost key "/etc/ssl/private/localhost.key"
+
+table users { "SHA256:..." => "op" }
+
+listen on localhost port 1337 tls pki localhost auth <users>
+.Ed
 .Sh SEE ALSO
 .Xr kamictl 8 ,
 .Xr kamid 8
