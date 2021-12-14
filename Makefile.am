@@ -34,8 +34,10 @@ kamid_SOURCES =		client.c	\
 			utils.c		\
 			utils.h
 
-kamirepl_SOURCES =	kamid.h		\
-			kamirepl.c	\
+kamiftp_SOURCES =	9pclib.c	\
+			9pclib.h	\
+			ftp.c		\
+			kamid.h		\
 			log.c		\
 			log.h		\
 			utils.c		\

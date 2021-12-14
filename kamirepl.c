@@ -34,6 +34,7 @@
 #include <tls.h>
 #include <unistd.h>
 
+#include "9pclib.h"
 #include "kamid.h"
 #include "log.h"
 #include "utils.h"
@@ -71,12 +72,6 @@ static void		 client_error(struct bufferevent *, short, void *);
 
 static void		 repl_read(struct bufferevent *, void *);
 static void		 repl_error(struct bufferevent *, short, void *);
-static void		 write_hdr(uint32_t, uint8_t, uint16_t);
-static void		 write_hdr_auto(uint32_t, uint8_t);
-static void		 write_str(uint16_t, const char *);
-static void		 write_str_auto(const char *);
-static void		 write_fid(uint32_t);
-static void		 write_tag(uint16_t);
 
 static void		 excmd_version(const char **, int);
 static void		 excmd_attach(const char **, int);
@@ -369,95 +364,32 @@ repl_error(struct bufferevent *bev, short error, void *d)
 	fatalx("an error occurred");
 }
 
-static void
-write_hdr(uint32_t len, uint8_t type, uint16_t tag)
+static inline void
+do_send(void)
 {
-	len += HEADERSIZE;
-
-	log_debug("enqueuing a packet; len=%"PRIu32" type=%d[%s] tag=%d",
-	    len, type, pp_msg_type(type), tag);
-
-	len = htole32(len);
-	/* type is one byte, no endiannes issues */
-	tag = htole16(tag);
-
-	bufferevent_write(bev, &len, sizeof(len));
-	bufferevent_write(bev, &type, sizeof(type));
-	bufferevent_write(bev, &tag, sizeof(tag));
-}
-
-static void
-write_hdr_auto(uint32_t len, uint8_t type)
-{
-        static uint16_t tag = 0;
-
-	if (++tag == NOTAG)
-		++tag;
-
-	write_hdr(len, type, tag);
-}
-
-static void
-write_str(uint16_t len, const char *str)
-{
-	uint16_t l = len;
-
-	len = htole16(len);
-	bufferevent_write(bev, &len, sizeof(len));
-	bufferevent_write(bev, str, l);
-}
-
-static void
-write_str_auto(const char *str)
-{
-	write_str(strlen(str), str);
-}
-
-static void
-write_fid(uint32_t fid)
-{
-	fid = htole32(fid);
-	bufferevent_write(bev, &fid, sizeof(fid));
-}
-
-static void
-write_tag(uint16_t tag)
-{
-	tag = htole16(tag);
-	bufferevent_write(bev, &tag, sizeof(tag));
+	bufferevent_write_buffer(bev, evb);
 }
 
 /* version [version-str] */
 static void
 excmd_version(const char **argv, int argc)
 {
-	uint32_t	 len, msize;
-	uint16_t	 sl;
 	const char	*s;
 
 	s = VERSION9P;
 	if (argc == 2)
 		s = argv[1];
 
-	sl = strlen(s);
-
-	/* msize[4] version[s] */
-	len = 4 + sizeof(sl) + sl;
-	write_hdr(len, Tversion, NOTAG);
-
-	msize = htole32(MSIZE9P);
-	bufferevent_write(bev, &msize, sizeof(msize));
-
-	write_str(sl, s);
+	tversion(s, MSIZE9P);
+	do_send();
 }
 
 /* attach fid uname aname */
 static void
 excmd_attach(const char **argv, int argc)
 {
-	uint32_t	 len, fid;
-	uint16_t	 sl, tl;
-	const char	*s, *t, *errstr;
+	uint32_t	 fid;
+	const char	*errstr;
 
 	if (argc != 4)
 		goto usage;
@@ -468,19 +400,8 @@ excmd_attach(const char **argv, int argc)
 		return;
 	}
 
-	s = argv[2];
-	sl = strlen(s);
-	t = argv[3];
-	tl = strlen(t);
-
-	/* fid[4] afid[4] uname[s] aname[s] */
-	len = 4 + 4 + sizeof(sl) + sl + sizeof(tl) + tl;
-	write_hdr_auto(len, Tattach);
-	write_fid(fid);
-	write_fid(NOFID);
-	write_str(sl, s);
-	write_str(tl, t);
-
+	tattach(fid, NOFID, argv[2], argv[3]);
+	do_send();
 	return;
 
 usage:
@@ -491,7 +412,7 @@ usage:
 static void
 excmd_clunk(const char **argv, int argc)
 {
-	uint32_t	 len, fid;
+	uint32_t	 fid;
 	const char	*errstr;
 
 	if (argc != 2)
@@ -503,10 +424,8 @@ excmd_clunk(const char **argv, int argc)
 		return;
 	}
 
-	/* fid[4] */
-	len = sizeof(fid);
-	write_hdr_auto(len, Tclunk);
-	write_fid(fid);
+	tclunk(fid);
+	do_send();
 	return;
 
 usage:
@@ -517,7 +436,6 @@ usage:
 static void
 excmd_flush(const char **argv, int argc)
 {
-	uint32_t	 len;
 	uint16_t	 oldtag;
 	const char	*errstr;
 
@@ -530,10 +448,8 @@ excmd_flush(const char **argv, int argc)
 		return;
 	}
 
-	/* oldtag[2] */
-	len = sizeof(oldtag);
-	write_hdr_auto(len, Tflush);
-	write_tag(oldtag);
+	tflush(oldtag);
+	do_send();
 	return;
 
 usage:
@@ -544,19 +460,11 @@ usage:
 static void
 excmd_walk(const char **argv, int argc)
 {
-	int		 i;
-	uint32_t	 len, fid, newfid;
+	uint32_t	 fid, newfid;
 	const char	*errstr;
 
 	if (argc < 3)
 		goto usage;
-
-	/* fid[4] newfid[4] nwname[2] nwname*(wname[s]) */
-
-	/* two bytes for wnames count */
-	len = sizeof(fid) + sizeof(newfid) + 2;
-	for (i = 3; i < argc; ++i)
-		len += 2 + strlen(argv[i]);
 
 	fid = strtonum(argv[1], 0, UINT32_MAX, &errstr);
 	if (errstr != NULL) {
@@ -570,13 +478,8 @@ excmd_walk(const char **argv, int argc)
 		return;
 	}
 
-	write_hdr_auto(len, Twalk);
-	write_fid(fid);
-	write_fid(newfid);
-	write_tag(argc - 3);
-	for (i = 3; i < argc; ++i)
-		write_str_auto(argv[i]);
-
+	twalk(fid, newfid, argv + 3, argc - 3);
+	do_send();
 	return;
 
 usage:
@@ -896,6 +799,10 @@ main(int argc, char **argv)
 	mark_nonblock(sock);
 
 	event_init();
+
+	/* initialize global evb */
+	if ((evb = evbuffer_new()) == NULL)
+		fatal("evbuffer_new");
 
 	signal_set(&ev_sigint, SIGINT, sig_handler, NULL);
 	signal_set(&ev_sigterm, SIGINT, sig_handler, NULL);
