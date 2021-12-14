@@ -951,6 +951,13 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 			return;
 		}
 
+		if (*wnam == '\0' || 
+		    strchr(wnam, '/') != NULL ||
+		    !strcmp(wnam, ".")) {
+			errno = EINVAL;
+			goto cantopen;
+		}
+
 		if ((fd = openat(oldfd, wnam, O_RDONLY|O_DIRECTORY)) == -1 &&
 		    errno != ENOTDIR) {
 			nwqid--;
