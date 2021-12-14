@@ -13,3 +13,29 @@ testing "open + clunk works" dir "./root" {
 	m = recv()
 	assert m.type == Rclunk
 }
+
+testing "can open directories" dir "./root" {
+	mount(0, "/")
+	walk(0, 1, "dir", "subdir")
+	walk-ok()
+
+	open(1, OREAD)
+	m = recv()
+	assert m.type == Ropen
+
+	clunk(1)
+	m = recv()
+	assert m.type == Rclunk
+}
+
+testing "can't open directories for writing" dir "./root" {
+	mount(0, "/")
+	walk(0, 1, "dir")
+	walk-ok()
+
+	open(1, OWRITE)
+	expect-error()
+
+	open(1, ORDWR)
+	expect-error()
+}
