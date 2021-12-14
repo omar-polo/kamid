@@ -905,7 +905,7 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 
-	if (f->iomode != 0) {
+	if (f->fd != -1) {
 		np_error(hdr->tag, "fid already opened for I/O");
 		return;
 	}
