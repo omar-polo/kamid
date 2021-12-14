@@ -34,3 +34,21 @@ testing "walk with invalid fid" dir "./root" {
 	walk(1, 2)
 	expect-error()
 }
+
+testing "walk with empty string" dir "./root" {
+	mount(0, "/")
+	walk(0, 1, "")
+	expect-error()
+}
+
+testing "walk to a non-existant file" dir "./root" {
+	mount(0, "/")
+	walk(0, 1, "non-exists")
+	expect-error()
+}
+
+testing "walk with an invalid component" dir "./root" {
+	mount(0, "/")
+	walk(0, 1, "/non-exists")
+	expect-error()
+}
