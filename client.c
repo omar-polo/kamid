@@ -1159,13 +1159,13 @@ topen(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 			f->fd = -1;
 			return;
 		}
-	}
 
-	if ((f->evb = evbuffer_new()) == NULL) {
-		np_errno(hdr->tag);
-		closedir(f->dir);
-		f->dir = NULL;
-		f->fd = -1;
+		if ((f->evb = evbuffer_new()) == NULL) {
+			np_errno(hdr->tag);
+			closedir(f->dir);
+			f->dir = NULL;
+			f->fd = -1;
+		}
 	}
 
 	f->offset = 0;
