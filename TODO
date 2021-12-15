@@ -3,3 +3,6 @@
 
  - (possibly related) find out what pread(2) black magic we can do to
    read stuff on 32 bits
+
+ - rework the ninepscript so tests are parsed and executed by the _kamid
+   user and not by root.
