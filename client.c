@@ -18,6 +18,8 @@
 
 #include <sys/stat.h>
 
+#include <assert.h>
+#include <dirent.h>
 #include <endian.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -35,6 +37,12 @@
 #include "utils.h"
 
 #define DEBUG_PACKETS 0
+
+/* straight outta /src/usr.bin/ssh/scp.c */
+#define TYPE_OVERFLOW(type, val) \
+	((sizeof(type) == 4 && (val) > INT32_MAX) || \
+	 (sizeof(type) == 8 && (val) > INT64_MAX) || \
+	 (sizeof(type) != 4 && sizeof(type) != 8))
 
 STAILQ_HEAD(qidhead, qid) qids;
 struct qid {
@@ -67,6 +75,9 @@ struct fid {
 	 * file descriptor.
 	 */
 	int			 fd;
+	DIR			*dir;
+	struct evbuffer		*evb;
+	uint64_t		 offset;
 
 	struct qid		*qid;
 	STAILQ_ENTRY(fid)	 entries;
@@ -111,6 +122,7 @@ static void		np_clunk(uint16_t);
 static void		np_flush(uint16_t);
 static void		np_walk(uint16_t, int, struct qid *);
 static void		np_open(uint16_t, struct qid *, uint32_t);
+static void		np_read(uint16_t, uint32_t, void *);
 static void		np_error(uint16_t, const char *);
 static void		np_errno(uint16_t);
 
@@ -119,6 +131,8 @@ static int	np_read8(const char *, const char *, uint8_t *,
 static int	np_read16(const char *, const char *, uint16_t *,
 		    const uint8_t **, size_t *);
 static int	np_read32(const char *, const char *, uint32_t *,
+		    const uint8_t **, size_t *);
+static int	np_read64(const char *, const char *, uint64_t *,
 		    const uint8_t **, size_t *);
 
 #define READSTRERR	-1
@@ -129,6 +143,7 @@ static int	np_readstr(const char *, const char *, char *, size_t,
 #define NPREAD8(f, dst, src, len)  np_read8(__func__, f, dst, src, len)
 #define NPREAD16(f, dst, src, len) np_read16(__func__, f, dst, src, len)
 #define NPREAD32(f, dst, src, len) np_read32(__func__, f, dst, src, len)
+#define NPREAD64(f, dst, src, len) np_read64(__func__, f, dst, src, len)
 
 #define NPREADSTR(f, b, bl, src, len) np_readstr(__func__, f, b, bl, src, len)
 
@@ -138,6 +153,7 @@ static void	tclunk(struct np_msg_header *, const uint8_t *, size_t);
 static void	tflush(struct np_msg_header *, const uint8_t *, size_t);
 static void	twalk(struct np_msg_header *, const uint8_t *, size_t);
 static void	topen(struct np_msg_header *, const uint8_t *, size_t);
+static void	tread(struct np_msg_header *, const uint8_t *, size_t);
 static void	handle_message(struct imsg *, size_t);
 
 ATTR_DEAD void
@@ -446,8 +462,19 @@ fid_by_id(uint32_t fid)
 static void
 free_fid(struct fid *f)
 {
+	int r;
+
 	if (f->fd != -1) {
-		close(f->fd);
+		if (f->dir != NULL)
+			r = closedir(f->dir);
+		else
+			r = close(f->fd);
+
+		if (r == -1)
+			fatal("can't close fid %d", f->fid);
+
+		evbuffer_free(f->evb);
+
 		/* try to honour ORCLOSE if requested */
 		if (f->iomode & O_CLOEXEC)
 			unlinkat(f->qid->fd, f->qid->fpath, 0);
@@ -501,6 +528,12 @@ np_write32(uint32_t x)
 {
 	x = htole32(x);
 	evbuffer_add(evb, &x, sizeof(x));
+}
+
+static void
+np_writebuf(size_t len, void *data)
+{
+	evbuffer_add(evb, data, len);
 }
 
 static void
@@ -617,6 +650,15 @@ np_open(uint16_t tag, struct qid *qid, uint32_t iounit)
 }
 
 static void
+np_read(uint16_t tag, uint32_t count, void *data)
+{
+	np_header(sizeof(count) + count, Rread, tag);
+	np_write32(count);
+	np_writebuf(count, data);
+	do_send();
+}
+
+static void
 np_error(uint16_t tag, const char *errstr)
 {
 	uint16_t l;
@@ -691,6 +733,24 @@ np_read32(const char *t, const char *f, uint32_t *dst, const uint8_t **src,
 	*src += sizeof(*dst);
 	*len -= sizeof(*dst);
 	*dst = le32toh(*dst);
+
+	return 1;
+}
+
+static int
+np_read64(const char *t, const char *f, uint64_t *dst, const uint8_t **src,
+    size_t *len)
+{
+	if (*len < sizeof(*dst)) {
+		log_warnx("%s: wanted %zu bytes for the %s field but only "
+		    "%zu are available.", t, sizeof(*dst), f, *len);
+		return -1;
+	}
+
+	memcpy(dst, *src, sizeof(*dst));
+	*src += sizeof(*dst);
+	*len -= sizeof(*dst);
+	*dst = le64toh(*dst);
 
 	return 1;
 }
@@ -1091,8 +1151,69 @@ topen(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	if (fstat(f->fd, &sb) == -1)
 		fatal("fstat");
 
+	if (S_ISDIR(sb.st_mode)) {
+		assert(f->qid->type & QTDIR);
+		if ((f->dir = fdopendir(f->fd)) == NULL) {
+			np_errno(hdr->tag);
+			close(f->fd);
+			f->fd = -1;
+			return;
+		}
+	}
+
+	if ((f->evb = evbuffer_new()) == NULL) {
+		np_errno(hdr->tag);
+		closedir(f->dir);
+		f->dir = NULL;
+		f->fd = -1;
+	}
+
+	f->offset = 0;
+
 	qid_update_from_sb(&qid, &sb);
 	np_open(hdr->tag, &qid, sb.st_blksize);
+}
+
+static void
+tread(struct np_msg_header *hdr, const uint8_t *data, size_t len)
+{
+	struct fid	*f;
+	ssize_t		 r;
+	uint64_t	 off;
+	uint32_t	 fid, count;
+	char		 buf[2048];
+
+	/* fid[4] offset[8] count[4] */
+	if (!NPREAD32("fid", &fid, &data, &len) ||
+	    !NPREAD64("offset", &off, &data, &len) ||
+	    !NPREAD32("count", &count, &data, &len)) {
+		client_send_listener(IMSG_CLOSE, NULL, 0);
+		client_shutdown();
+		return;
+	}
+
+	if ((f = fid_by_id(fid)) == NULL || f->fd != -1) {
+		np_error(hdr->tag, "invalid fid");
+		return;
+	}
+
+	if (TYPE_OVERFLOW(off_t, off)) {
+		log_warnx("unexpected size_t size");
+		np_error(hdr->tag, "invalid offset");
+		return;
+	}
+
+	if (f->dir == NULL) {
+		/* read a file */
+		r = pread(f->fd, buf, sizeof(buf), (off_t)off);
+		if (r == -1)
+			np_errno(hdr->tag);
+		else
+			np_read(hdr->tag, r, buf);
+	} else {
+		/* read dirents */
+		np_error(hdr->tag, "not implemented yet");
+	}
 }
 
 static void
@@ -1108,6 +1229,7 @@ handle_message(struct imsg *imsg, size_t len)
 		{Tflush,	tflush},
 		{Twalk,		twalk},
 		{Topen,		topen},
+		{Tread,		tread},
 	};
 	struct np_msg_header	 hdr;
 	size_t			 i;
