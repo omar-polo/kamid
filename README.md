@@ -29,8 +29,8 @@ also needed.  kamid must be started with root privileges.
 A sample configuration file:
 
 ```
-pki localhost cert "/path/to/localhost.crt"
-pki localhost key  "/path/to/localhost.key"
+pki localhost cert "/etc/ssl/localhost.crt"
+pki localhost key  "/etc/ssl/private/localhost.key"
 
 table users { "SHA256:..." => "op" }
 
