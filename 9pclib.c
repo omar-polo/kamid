@@ -71,6 +71,13 @@ write_str_auto(const char *str)
 }
 
 void
+write_64(uint64_t x)
+{
+	x = htole64(x);
+	evbuffer_add(evb, &x, sizeof(x));
+}
+
+void
 write_32(uint32_t fid)
 {
 	fid = htole32(fid);
@@ -82,6 +89,12 @@ write_16(uint16_t tag)
 {
 	tag = htole16(tag);
 	evbuffer_add(evb, &tag, sizeof(tag));
+}
+
+void
+write_8(uint8_t x)
+{
+	evbuffer_add(evb, &x, sizeof(x));
 }
 
 
@@ -159,4 +172,29 @@ twalk(uint32_t fid, uint32_t newfid, const char **wnames, size_t nwname)
 	write_16(nwname);
 	for (i = 0; i < nwname; ++i)
 		write_str_auto(wnames[i]);
+}
+
+void
+topen(uint32_t fid, uint8_t mode)
+{
+	uint32_t	len;
+
+	/* fid[4] mode[1] */
+	len = sizeof(fid) + sizeof(mode);
+	write_hdr_auto(len, Topen);
+	write_fid(fid);
+	write_8(mode);
+}
+
+void
+tread(uint32_t fid, uint64_t off, uint32_t count)
+{
+	uint32_t	len;
+
+	/* fid[4] off[8] count[4] */
+	len = sizeof(fid) + sizeof(off) + sizeof(count);
+	write_hdr_auto(len, Tread);
+	write_fid(fid);
+	write_off(off);
+	write_32(count);
 }
