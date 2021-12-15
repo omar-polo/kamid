@@ -564,9 +564,9 @@ yylex(void)
 			*p = '\0';
 			errno = 0;
 			yylval.v.num = strtoll(buf, &ep, 0);
-			if (*ep != '\0' || errno == ERANGE &&
+			if (*ep != '\0' || (errno == ERANGE &&
 			    (yylval.v.num == LONG_MAX ||
-			    yylval.v.num == LONG_MIN)) {
+			    yylval.v.num == LONG_MIN))) {
 				yyerror("\"%s\" invalid number or out of range",
 				    buf);
 				return findeol();
