@@ -33,6 +33,7 @@
 #include <syslog.h>
 #include <tls.h>
 #include <unistd.h>
+#include <vis.h>
 
 #include "9pclib.h"
 #include "kamid.h"
@@ -78,6 +79,8 @@ static void		 excmd_attach(const char **, int);
 static void		 excmd_clunk(const char **, int);
 static void		 excmd_flush(const char **, int);
 static void		 excmd_walk(const char ** , int);
+static void		 excmd_open(const char ** , int);
+static void		 excmd_read(const char ** , int);
 static void		 excmd(const char **, int);
 
 static const char	*pp_qid_type(uint8_t);
@@ -486,6 +489,93 @@ usage:
 	log_warnx("usage: walk fid newfid wnames...");
 }
 
+/* open fid mode [flag] */
+static void
+excmd_open(const char **argv, int argc)
+{
+	const char	*errstr;
+	uint32_t	 fid;
+	uint8_t		 mode = 0;
+
+	if (argc != 3 && argc != 4)
+		goto usage;
+
+	fid = strtonum(argv[1], 0, UINT32_MAX, &errstr);
+	if (errstr != NULL) {
+		log_warnx("fid is %s: %s", errstr, argv[1]);
+		return;
+	}
+
+	/* parse mode */
+	if (!strcmp("read", argv[2]) || !strcmp("r", argv[2]))
+		mode = KOREAD;
+	else if (!strcmp("write", argv[2]) || !strcmp("w", argv[2]))
+		mode = KOWRITE;
+	else if (!strcmp("readwrite", argv[2]) || !strcmp("rw", argv[2]))
+		mode = KORDWR;
+	else {
+		log_warnx("invalid mode %s", argv[2]);
+		return;
+	}
+
+	/* parse flag */
+	if (argv[3] != NULL) {
+		if (!strcmp("trunc", argv[3]))
+			mode |= KOTRUNC;
+		else if (!strcmp("rclose", argv[3]))
+			mode |= KORCLOSE;
+		else {
+			log_warnx("invalid flag %s", argv[3]);
+			return;
+		}
+	}
+
+	topen(fid, mode);
+	do_send();
+	return;
+
+usage:
+	log_warnx("usage: open fid mode [flag]");
+}
+
+/* read fid offset count */
+static void
+excmd_read(const char **argv, int argc)
+{
+	uint64_t	 off;
+	uint32_t	 fid, count;
+	const char	*errstr;
+
+	if (argc != 4)
+		goto usage;
+
+	fid = strtonum(argv[1], 0, UINT32_MAX, &errstr);
+	if (errstr != NULL) {
+		log_warnx("fid is %s: %s", errstr, argv[1]);
+		return;
+	}
+
+	/* should really be UNT64_MAX but it fails... */
+	off = strtonum(argv[2], -1, UINT32_MAX, &errstr);
+	if (errstr != NULL) {
+		log_warnx("offset is %s: %s", errstr, argv[2]);
+		return;
+	}
+
+	count = strtonum(argv[3], 0, UINT32_MAX, &errstr);
+	if (errstr != NULL) {
+		log_warnx("count is %s: %s", errstr, argv[3]);
+		return;
+	}
+
+	tread(fid, off, count);
+	do_send();
+	return;
+
+usage:
+	log_warnx("usage: read fid offset count");
+}
+
 static void
 excmd(const char **argv, int argc)
 {
@@ -498,6 +588,8 @@ excmd(const char **argv, int argc)
 		{"clunk",	excmd_clunk},
 		{"flush",	excmd_flush},
 		{"walk",	excmd_walk},
+		{"open",	excmd_open},
+		{"read",	excmd_read},
 	};
 	size_t i;
 
@@ -560,8 +652,9 @@ pp_qid(const uint8_t *d, uint32_t len)
 static void
 pp_msg(uint32_t len, uint8_t type, uint16_t tag, const uint8_t *d)
 {
-	uint32_t	msize;
-	uint16_t	slen;
+	uint32_t	 msize, iounit, count;
+	uint16_t	 slen;
+	char		*v;
 
 	printf("len=%"PRIu32" type=%d[%s] tag=0x%x[%d] ", len,
 	    type, pp_msg_type(type), tag, tag);
@@ -643,6 +736,51 @@ pp_msg(uint32_t len, uint8_t type, uint16_t tag, const uint8_t *d)
 
 		break;
 
+	case Ropen:
+		if (len != QIDSIZE + 4) {
+			printf("invalid Ropen: expected %d bytes; "
+			    "got %u\n", QIDSIZE + 4, len);
+			break;
+		}
+
+		pp_qid(d, len);
+		d += QIDSIZE;
+		len -= QIDSIZE;
+
+		memcpy(&iounit, d, sizeof(iounit));
+		d += sizeof(iounit);
+		len -= sizeof(iounit);
+		iounit = le32toh(iounit);
+		printf(" iounit=%"PRIu32, iounit);
+		break;
+
+	case Rread:
+		if (len < sizeof(count)) {
+			printf("invalid Rread: expected %zu bytes at least; "
+			    "got %u\n", sizeof(count), len);
+			break;
+		}
+
+		memcpy(&count, d, sizeof(count));
+		d += sizeof(count);
+		len -= sizeof(count);
+		count = le32toh(count);
+
+		if (len != count) {
+			printf("invalid Rread: expected %d data bytes; "
+			    "got %u\n", count, len);
+			break;
+		}
+
+		/* allocates three extra bytes, oh well... */
+		if ((v = calloc(count + 1, 4)) == NULL)
+			fatal("calloc");
+		strvisx(v, d, count, VIS_SAFE | VIS_TAB | VIS_NL | VIS_CSTYLE);
+		printf("data=%s", v);
+		free(v);
+
+		break;
+
 	case Rerror:
 		memcpy(&slen, d, sizeof(slen));
 		d += sizeof(slen);
@@ -662,7 +800,11 @@ pp_msg(uint32_t len, uint8_t type, uint16_t tag, const uint8_t *d)
 		break;
 
 	default:
-		printf("unknown command type");
+		if ((v = calloc(len + 1, 4)) == NULL)
+			fatal("calloc");
+		strvisx(v, d, len, VIS_SAFE | VIS_TAB | VIS_NL | VIS_CSTYLE);
+		printf("body=%s", v);
+		free(v);
 	}
 
 	printf("\n");
