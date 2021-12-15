@@ -1068,19 +1068,14 @@ topen(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 
-	if (f->qid->type & QTDIR) {
-		/*
-	 	 * XXX: real 9P2000 uses reads on directories to list the
-		 * files, but 9P2000.L (and possibly .U too) uses
-		 * Treaddir.  It's my intention to support the 9p-style
-		 * read-on-dir, just not yet.
-		 */
-		np_error(hdr->tag, "can't do I/O on directories yet");
+	if (npmode_to_unix(mode, &f->iomode) == -1) {
+		np_error(hdr->tag, "invalid mode");
 		return;
 	}
 
-	if (npmode_to_unix(mode, &f->iomode) == -1) {
-		np_error(hdr->tag, "invalid mode");
+	if (f->qid->type & QTDIR &&
+	    (f->iomode & O_WRONLY || f->iomode & O_RDWR)) {
+		np_error(hdr->tag, "can't open directory for writing");
 		return;
 	}
 
