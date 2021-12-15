@@ -130,4 +130,10 @@ char		*strsep(char **, const char *);
 long long	 strtonum(const char *, long long, long long, const char **);
 #endif
 
+#ifdef HAVE_VIS
+# include <vis.h>
+#else
+# include "compat/vis.h"
+#endif
+
 #endif	/* COMPAT_H */

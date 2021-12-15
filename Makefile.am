@@ -2,7 +2,12 @@ bin_PROGRAMS =		kamictl kamid kamiftp
 check_PROGRAMS =	ninepscript
 noinst_PROGRAMS =	kamirepl
 
-EXTRA_kamid_SOURCES =	compat/ohash.h compat/imsg.h compat/queue.h compat/tree.h
+EXTRA_kamid_SOURCES =	compat/ohash.h	\
+			compat/imsg.h	\
+			compat/queue.h	\
+			compat/tree.h	\
+			compat/vis.c	\
+			compat/vis.h
 
 kamictl_SOURCES =	compat.h	\
 			ctl_parser.c	\

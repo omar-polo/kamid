@@ -33,7 +33,6 @@
 #include <syslog.h>
 #include <tls.h>
 #include <unistd.h>
-#include <vis.h>
 
 #include "9pclib.h"
 #include "kamid.h"

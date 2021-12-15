@@ -64,6 +64,7 @@ AC_REPLACE_FUNCS([
 	strlcpy		\
 	strsep		\
 	strtonum	\
+	vis		\
 ])
 
 AC_MSG_CHECKING([for sys/queue.h with TAILQ_FOREACH_SAFE and STAILQ_ENTRY])
