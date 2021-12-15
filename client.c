@@ -473,7 +473,8 @@ free_fid(struct fid *f)
 		if (r == -1)
 			fatal("can't close fid %d", f->fid);
 
-		evbuffer_free(f->evb);
+		if (f->evb != NULL)
+			evbuffer_free(f->evb);
 
 		/* try to honour ORCLOSE if requested */
 		if (f->iomode & O_CLOEXEC)
