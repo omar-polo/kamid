@@ -125,7 +125,7 @@ identifies the user and
 .Ar afid
 specifies a fid previously established by an auth message, or the
 special
-.Dv NOFID 
+.Dv NOFID
 value
 .Pq defined as (u32int)~0
 if the authentication is not required.
@@ -255,15 +255,94 @@ qid[13] iounit[4]
 .Ar mode
 determines the type of I/O:
 .Bl -tag -width Ds -offset indent -compact
-.It 0 Dt OREAD
-.It 1 Dt OWRITE
-.It 2 Dt ORDWD
-.It 3 Dt OEXEC
+.It 0 Dv OREAD
+.It 1 Dv OWRITE
+.It 2 Dv ORDWD
+.It 3 Dv OEXEC
 .El
 .Pp
 The returned
 .Ar iounit
 is the optimal blocksize for I/O.
+.It Ic read
+Read data at offset from file
+.Bd -literal
+fid[4] offset[8] count[4]
+count[4] data[count]
+.Ed
+.Pp
+.Ar fid
+must have been prepared for I/O with a previous
+.Ic open
+call.
+The returned
+.Ar count
+is zero when reaching end-of-file and may be lesser than what requested.
+.Pp
+Directories are a stream of stat structures, as described in
+.Ic stat ,
+and for them the read request message must have offset equal to zero or
+the value of
+.Ar offset
+in the previous read on the directory plus the number of bytes returned
+in the previous read.
+.It Ic stat
+get file status
+.Bd -literal
+fid[4]
+stat[n]
+.Ed
+.Pp
+The stat structure is made by the following fields:
+.Bl -tag -width twelveletters -compact
+.It size[2]
+total byte count of the following data
+.It type[2]
+for kernel use
+.It dev[4]
+for kernel use
+.It qid[13]
+server unique identifier of the file
+.It mode[4]
+permissions and flags
+.It atime[4]
+last access time
+.It mtime[4]
+last modification time
+.It length[8]
+length of file in bytes
+.It name[s]
+file name
+(must be
+.Dq /
+if the file is the root directory of the server)
+.El
+.El
+.Sh 9P2000.L EXTENSIONS
+.Xr kamid 8
+supports also a subset of the
+.Sq 9P2000.L
+dialect.
+The supported messages are
+.Bl -tag -width readdir
+.It Ic readdir
+Read directory entries
+.Bd -literal
+fid[4] offset[8] count[4]
+count[4] data[count]
+.Ed
+.Pp
+Each directory entry is described by a variable-length record:
+.Ql qid[13] offset[8] type[1] name[s] .
+Offset is zero upon the first call.
+If the
+.Ar count
+field in the
+.Ic Rreaddir
+response is not zero then more data is available.
+.Pp
+.Ar count
+is allowed to be zero in the request.
 .El
 .Sh SEE ALSO
 .Xr utf8 7 ,
