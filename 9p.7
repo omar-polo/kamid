@@ -286,6 +286,13 @@ the value of
 .Ar offset
 in the previous read on the directory plus the number of bytes returned
 in the previous read.
+Thus, is not possible to seek into directories except for rewinding.
+.It Ic write
+Write data at offset
+.Bd -literal
+fid[4] offset[8] count[4] data[count]
+count[4]
+.Ed
 .It Ic stat
 get file status
 .Bd -literal
