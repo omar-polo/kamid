@@ -152,6 +152,9 @@ struct np_msg_header {
 #define QIDSIZE		13
 #define MAXWELEM	16
 
+#define NPSTATSIZ(namlen, uidnam, gidnam, unam) \
+	(8 + QIDSIZE + 20 + 2 + namlen + 2 + uidnam + 2 + gidnam + 2 + unam)
+
 /* bits in Qid.type */
 #define QTDIR		0x80		/* type bit for directories */
 #define QTAPPEND	0x40		/* type bit for append only files */

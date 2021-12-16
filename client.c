@@ -77,6 +77,10 @@ struct fid {
 	int			 fd;
 	DIR			*dir;
 	struct evbuffer		*evb;
+
+	/*
+	 * expected offset for Tread against a directory.
+	 */
 	uint64_t		 offset;
 
 	struct qid		*qid;
@@ -109,11 +113,12 @@ static void		 free_fid(struct fid *);
 static void		parse_message(const uint8_t *, size_t,
 			    struct np_msg_header *, uint8_t **);
 
-static void		np_write16(uint16_t);
-static void		np_write32(uint32_t);
+static void		np_write16(struct evbuffer *, uint16_t);
+static void		np_write32(struct evbuffer *, uint32_t);
+static void		np_write64(struct evbuffer *, uint64_t);
 static void		np_header(uint32_t, uint8_t, uint16_t);
-static void		np_string(uint16_t, const char *);
-static void		np_qid(struct qid *);
+static void		np_string(struct evbuffer *, uint16_t, const char *);
+static void		np_qid(struct evbuffer *, struct qid *);
 static void		do_send(void);
 
 static void		np_version(uint16_t, uint32_t, const char *);
@@ -518,23 +523,30 @@ err:
 }
 
 static void
-np_write16(uint16_t x)
+np_write16(struct evbuffer *e, uint16_t x)
 {
 	x = htole16(x);
-	evbuffer_add(evb, &x, sizeof(x));
+	evbuffer_add(e, &x, sizeof(x));
 }
 
 static void
-np_write32(uint32_t x)
+np_write32(struct evbuffer *e, uint32_t x)
 {
 	x = htole32(x);
-	evbuffer_add(evb, &x, sizeof(x));
+	evbuffer_add(e, &x, sizeof(x));
 }
 
 static void
-np_writebuf(size_t len, void *data)
+np_write64(struct evbuffer *e, uint64_t x)
 {
-	evbuffer_add(evb, data, len);
+	x = htole64(x);
+	evbuffer_add(e, &x, sizeof(x));
+}
+
+static void
+np_writebuf(struct evbuffer *e, size_t len, void *data)
+{
+	evbuffer_add(e, data, len);
 }
 
 static void
@@ -551,17 +563,17 @@ np_header(uint32_t len, uint8_t type, uint16_t tag)
 }
 
 static void
-np_string(uint16_t len, const char *str)
+np_string(struct evbuffer *e, uint16_t len, const char *str)
 {
 	uint16_t l = len;
 
 	len = htole16(len);
-	evbuffer_add(evb, &len, sizeof(len));
-	evbuffer_add(evb, str, l);
+	evbuffer_add(e, &len, sizeof(len));
+	evbuffer_add(e, str, l);
 }
 
 static void
-np_qid(struct qid *qid)
+np_qid(struct evbuffer *e, struct qid *qid)
 {
 	uint64_t	path;
 	uint32_t	vers;
@@ -569,9 +581,9 @@ np_qid(struct qid *qid)
 	path = htole64(qid->path);
 	vers = htole32(qid->vers);
 
-	evbuffer_add(evb, &qid->type, sizeof(qid->type));
-	evbuffer_add(evb, &vers, sizeof(vers));
-	evbuffer_add(evb, &path, sizeof(path));
+	evbuffer_add(e, &qid->type, sizeof(qid->type));
+	evbuffer_add(e, &vers, sizeof(vers));
+	evbuffer_add(e, &path, sizeof(path));
 }
 
 static void
@@ -601,7 +613,7 @@ np_version(uint16_t tag, uint32_t msize, const char *version)
 
 	np_header(sizeof(msize) + sizeof(l) + l, Rversion, tag);
 	evbuffer_add(evb, &msize, sizeof(msize));
-	np_string(l, version);
+	np_string(evb, l, version);
 	do_send();
 }
 
@@ -609,7 +621,7 @@ static void
 np_attach(uint16_t tag, struct qid *qid)
 {
 	np_header(QIDSIZE, Rattach, tag);
-	np_qid(qid);
+	np_qid(evb, qid);
 	do_send();
 }
 
@@ -634,9 +646,9 @@ np_walk(uint16_t tag, int nwqid, struct qid *wqid)
 
 	/* two bytes for the counter */
 	np_header(2 + QIDSIZE * nwqid, Rwalk, tag);
-	np_write16(nwqid);
+	np_write16(evb, nwqid);
 	for (i = 0; i < nwqid; ++i)
-		np_qid(wqid + i);
+		np_qid(evb, wqid + i);
 
 	do_send();
 }
@@ -645,8 +657,8 @@ static void
 np_open(uint16_t tag, struct qid *qid, uint32_t iounit)
 {
 	np_header(QIDSIZE + sizeof(iounit), Ropen, tag);
-	np_qid(qid);
-	np_write32(iounit);
+	np_qid(evb, qid);
+	np_write32(evb, iounit);
 	do_send();
 }
 
@@ -654,8 +666,8 @@ static void
 np_read(uint16_t tag, uint32_t count, void *data)
 {
 	np_header(sizeof(count) + count, Rread, tag);
-	np_write32(count);
-	np_writebuf(count, data);
+	np_write32(evb, count);
+	np_writebuf(evb, count, data);
 	do_send();
 }
 
@@ -667,7 +679,7 @@ np_error(uint16_t tag, const char *errstr)
 	l = strlen(errstr);
 
 	np_header(sizeof(l) + l, Rerror, tag);
-	np_string(l, errstr);
+	np_string(evb, l, errstr);
 	do_send();
 }
 
@@ -1175,6 +1187,56 @@ topen(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	np_open(hdr->tag, &qid, sb.st_blksize);
 }
 
+static inline void
+serialize_dirent(int dirfd, struct evbuffer *evb, struct dirent *d)
+{
+	struct stat	 sb;
+	struct qid	 qid;
+	const char	*uid, *gid, *muid;
+	size_t		 tot;
+	uint16_t	 namlen, uidlen, gidlen, ulen;
+
+	if (fstatat(dirfd, d->d_name, &sb, AT_SYMLINK_NOFOLLOW) == -1) {
+		log_warn("fstatat");
+		return;
+	}
+
+	qid_update_from_sb(&qid, &sb);
+
+	/* TODO: fill these fields */
+	uid = "";
+	gid = "";
+	muid = "";
+
+	namlen = strlen(d->d_name);
+	uidlen = strlen(uid);
+	gidlen = strlen(gid);
+	ulen = strlen(muid);
+
+	tot = NPSTATSIZ(namlen, uidlen, gidlen, ulen);
+	if (tot > UINT32_MAX) {
+		log_warnx("stat info for dir entry %s would overflow",
+		    d->d_name);
+		return;
+	}
+
+	np_write16(evb, tot);			/*	size[2]		*/
+	np_write16(evb, sb.st_rdev);		/*	type[2]		*/
+	np_write32(evb, sb.st_dev);		/*	dev[4]		*/
+	np_qid(evb, &qid);			/*	qid[13]		*/
+
+	/* XXX: translate? */
+	np_write32(evb, sb.st_mode);		/*	mode[4]		*/
+
+	np_write32(evb, sb.st_atim.tv_sec);	/*	atime[4]	*/
+	np_write32(evb, sb.st_mtim.tv_sec);	/*	mtime[4]	*/
+	np_write64(evb, sb.st_size);		/*	length[8]	*/
+	np_string(evb, namlen, d->d_name);	/*	name[s]		*/
+	np_string(evb, uidlen, uid);		/*	uid[s]		*/
+	np_string(evb, gidlen, gid);		/*	gid[s]		*/
+	np_string(evb, ulen, muid);		/*	muid[s]		*/
+}
+
 static void
 tread(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 {
@@ -1212,8 +1274,25 @@ tread(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		else
 			np_read(hdr->tag, r, buf);
 	} else {
-		/* read dirents */
-		np_error(hdr->tag, "not implemented yet");
+		if (off != f->offset) {
+			np_error(hdr->tag, "can't seek in directories");
+			return;
+		}
+
+		while (EVBUFFER_LENGTH(f->evb) < count) {
+			struct dirent *d;
+
+			if ((d = readdir(f->dir)) == NULL)
+				break;
+			serialize_dirent(f->fd, f->evb, d);
+		}
+
+		count = MIN(count, EVBUFFER_LENGTH(f->evb));
+		np_read(hdr->tag, count, EVBUFFER_DATA(f->evb));
+		evbuffer_drain(f->evb, count);
+		do_send();
+
+		f->offset += count;
 	}
 }
 
