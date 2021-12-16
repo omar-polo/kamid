@@ -1274,6 +1274,11 @@ tread(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		else
 			np_read(hdr->tag, r, buf);
 	} else {
+		if (off == 0 && f->offset != 0) {
+			rewinddir(f->dir);
+			f->offset = 0;
+		}
+
 		if (off != f->offset) {
 			np_error(hdr->tag, "can't seek in directories");
 			return;
