@@ -128,7 +128,7 @@ tattach(uint32_t fid, uint32_t afid, const char *uname, const char *aname)
 	    + sizeof(al) + al;
 	write_hdr_auto(len, Tattach);
 	write_fid(fid);
-	write_fid(NOFID);
+	write_fid(afid);
 	write_str(ul, uname);
 	write_str(al, aname);
 }
