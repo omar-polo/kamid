@@ -172,6 +172,9 @@ struct np_msg_header {
 
 /* 9p message types */
 enum {
+	Treaddir =	40,	/* .L */
+	Rreaddir,
+
 	Tversion =	100,
 	Rversion,
 	Tauth =		102,
