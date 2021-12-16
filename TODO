@@ -6,3 +6,5 @@
 
  - rework the ninepscript so tests are parsed and executed by the _kamid
    user and not by root.
+
+ - tweak iounit so it's always lower than the choosen msize
