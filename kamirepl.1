@@ -1,0 +1,128 @@
+.\" Copyright (c) 2021 Omar Polo <op@omarpolo.com>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate: December 16 2021 $
+.Dt KAMIREPL 1
+.Os
+.Sh NAME
+.Nm kamirepl
+.Nd 9p repl client
+.Sh SYNOPSIS
+.Nm
+.Op Fl chv
+.Op Fl C Ar cert
+.Op Fl H Ar host
+.Op Fl K Ar key
+.Op Fl P Ar port
+.Sh DESCRIPTION
+.Nm
+is a 
+.Xr 9p 7
+repl client.
+.Pp
+The optinos are as follows:
+.Bl -tag -width tenletters
+.It Fl C Ar cert
+Path to the TLS client certificate to use.
+.It Fl c
+Use TLS for the connection.
+.Fl C
+and
+.Fl K
+are mandatory if used.
+.It Fl H Ar host
+Hostname of the file server.
+.It Fl h
+Display usage and exit.
+.It Fl K Ar key
+Path to the TLS client certificate private key.
+.It Fl P Ar port
+Port number to connect to.
+.It Fl v
+Verbose logging.
+.El
+.Pp
+The interactive commands are
+.Bl -tag -width Ds
+.It Ic version Op Ar version-string
+.Ar version-string
+is
+.Dq 9P2000
+by default.
+.It Ic attach Ar fid Ar uname Ar aname
+Request the file server to attach the file tree identified by
+.Ar aname
+to the specified
+.Ar fid
+number.
+.Ar aname
+is the identifier for the user.
+The afid used is implicitly NOFID.
+.It Ic clunk Ar fid
+Closes
+.Ar fid.
+.It Ic flush Ar oldtag
+Require the server to flush
+.Ar oldtag .
+.It Ic walk Ar fid Ar newfid Ar wnames...
+Do a walk from
+.Ar fid
+following
+.Ar wnames
+component and associating the reached file to
+.Ar newfid .
+.It Ic open Ar fid Ar mode Op Ar flag
+Prepare
+.Ar fid
+for I/O.
+.Ar mode
+can be one of
+.Sq read
+or
+.Sq r ,
+.Sq write
+or
+.Sq w ,
+.Sq readwrite
+or
+.Sq rdwr .
+Optionally,
+.Ar flag
+can be on of
+.Sq trunc
+to truncate the file or
+.Sq rclose
+to remove the file upon
+.Ic clunk .
+.It Ic read Ar fid Ar offset Ar count
+Issue a read request for the given
+.Ar fid ,
+which must have been prepared for I/O with
+.Ic open ,
+at
+.Ar offset
+and for
+.Ar count
+bytes.
+.El
+.Sh SEE ALSO
+.Xr kamiftp 1
+.Xr 9p 7
+.Xr kamid 8
+.Sh AUTHORS
+.An -nosplit
+The
+.Nm
+utility was written by
+.An Omar Polo Aq Mt op@omarpolo.com .
