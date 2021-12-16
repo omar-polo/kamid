@@ -128,6 +128,7 @@ static void		np_flush(uint16_t);
 static void		np_walk(uint16_t, int, struct qid *);
 static void		np_open(uint16_t, struct qid *, uint32_t);
 static void		np_read(uint16_t, uint32_t, void *);
+static void		np_write(uint16_t, uint32_t);
 static void		np_error(uint16_t, const char *);
 static void		np_errno(uint16_t);
 
@@ -159,6 +160,7 @@ static void	tflush(struct np_msg_header *, const uint8_t *, size_t);
 static void	twalk(struct np_msg_header *, const uint8_t *, size_t);
 static void	topen(struct np_msg_header *, const uint8_t *, size_t);
 static void	tread(struct np_msg_header *, const uint8_t *, size_t);
+static void	twrite(struct np_msg_header *, const uint8_t *, size_t);
 static void	handle_message(struct imsg *, size_t);
 
 ATTR_DEAD void
@@ -668,6 +670,14 @@ np_read(uint16_t tag, uint32_t count, void *data)
 	np_header(sizeof(count) + count, Rread, tag);
 	np_write32(evb, count);
 	np_writebuf(evb, count, data);
+	do_send();
+}
+
+static void
+np_write(uint16_t tag, uint32_t count)
+{
+	np_header(sizeof(count), Rwrite, tag);
+	np_write32(evb, count);
 	do_send();
 }
 
@@ -1302,6 +1312,47 @@ tread(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 }
 
 static void
+twrite(struct np_msg_header *hdr, const uint8_t *data, size_t len)
+{
+	struct fid	*f;
+	ssize_t		 r;
+	uint64_t	 off;
+	uint32_t	 fid, count;
+
+	/* fid[4] offset[8] count[4] data[count] */
+	if (!NPREAD32("fid", &fid, &data, &len) ||
+	    !NPREAD64("off", &off, &data, &len) ||
+	    !NPREAD32("count", &count, &data, &len) ||
+	    len != count) {
+		client_send_listener(IMSG_CLOSE, NULL, 0);
+		client_shutdown();
+		return;
+	}
+
+	if ((f = fid_by_id(fid)) == NULL || f->fd == -1) {
+		np_error(hdr->tag, "invalid fid");
+		return;
+	}
+
+	if (!(f->iomode & O_WRONLY) &&
+	    !(f->iomode & O_RDWR)) {
+		np_error(hdr->tag, "fid not opened for writing");
+		return;
+	}
+
+	if (TYPE_OVERFLOW(off_t, off)) {
+		log_warnx("unexpected off_t size");
+		np_error(hdr->tag, "invalid offset");
+		return;
+	}
+
+	if ((r = pwrite(f->fid, data, len, off)) == -1)
+		np_errno(hdr->tag);
+	else
+		np_write(hdr->tag, r);
+}
+
+static void
 handle_message(struct imsg *imsg, size_t len)
 {
 	struct msg {
@@ -1315,6 +1366,7 @@ handle_message(struct imsg *imsg, size_t len)
 		{Twalk,		twalk},
 		{Topen,		topen},
 		{Tread,		tread},
+		{Twrite,	twrite},
 	};
 	struct np_msg_header	 hdr;
 	size_t			 i;
