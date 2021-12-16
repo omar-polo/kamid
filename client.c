@@ -54,7 +54,7 @@ struct qid {
 	int			 refcount;
 
 	int			 fd;
-	char			 fpath[PATH_MAX+1];
+	char			 fpath[PATH_MAX];
 
 	STAILQ_ENTRY(qid)	 entries;
 };
@@ -948,7 +948,7 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	uint32_t	 fid, newfid;
 	uint16_t	 nwname;
 	int		 fd, oldfd, no, nwqid = 0;
-	char		 wnam[PATH_MAX+1];
+	char		 wnam[PATH_MAX];
 
 	if (!NPREAD32("fid", &fid, &data, &len)       ||
 	    !NPREAD32("newfid", &newfid, &data, &len) ||
