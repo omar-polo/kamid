@@ -153,7 +153,7 @@ struct np_msg_header {
 #define MAXWELEM	16
 
 #define NPSTATSIZ(namlen, uidnam, gidnam, unam) \
-	(8 + QIDSIZE + 20 + 2 + namlen + 2 + uidnam + 2 + gidnam + 2 + unam)
+	(6 + QIDSIZE + 20 + 2 + namlen + 2 + uidnam + 2 + gidnam + 2 + unam)
 
 /* bits in Qid.type */
 #define QTDIR		0x80		/* type bit for directories */
