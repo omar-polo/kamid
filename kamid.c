@@ -281,7 +281,6 @@ do_auth_tls(struct imsg *imsg)
 	if ((t = auth_table_by_id(auth.listen_id)) == NULL)
 		fatal("request for invalid listener id %d", imsg->hdr.pid);
 
-	log_debug("before table_lookup");
 	if (table_lookup(t, auth.hash, &username) == -1) {
 		log_warnx("login failed for hash %s", auth.hash);
 		goto err;
