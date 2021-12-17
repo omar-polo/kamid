@@ -1346,7 +1346,7 @@ twrite(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 
-	if ((r = pwrite(f->fid, data, len, off)) == -1)
+	if ((r = pwrite(f->fd, data, len, off)) == -1)
 		np_errno(hdr->tag);
 	else
 		np_write(hdr->tag, r);
