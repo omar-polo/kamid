@@ -258,40 +258,97 @@ auth_table_by_id(uint32_t id)
 	return NULL;
 }
 
+static inline struct table *
+virtual_table_by_id(uint32_t id)
+{
+	struct kd_listen_conf *listen;
+
+	STAILQ_FOREACH(listen, &main_conf->listen_head, entry) {
+		if (listen->id == id)
+			return listen->virtual_table;
+	}
+
+	return NULL;
+}
+
+static inline struct table *
+userdata_table_by_id(uint32_t id)
+{
+	struct kd_listen_conf *listen;
+
+	STAILQ_FOREACH(listen, &main_conf->listen_head, entry) {
+		if (listen->id == id)
+			return listen->userdata_table;
+	}
+
+	return NULL;
+}
+
 static inline void
 do_auth_tls(struct imsg *imsg)
 {
-	char *username = NULL;
+	char *username = NULL, *user = NULL, *home = NULL, *local_user;
 	struct passwd *pw;
-	struct table *t;
-	struct kd_auth_req auth;
-	int p[2];
+	struct table *auth, *virt, *userdata;
+	struct kd_auth_req kauth;
+	int p[2], free_home = 1;
 
-	if (sizeof(auth) != IMSG_DATA_SIZE(*imsg))
+	if (sizeof(kauth) != IMSG_DATA_SIZE(*imsg))
 		fatal("wrong size for IMSG_AUTH_TLS: "
 		    "got %lu; want %lu", IMSG_DATA_SIZE(*imsg),
-		    sizeof(auth));
-	memcpy(&auth, imsg->data, sizeof(auth));
+		    sizeof(kauth));
+	memcpy(&kauth, imsg->data, sizeof(kauth));
 
-	if (memmem(auth.hash, sizeof(auth.hash), "", 1) == NULL)
+	if (memmem(kauth.hash, sizeof(kauth.hash), "", 1) == NULL)
                 fatal("non NUL-terminated hash received");
 
-	log_debug("tls id=%u hash=%s", auth.listen_id, auth.hash);
+	log_debug("tls id=%u hash=%s", kauth.listen_id, kauth.hash);
 
-	if ((t = auth_table_by_id(auth.listen_id)) == NULL)
+	if ((auth = auth_table_by_id(kauth.listen_id)) == NULL)
 		fatal("request for invalid listener id %d", imsg->hdr.pid);
 
-	if (table_lookup(t, auth.hash, &username) == -1) {
-		log_warnx("login failed for hash %s", auth.hash);
+	virt = virtual_table_by_id(kauth.listen_id);
+	userdata = userdata_table_by_id(kauth.listen_id);
+
+	if (table_lookup(auth, kauth.hash, &username) == -1) {
+		log_warnx("login failed for hash %s", kauth.hash);
 		goto err;
 	}
 
-	log_debug("matched local user %s", username);
-
-	if ((pw = getpwnam(username)) == NULL) {
-		log_warnx("getpwnam(%s) failed", username);
+	if (virt != NULL && table_lookup(virt, username, &user) == -1) {
+		log_warnx("virtual lookup failed for user %s", username);
 		goto err;
 	}
+
+	/* the local user */
+	local_user = user != NULL ? user : username;
+
+	if (user != NULL)
+		log_debug("virtual user %s matches local user %s",
+		    username, user);
+	else
+		log_debug("matched local user %s", username);
+
+	if (userdata != NULL && table_lookup(userdata, username, &home)
+	    == -1) {
+		log_warnx("userdata lookup failed for user %s", username);
+		goto err;
+	} else {
+		if ((pw = getpwnam(local_user)) == NULL) {
+			log_warnx("getpwnam(%s) failed", local_user);
+			goto err;
+		}
+
+		free_home = 0;
+		home = pw->pw_dir;
+	}
+
+	if (user != NULL)
+		log_debug("matched home %s for virtual user %s",
+		    home, username);
+	else
+		log_debug("matched home %s for local user %s",
+		    home, username);
 
 	if (socketpair(AF_UNIX, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK,
 	    PF_UNSPEC, p) == -1)
@@ -300,15 +357,21 @@ do_auth_tls(struct imsg *imsg)
 	start_child(PROC_CLIENTCONN, p[1], debug, verbose);
 
 	main_imsg_compose_listener(IMSG_AUTH, p[0], imsg->hdr.peerid,
-	    username, strlen(username)+1);
+	    local_user, strlen(local_user)+1);
 	main_imsg_compose_listener(IMSG_AUTH_DIR, -1, imsg->hdr.peerid,
-	    pw->pw_dir, strlen(pw->pw_dir)+1);
+	    home, strlen(home)+1);
 
 	free(username);
+	free(user);
+	if (free_home)
+		free(home);
 	return;
 
 err:
 	free(username);
+	free(user);
+	if (free_home)
+		free(home);
 	main_imsg_compose_listener(IMSG_AUTH, -1, imsg->hdr.peerid,
 	    NULL, 0);
 }

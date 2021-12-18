@@ -118,6 +118,8 @@ typedef struct {
 %token	ON
 %token	PKI PORT
 %token	TABLE TLS
+%token	USERDATA
+%token	VIRTUAL
 %token	YES
 
 %token	<v.string>	STRING
@@ -298,6 +300,16 @@ listen_opt	: ON STRING PORT NUMBER	{
 				yyerror("listen auth already defined");
 			listener->auth_table = $2;
 		}
+		| USERDATA tableref {
+			if (listener->userdata_table != NULL)
+				yyerror("userdata table already defined");
+			listener->userdata_table = $2;
+		}
+		| VIRTUAL tableref {
+			if (listener->virtual_table != NULL)
+				yyerror("virtual table already defined");
+			listener->virtual_table = $2;
+		}
 		;
 
 %%
@@ -345,6 +357,8 @@ lookup(char *s)
 		{"port",		PORT},
 		{"table",		TABLE},
 		{"tls",			TLS},
+		{"userdata",		USERDATA},
+		{"virtual",		VIRTUAL},
 		{"yes",			YES},
 	};
 	const struct keywords	*p;

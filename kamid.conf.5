@@ -84,6 +84,15 @@ rule.
 Use the given authentication
 .Ar table
 to authorize the clients.
+.It Ic userdata Pf < Ar table Ns >
+Maps user
+.Pq virtuals or not
+to their exported tree.
+By default the user home directory obtained with
+.Xr getpwnam 3
+is used.
+.It Ic virtual Pf < Ar table Ns >
+Maps virtual users to local user.
 .El
 .It Ic pki Ar pkiname Ic cert Ar certfile
 Associate certificate file

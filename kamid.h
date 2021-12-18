@@ -97,7 +97,16 @@ struct kd_listen_conf {
 	int				 fd;
 	char				 iface[LINE_MAX];
 	uint16_t			 port;
+
+	/* certificate hash => (virtual) user */
 	struct table			*auth_table;
+
+	/* virtual user => local user */
+	struct table			*virtual_table;
+
+	/* (virtual) user => export directory */
+	struct table			*userdata_table;
+
 	char				 pki[LINE_MAX];
 	struct event			 ev;
 	struct tls			*ctx;
