@@ -70,7 +70,7 @@ export REGRESS_ROOT="$testroot"
 ret=0
 
 set +e
-cd regress/lisp/9p-test/ &&
+cd regress/lisp/9p-test/ && \
 	${SBCL} --noinform \
 		--disable-debugger \
 		--eval "(require 'asdf)" \
