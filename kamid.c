@@ -81,7 +81,7 @@ usage(void)
 int
 main(int argc, char **argv)
 {
-        struct event	 ev_sigint, ev_sigterm, ev_sighup;
+	struct event	 ev_sigint, ev_sigterm, ev_sighup;
 	int		 ch;
 	int		 listener_flag = 0, client_flag = 0;
 	int		 pipe_main2listener[2];
