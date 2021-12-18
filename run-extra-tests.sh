@@ -82,6 +82,8 @@ ret=$?
 if [ $ret -ne 0 ]; then
 	echo
 	echo "Test failed, leaving root at $testroot"
+else
+	rm -rf "$testroot"
 fi
 
 ${DOAS} pkill kamid
