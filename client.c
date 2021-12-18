@@ -1305,7 +1305,6 @@ tread(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		count = MIN(count, EVBUFFER_LENGTH(f->evb));
 		np_read(hdr->tag, count, EVBUFFER_DATA(f->evb));
 		evbuffer_drain(f->evb, count);
-		do_send();
 
 		f->offset += count;
 	}
