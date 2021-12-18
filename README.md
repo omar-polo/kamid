@@ -55,3 +55,6 @@ See `regress/sample.9ps` for an example of the grammar.
 
 kamid is released under a BSD-like license.  The bulk of the code is
 under the ISC license, but some file are BSD2 or BSD3.
+
+`regress/lisp/9p-test/` (the common lisp regression suite) is released
+under the GNU GPLv3+.
