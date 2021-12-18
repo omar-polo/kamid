@@ -50,6 +50,13 @@ The regression uses a custom DSL, `ninepscript`, to run the tests.
 See `regress/sample.9ps` for an example of the grammar.
 `contrib/9ps-mode.el` is the major mode for Emacs.
 
+There's another regression suite, written in common lisp, in
+`regress/lisp/9p-test`.  To run it execute
+
+	$ DOAS=sudo ./run-extra-tests.sh
+
+(leave `DOAS=sudo` if you have doas installed and running)
+
 
 ## License
 
