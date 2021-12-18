@@ -129,6 +129,7 @@ static void		np_walk(uint16_t, int, struct qid *);
 static void		np_open(uint16_t, struct qid *, uint32_t);
 static void		np_read(uint16_t, uint32_t, void *);
 static void		np_write(uint16_t, uint32_t);
+static void		np_stat(uint16_t, uint32_t, void *);
 static void		np_error(uint16_t, const char *);
 static void		np_errno(uint16_t);
 
@@ -161,6 +162,7 @@ static void	twalk(struct np_msg_header *, const uint8_t *, size_t);
 static void	topen(struct np_msg_header *, const uint8_t *, size_t);
 static void	tread(struct np_msg_header *, const uint8_t *, size_t);
 static void	twrite(struct np_msg_header *, const uint8_t *, size_t);
+static void	tstat(struct np_msg_header *, const uint8_t *, size_t);
 static void	handle_message(struct imsg *, size_t);
 
 ATTR_DEAD void
@@ -682,6 +684,14 @@ np_write(uint16_t tag, uint32_t count)
 }
 
 static void
+np_stat(uint16_t tag, uint32_t count, void *data)
+{
+	np_header(count, Rstat, tag);
+	np_writebuf(evb, count, data);
+	do_send();
+}
+
+static void
 np_error(uint16_t tag, const char *errstr)
 {
 	uint16_t l;
@@ -1198,27 +1208,21 @@ topen(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 }
 
 static inline void
-serialize_dirent(int dirfd, struct evbuffer *evb, struct dirent *d)
+serialize_stat(const char *fname, struct stat *sb, struct evbuffer *evb)
 {
-	struct stat	 sb;
 	struct qid	 qid;
 	const char	*uid, *gid, *muid;
 	size_t		 tot;
 	uint16_t	 namlen, uidlen, gidlen, ulen;
 
-	if (fstatat(dirfd, d->d_name, &sb, AT_SYMLINK_NOFOLLOW) == -1) {
-		log_warn("fstatat");
-		return;
-	}
-
-	qid_update_from_sb(&qid, &sb);
+	qid_update_from_sb(&qid, sb);
 
 	/* TODO: fill these fields */
 	uid = "";
 	gid = "";
 	muid = "";
 
-	namlen = strlen(d->d_name);
+	namlen = strlen(fname);
 	uidlen = strlen(uid);
 	gidlen = strlen(gid);
 	ulen = strlen(muid);
@@ -1226,22 +1230,22 @@ serialize_dirent(int dirfd, struct evbuffer *evb, struct dirent *d)
 	tot = NPSTATSIZ(namlen, uidlen, gidlen, ulen);
 	if (tot > UINT32_MAX) {
 		log_warnx("stat info for dir entry %s would overflow",
-		    d->d_name);
+		    fname);
 		return;
 	}
 
 	np_write16(evb, tot);			/*	size[2]		*/
-	np_write16(evb, sb.st_rdev);		/*	type[2]		*/
-	np_write32(evb, sb.st_dev);		/*	dev[4]		*/
+	np_write16(evb, sb->st_rdev);		/*	type[2]		*/
+	np_write32(evb, sb->st_dev);		/*	dev[4]		*/
 	np_qid(evb, &qid);			/*	qid[13]		*/
 
 	/* XXX: translate? */
-	np_write32(evb, sb.st_mode);		/*	mode[4]		*/
+	np_write32(evb, sb->st_mode);		/*	mode[4]		*/
 
-	np_write32(evb, sb.st_atim.tv_sec);	/*	atime[4]	*/
-	np_write32(evb, sb.st_mtim.tv_sec);	/*	mtime[4]	*/
-	np_write64(evb, sb.st_size);		/*	length[8]	*/
-	np_string(evb, namlen, d->d_name);	/*	name[s]		*/
+	np_write32(evb, sb->st_atim.tv_sec);	/*	atime[4]	*/
+	np_write32(evb, sb->st_mtim.tv_sec);	/*	mtime[4]	*/
+	np_write64(evb, sb->st_size);		/*	length[8]	*/
+	np_string(evb, namlen, fname);		/*	name[s]		*/
 	np_string(evb, uidlen, uid);		/*	uid[s]		*/
 	np_string(evb, gidlen, gid);		/*	gid[s]		*/
 	np_string(evb, ulen, muid);		/*	muid[s]		*/
@@ -1296,10 +1300,15 @@ tread(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 
 		while (EVBUFFER_LENGTH(f->evb) < count) {
 			struct dirent *d;
+			struct stat sb;
 
 			if ((d = readdir(f->dir)) == NULL)
 				break;
-			serialize_dirent(f->fd, f->evb, d);
+			if (fstatat(f->fd, d->d_name, &sb, 0) == -1) {
+				warn("fstatat");
+				continue;
+			}
+			serialize_stat(d->d_name, &sb, f->evb);
 		}
 
 		count = MIN(count, EVBUFFER_LENGTH(f->evb));
@@ -1352,6 +1361,54 @@ twrite(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 }
 
 static void
+tstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
+{
+	struct evbuffer	*evb;
+	struct stat	 sb;
+	struct fid	*f;
+	const char	*fname;
+	int		 r;
+	uint32_t	 fid;
+
+	/* fid[4] */
+	if (!NPREAD32("fid", &fid, &data, &len)) {
+		client_send_listener(IMSG_CLOSE, NULL, 0);
+		client_shutdown();
+		return;
+	}
+
+	/*
+	 * plan9' stat(9P) is not clear on whether the stat is allowed
+	 * on opened fids or not.
+	 */
+	if ((f = fid_by_id(fid)) == NULL) {
+		np_error(hdr->tag, "invalid fid");
+		return;
+	}
+
+	if ((evb = evbuffer_new()) == NULL)
+		fatal("evbuffer_new");
+
+	if (f->qid->type & QTDIR) {
+		fname = ".";
+		r = fstat(f->qid->fd, &sb);
+	} else {
+		fname = f->qid->fpath;
+		r = fstatat(f->qid->fd, f->qid->fpath, &sb, 0);
+	}
+
+	if (r == -1) {
+		np_errno(hdr->tag);
+		evbuffer_free(evb);
+		return;
+	}
+
+	serialize_stat(fname, &sb, evb);
+	np_stat(hdr->tag, EVBUFFER_LENGTH(evb), EVBUFFER_DATA(evb));
+	evbuffer_free(evb);
+}
+
+static void
 handle_message(struct imsg *imsg, size_t len)
 {
 	struct msg {
@@ -1366,6 +1423,7 @@ handle_message(struct imsg *imsg, size_t len)
 		{Topen,		topen},
 		{Tread,		tread},
 		{Twrite,	twrite},
+		{Tstat,		tstat},
 	};
 	struct np_msg_header	 hdr;
 	size_t			 i;
