@@ -324,7 +324,7 @@ do_auth_tls(struct imsg *imsg)
 	local_user = user != NULL ? user : username;
 
 	if (user != NULL)
-		log_debug("virtual user %s matches local user %s",
+		log_debug("virtual user %s matched local user %s",
 		    username, user);
 	else
 		log_debug("matched local user %s", username);
