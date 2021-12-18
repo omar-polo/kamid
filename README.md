@@ -55,7 +55,7 @@ There's another regression suite, written in common lisp, in
 
 	$ DOAS=sudo ./run-extra-tests.sh
 
-(leave `DOAS=sudo` if you have doas installed and running)
+(leave `DOAS=sudo` out if you have doas installed and running)
 
 
 ## License
