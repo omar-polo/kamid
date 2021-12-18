@@ -333,7 +333,7 @@ do_auth_tls(struct imsg *imsg)
 	    == -1) {
 		log_warnx("userdata lookup failed for user %s", username);
 		goto err;
-	} else {
+	} else if (userdata == NULL) {
 		if ((pw = getpwnam(local_user)) == NULL) {
 			log_warnx("getpwnam(%s) failed", local_user);
 			goto err;
