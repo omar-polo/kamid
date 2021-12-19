@@ -19,9 +19,9 @@
 
 (defsuite kami-suite (all-suite))
 
-(defparameter *client-certificate* "/home/cage/lisp/tinmop/kamid.cert")
+(defparameter *client-certificate* nil)
 
-(defparameter *certificate-key*    "/home/cage/lisp/tinmop/kamid.key")
+(defparameter *certificate-key*    nil)
 
 (defparameter *host*               "localhost")
 
