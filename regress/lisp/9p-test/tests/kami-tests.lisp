@@ -209,7 +209,6 @@
       results)))
 
 (deftest test-stat (kami-suite)
-  (example-write-2-3 *remote-test-path-write*)
   (assert-true (ignore-errors (example-stat "/")))
   (assert-true (ignore-errors (example-stat *remote-test-path*)))
   (assert-eq   :directory
