@@ -44,23 +44,44 @@
 
 (define-constant +open-remove-on-clunk+  #x40              :test #'=)
 
-(define-constant +stat-type-dir+          #x80000000       :test #'=
+(define-constant +stat-type-dir+          #x80       :test #'=
   :documentation "mode bit for directories")
 
-(define-constant +stat-type-append+       #x40000000       :test #'=
+(define-constant +stat-type-append+       #x40       :test #'=
   :documentation "mode bit for append only files")
 
-(define-constant +stat-type-excl+         #x20000000       :test #'=
+(define-constant +stat-type-excl+         #x20       :test #'=
   :documentation "mode bit for exclusive use files")
 
-(define-constant +stat-type-mount+        #x10000000       :test #'=
+(define-constant +stat-type-mount+        #x10       :test #'=
   :documentation "mode bit for mounted channel")
 
-(define-constant +stat-type-auth+         #x08000000       :test #'=
+(define-constant +stat-type-auth+         #x08       :test #'=
   :documentation "mode bit for authentication file")
 
-(define-constant +stat-type-tmp+          #x04000000       :test #'=
+(define-constant +stat-type-tmp+          #x04       :test #'=
   :documentation "mode bit for non-backed-up files")
+
+(define-constant +stat-type-symlink+      #x02       :test #'=
+  :documentation "mode bit for non-backed-up files")
+
+(define-constant +stat-type-file+         #x00       :test #'=
+  :documentation "mode bit for non-backed-up files")
+
+(define-constant +file-types+ (list (cons +stat-type-dir+     :directory)
+                                    (cons +stat-type-append+  :append-only)
+                                    (cons +stat-type-excl+    :executable)
+                                    (cons +stat-type-mount+   :mount)
+                                    (cons +stat-type-auth+    :auth )
+                                    (cons +stat-type-tmp+     :tmp)
+                                    (cons +stat-type-symlink+ :symlink)
+                                    (cons +stat-type-file+    :file))
+  :test #'equalp)
+
+(defun file-type-number->symbol (key)
+  (cdr (assoc key +file-types+)))
+
+;; modes
 
 (define-constant +stat-type-read+         #x4              :test #'=
   :documentation "mode bit for read permission")
@@ -487,21 +508,36 @@
   (+  (length decoded-string)
       +message-string-length-size+))
 
+(defstruct stat
+  (entry-size)
+  (ktype)
+  (kdev)
+  (entry-type)
+  (version)
+  (path)
+  (mode)
+  (atime)
+  (mtime)
+  (size)
+  (name)
+  (user-id)
+  (group-id)
+  (last-modified-from-id))
+
 (defun decode-rstat (data)
   (flet ((->int (start end)
            (bytes->int (subseq data start end))))
-    (let* ((entry-size1           (->int  0  2))
-           (entry-size2           (->int  2  4))
-           (ktype                 (->int  4  6))
-           (kdev                  (->int  6 10))
-           (entry-type            (->int 10 11))
-           (version               (->int 11 15))
-           (path                  (->int 15 23))
-           (mode                  (->int 23 27))
-           (atime                 (->int 27 31))
-           (mtime                 (->int 31 35))
-           (size                  (->int 35 43))
-           (strings-start         43)
+    (let* ((entry-size            (->int  0  2))
+           (ktype                 (->int  2  4))
+           (kdev                  (->int  4  8))
+           (entry-type            (->int  8  9))
+           (version               (->int  9 13))
+           (path                  (->int 13 21))
+           (mode                  (->int 21 25))
+           (atime                 (->int 25 29))
+           (mtime                 (->int 29 33))
+           (size                  (->int 33 41))
+           (strings-start         41)
            (name                  (decode-string (subseq data strings-start)))
            (name-offset           (encoded-string-offset name))
            (user-id               (decode-string (subseq data
@@ -514,21 +550,20 @@
            (group-id-offset       (+ user-id-offset
                                      (encoded-string-offset group-id)))
            (last-modified-from-id (decode-string (subseq data group-id-offset))))
-      (values entry-size1
-              entry-size2
-              ktype
-              kdev
-              entry-type
-              version
-              path
-              mode
-              atime
-              mtime
-              size
-              name
-              user-id
-              group-id
-              last-modified-from-id))))
+      (make-stat :entry-size            entry-size
+                 :ktype                 ktype
+                 :kdev                  kdev
+                 :entry-type            (file-type-number->symbol entry-type)
+                 :version               version
+                 :path                  path
+                 :mode                  mode
+                 :atime                 atime
+                 :mtime                 mtime
+                 :size                  size
+                 :name                  name
+                 :user-id               user-id
+                 :group-id              group-id
+                 :last-modified-from-id last-modified-from-id))))
 
 ;;; high level routines
 

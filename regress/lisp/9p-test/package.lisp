@@ -80,6 +80,20 @@
    :9p-read
    :9p-walk
    :decode-read-reply
+   :stat-entry-size
+   :stat-ktype
+   :stat-kdev
+   :stat-entry-type
+   :stat-version
+   :stat-path
+   :stat-mode
+   :stat-atime
+   :stat-mtime
+   :stat-size
+   :stat-name
+   :stat-user-id
+   :stat-group-id
+   :stat-last-modified-from-id
    :decode-rstat
    :read-all-pending-messages-ignoring-errors
    :create-directory

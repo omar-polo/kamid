@@ -1,4 +1,4 @@
-;; test stuite for kami
+;; test suite for kami
 ;; Copyright (C) 2021  cage
 
 ;; This program is free software: you can redistribute it and/or modify
@@ -12,11 +12,30 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; along with this program.
+;; If not, see [[http://www.gnu.org/licenses/][http://www.gnu.org/licenses/]].
 
 (in-package :kami-tests)
 
 (defsuite kami-suite (all-suite))
+
+(defparameter *client-certificate* "/home/cage/lisp/tinmop/kamid.cert")
+
+(defparameter *certificate-key*    "/home/cage/lisp/tinmop/kamid.key")
+
+(defparameter *host*               "localhost")
+
+(defparameter *port*               10564)
+
+(defparameter *remote-test-file*   "kami-test")
+
+(defparameter *remote-test-path*   "/kamid/regress/root/dir/subdir/file")
+
+(defparameter *remote-test-path-write*   "/kamid/regress/root/dir/subdir/test-file-write")
+
+(defparameter *remote-test-path-contents* (format nil "qwertyuiopasdfghjklòàù è~%"))
+
+(alexandria:define-constant +remote-test-path-ovewrwrite-data+ "12" :test #'string=)
 
 (defun start-non-tls-socket (host port)
   (usocket:socket-connect host
@@ -95,7 +114,7 @@
         (read-all-pending-message stream)
         t))))
 
-(deftest test-read (kami-suite)
+(deftest test-read ((kami-suite) (test-walk))
   (assert-true (ignore-errors (example-open-path *remote-test-file*))))
 
 (defun example-slurp (path &optional (root "/"))
@@ -113,7 +132,7 @@
                                           :buffer-size 3)
                               :errorp nil))))
 
-(deftest test-slurp-file (kami-suite)
+(deftest test-slurp-file ((kami-suite) (test-read))
   (assert-equality #'string=
       *remote-test-path-contents*
       (example-slurp *remote-test-path*)))
@@ -169,3 +188,31 @@
          (file-sequence     (read-entire-file-as-string *remote-test-path-write*)))
     (setf (subseq expected-sequence 2 4) +remote-test-path-ovewrwrite-data+)
     (assert-equality #'string= file-sequence expected-sequence)))
+
+(defun example-stat (path &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (*buffer-size*   256)
+           (root-fid        (mount stream root))
+           (fid             (open-path stream root-fid path :mode +create-for-read+))
+           (results         nil))
+      (9p-stat stream fid
+               :callback (lambda (x data)
+                           (declare (ignore x))
+                           (setf results (decode-rstat data))))
+      (read-all-pending-message stream)
+      results)))
+
+(deftest test-stat (kami-suite)
+  (example-write-2-3 *remote-test-path-write*)
+  (assert-true (ignore-errors (example-stat "/")))
+  (assert-true (ignore-errors (example-stat *remote-test-path*)))
+  (assert-eq   :directory
+      (stat-entry-type (example-stat "/")))
+  (assert-eq   :file
+      (stat-entry-type (example-stat *remote-test-path*))))
