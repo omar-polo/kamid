@@ -127,6 +127,7 @@ static void		np_clunk(uint16_t);
 static void		np_flush(uint16_t);
 static void		np_walk(uint16_t, int, struct qid *);
 static void		np_open(uint16_t, struct qid *, uint32_t);
+static void		np_create(uint16_t, struct qid *, uint32_t);
 static void		np_read(uint16_t, uint32_t, void *);
 static void		np_write(uint16_t, uint32_t);
 static void		np_stat(uint16_t, uint32_t, void *);
@@ -160,6 +161,7 @@ static void	tclunk(struct np_msg_header *, const uint8_t *, size_t);
 static void	tflush(struct np_msg_header *, const uint8_t *, size_t);
 static void	twalk(struct np_msg_header *, const uint8_t *, size_t);
 static void	topen(struct np_msg_header *, const uint8_t *, size_t);
+static void	tcreate(struct np_msg_header *, const uint8_t *, size_t);
 static void	tread(struct np_msg_header *, const uint8_t *, size_t);
 static void	twrite(struct np_msg_header *, const uint8_t *, size_t);
 static void	tstat(struct np_msg_header *, const uint8_t *, size_t);
@@ -661,6 +663,15 @@ static void
 np_open(uint16_t tag, struct qid *qid, uint32_t iounit)
 {
 	np_header(QIDSIZE + sizeof(iounit), Ropen, tag);
+	np_qid(evb, qid);
+	np_write32(evb, iounit);
+	do_send();
+}
+
+static void
+np_create(uint16_t tag, struct qid *qid, uint32_t iounit)
+{
+	np_header(QIDSIZE + sizeof(iounit), Rcreate, tag);
 	np_qid(evb, qid);
 	np_write32(evb, iounit);
 	do_send();
@@ -1207,6 +1218,97 @@ topen(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	np_open(hdr->tag, &qid, sb.st_blksize);
 }
 
+static void
+tcreate(struct np_msg_header *hdr, const uint8_t *data, size_t len)
+{
+	struct stat	 sb;
+	struct qid	 qid;
+	struct fid	*f;
+	uint32_t	 fid, perm;
+	uint8_t		 mode;
+	char		 name[PATH_MAX];
+
+	/* fid[4] name[s] perm[4] mode[1] */
+	if (!NPREAD32("fid", &fid, &data, &len))
+		goto err;
+	switch (NPREADSTR("name", name, sizeof(name), &data, &len)) {
+	case READSTRERR:
+		goto err;
+	case READSTRTRUNC:
+		np_error(hdr->tag, "name too long");
+		return;
+	}
+	if (!NPREAD32("perm", &perm, &data, &len) ||
+	    !NPREAD8("mode", &mode, &data, &len))
+		goto err;
+
+	if ((f = fid_by_id(fid)) == NULL || f->fd != -1) {
+		np_error(hdr->tag, "invalid fid");
+		return;
+	}
+
+	if (!(f->qid->type & QTDIR)) {
+		np_error(hdr->tag, "fid doesn't identify a directory");
+		return;
+	}
+
+	if (npmode_to_unix(mode, &f->iomode) == -1) {
+		np_error(hdr->tag, "invalid mode");
+		return;
+	}
+
+	if (f->iomode & O_RDONLY) {
+		np_error(hdr->tag, "can't create a read-only file");
+		return;
+	}
+
+	/* TODO: parse the mode */
+
+	if (perm & 0x80000000) {
+		/* create a directory */
+		f->fd = mkdirat(f->qid->fd, name, 0755);
+	} else {
+		/* create a file */
+		f->fd = openat(f->qid->fd, name, f->iomode | O_CREAT | O_TRUNC,
+		    0644);
+	}
+
+	if (f->fd == -1) {
+		np_errno(hdr->tag);
+		return;
+	}
+
+	if (fstat(f->fd, &sb) == -1)
+		fatal("fstat");
+
+	if (S_ISDIR(sb.st_mode)) {
+		if ((f->dir = fdopendir(f->fd)) == NULL) {
+			np_errno(hdr->tag);
+			close(f->fd);
+			f->fd = -1;
+			return;
+		}
+
+		if ((f->evb = evbuffer_new()) == NULL) {
+			np_errno(hdr->tag);
+			closedir(f->dir);
+			f->dir = NULL;
+			f->fd = -1;
+		}
+	}
+
+	f->offset = 0;
+
+	qid_update_from_sb(&qid, &sb);
+	np_create(hdr->tag, &qid, sb.st_blksize);
+
+	return;
+
+err:
+	client_send_listener(IMSG_CLOSE, NULL, 0);
+	client_shutdown();
+}
+
 static inline void
 serialize_stat(const char *fname, struct stat *sb, struct evbuffer *evb)
 {
@@ -1421,6 +1523,7 @@ handle_message(struct imsg *imsg, size_t len)
 		{Tflush,	tflush},
 		{Twalk,		twalk},
 		{Topen,		topen},
+		{Tcreate,	tcreate},
 		{Tread,		tread},
 		{Twrite,	twrite},
 		{Tstat,		tstat},
