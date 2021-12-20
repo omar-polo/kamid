@@ -972,7 +972,7 @@ tflush(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 
 	/* oldtag[2] */
 	if (len != sizeof(oldtag)) {
-		log_warnx("Tclunk with the wrong size: got %zu want %zu",
+		log_warnx("Tflush with the wrong size: got %zu want %zu",
 		    len, sizeof(oldtag));
 		client_send_listener(IMSG_CLOSE, NULL, 0);
 		client_shutdown();
