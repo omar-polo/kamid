@@ -131,6 +131,7 @@ static void		np_create(uint16_t, struct qid *, uint32_t);
 static void		np_read(uint16_t, uint32_t, void *);
 static void		np_write(uint16_t, uint32_t);
 static void		np_stat(uint16_t, uint32_t, void *);
+static void		np_remove(uint16_t);
 static void		np_error(uint16_t, const char *);
 static void		np_errno(uint16_t);
 
@@ -165,6 +166,7 @@ static void	tcreate(struct np_msg_header *, const uint8_t *, size_t);
 static void	tread(struct np_msg_header *, const uint8_t *, size_t);
 static void	twrite(struct np_msg_header *, const uint8_t *, size_t);
 static void	tstat(struct np_msg_header *, const uint8_t *, size_t);
+static void	tremove(struct np_msg_header *, const uint8_t *, size_t);
 static void	handle_message(struct imsg *, size_t);
 
 ATTR_DEAD void
@@ -703,6 +705,13 @@ np_stat(uint16_t tag, uint32_t count, void *data)
 }
 
 static void
+np_remove(uint16_t tag)
+{
+	np_header(0, Rremove, tag);
+	do_send();
+}
+
+static void
 np_error(uint16_t tag, const char *errstr)
 {
 	uint16_t l;
@@ -972,7 +981,7 @@ tflush(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 
 	/* oldtag[2] */
 	if (len != sizeof(oldtag)) {
-		log_warnx("Tclunk with the wrong size: got %zu want %zu",
+		log_warnx("Tflush with the wrong size: got %zu want %zu",
 		    len, sizeof(oldtag));
 		client_send_listener(IMSG_CLOSE, NULL, 0);
 		client_shutdown();
@@ -1511,6 +1520,38 @@ tstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 }
 
 static void
+tremove(struct np_msg_header *hdr, const uint8_t *data, size_t len)
+{
+	struct fid	*f;
+	uint32_t	 fid;
+	int		 r;
+
+	/* fid[4] */
+	if (!NPREAD32("fid", &fid, &data, &len)) {
+		client_send_listener(IMSG_CLOSE, NULL, 0);
+		client_shutdown();
+		return;
+	}
+
+	if ((f = fid_by_id(fid)) == NULL) {
+		np_error(hdr->tag, "invalid fid");
+		return;
+	}
+
+	if (f->fd == -1 || f->dir == NULL) /* unlink file */
+		r = unlinkat(f->qid->fd, f->qid->fpath, 0);
+	else /* directory */
+		r = unlinkat(f->qid->fd, f->qid->fpath, AT_REMOVEDIR);
+
+	if (r == -1)
+		np_errno(hdr->tag);
+	else
+		np_remove(hdr->tag);
+
+	free_fid(f);
+}
+
+static void
 handle_message(struct imsg *imsg, size_t len)
 {
 	struct msg {
@@ -1527,6 +1568,7 @@ handle_message(struct imsg *imsg, size_t len)
 		{Tread,		tread},
 		{Twrite,	twrite},
 		{Tstat,		tstat},
+		{Tremove,	tremove},
 	};
 	struct np_msg_header	 hdr;
 	size_t			 i;
