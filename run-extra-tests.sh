@@ -38,9 +38,10 @@ if [ ! -f kamid.pem -o ! -f kamid.key ]; then
 fi
 
 kamid_hash="$(h client.pem)"
-testroot="$(mktemp -d -t kamid-regress.XXXXXXXXXX)"
+tmpdir="$(mktemp -d -t kamid-regress.XXXXXXXXXX)"
+testroot="$tmpdir/root"
 
-cp -R regress/root/ "$testroot"
+cp -R regress/root/ "$tmpdir"
 
 cat > regress.conf <<EOF
 pki localhost cert "$PWD/kamid.pem"
@@ -56,7 +57,7 @@ listen on localhost port 1337 tls pki localhost \
 	userdata <data>
 EOF
 
-logfile="kamid-regress-$(date +%Y-%m-%d-%H-%M).log"
+logfile="$tmpdir/$(date +%Y-%m-%d-%H-%M).log"
 
 echo "logging on $logfile"
 ${DOAS} ./kamid -d -vvv -f regress.conf > "$logfile" 2>&1 &
@@ -82,6 +83,7 @@ ret=$?
 if [ $ret -ne 0 ]; then
 	echo
 	echo "Test failed, leaving root at $testroot"
+	sleep 1
 else
 	rm -rf "$testroot"
 fi
