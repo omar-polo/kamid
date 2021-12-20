@@ -264,6 +264,26 @@ determines the type of I/O:
 The returned
 .Ar iounit
 is the optimal blocksize for I/O.
+.It Ic create
+Create a file
+.Bd -literal
+fid[4] name[s] perm[4] mode[1]
+qid[13] iounit[4]
+.Ed
+.Pp
+The call attempts to create a file named
+.Ar name
+in the directory identified by
+.Ar fid
+according to
+.Ar perm
+and then to open it with
+.Ar mode
+into the given
+.Ar fid .
+.Pp
+It is illegal to use an already opened
+.Ar fid .
 .It Ic read
 Read data at offset from file
 .Bd -literal
@@ -330,6 +350,12 @@ group name
 .It muid[s]
 name of the user who last modified the file.
 .El
+.It Ic remove
+Remove a file
+.Bd -literal
+fid[4]
+.Aq empty response
+.Ed
 .El
 .Sh 9P2000.L EXTENSIONS
 .Xr kamid 8
