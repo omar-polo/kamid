@@ -1251,6 +1251,12 @@ tcreate(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	    !NPREAD8("mode", &mode, &data, &len))
 		goto err;
 
+	if (!strcmp(name, ".") || !strcmp(name, "..") ||
+	    strchr(name, '/') != NULL) {
+		np_error(hdr->tag, "invalid name");
+		return;
+	}
+
 	if ((f = fid_by_id(fid)) == NULL || f->fd != -1) {
 		np_error(hdr->tag, "invalid fid");
 		return;
