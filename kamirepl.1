@@ -105,6 +105,16 @@ to truncate the file or
 .Sq rclose
 to remove the file upon
 .Ic clunk .
+.It Ic create Ar fid Ar name Ar perm Ar mode
+Create the file
+.Ar name
+and open it with
+.Ar mode
+as the given
+.Ar fid.
+.Ar perm
+should be used to select the permissions of the file, but is currently
+unused.
 .It Ic read Ar fid Ar offset Ar count
 Issue a read request for the given
 .Ar fid ,
@@ -115,6 +125,20 @@ at
 and for
 .Ar count
 bytes.
+.It Ic write Ar fid Ar offset Ar content
+Writes
+.Ar content
+to
+.Ar fid
+starting at
+.Ar offset .
+.It Ic remove Ar fid
+Delete the file identified by
+.Ar fid
+and close it.
+Even in case of error,
+.Ar fid
+is clunked.
 .El
 .Sh SEE ALSO
 .Xr kamiftp 1

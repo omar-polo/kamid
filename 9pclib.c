@@ -71,6 +71,13 @@ write_str_auto(const char *str)
 }
 
 void
+write_buf(const void *d, uint32_t len)
+{
+	write_32(len);
+	evbuffer_add(evb, d, len);
+}
+
+void
 write_64(uint64_t x)
 {
 	x = htole64(x);
@@ -187,6 +194,22 @@ topen(uint32_t fid, uint8_t mode)
 }
 
 void
+tcreate(uint32_t fid, const char *name, uint32_t perm, uint8_t mode)
+{
+	uint32_t	len;
+	uint16_t	nl;
+
+	/* fid[4] name[s] perm[4] mode[1] */
+	nl = strlen(name);
+	len = sizeof(fid) + sizeof(nl) + nl + sizeof(perm) + sizeof(mode);
+	write_hdr_auto(len, Tcreate);
+	write_fid(fid);
+	write_str(nl, name);
+	write_32(perm);
+	write_8(mode);
+}
+
+void
 tread(uint32_t fid, uint64_t off, uint32_t count)
 {
 	uint32_t	len;
@@ -197,4 +220,25 @@ tread(uint32_t fid, uint64_t off, uint32_t count)
 	write_fid(fid);
 	write_off(off);
 	write_32(count);
+}
+
+void
+twrite(uint32_t fid, uint64_t off, const void *data, uint32_t count)
+{
+	uint32_t	len;
+
+	/* fid[4] off[8] count[4] data[count] */
+	len = sizeof(fid) + sizeof(off) + sizeof(count) + count;
+	write_hdr_auto(len, Twrite);
+	write_fid(fid);
+	write_off(off);
+	write_buf(data, count);
+}
+
+void
+tremove(uint32_t fid)
+{
+	/* fid[4] */
+	write_hdr_auto(sizeof(fid), Tremove);
+	write_fid(fid);
 }

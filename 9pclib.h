@@ -30,6 +30,7 @@ void		 write_hdr(uint32_t, uint8_t, uint16_t);
 void		 write_hdr_auto(uint32_t, uint8_t);
 void		 write_str(uint16_t, const char *);
 void		 write_str_auto(const char *);
+void		 write_buf(const void *, uint32_t);
 void		 write_64(uint64_t);
 void		 write_32(uint32_t);
 void		 write_16(uint16_t);
@@ -45,6 +46,9 @@ void		 tclunk(uint32_t);
 void		 tflush(uint16_t);
 void		 twalk(uint32_t, uint32_t, const char **, size_t);
 void		 topen(uint32_t, uint8_t);
+void		 tcreate(uint32_t, const char *, uint32_t, uint8_t);
 void		 tread(uint32_t, uint64_t, uint32_t);
+void		 twrite(uint32_t, uint64_t, const void *, uint32_t);
+void		 tremove(uint32_t);
 
 #endif

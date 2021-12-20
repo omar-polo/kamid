@@ -79,7 +79,9 @@ static void		 excmd_clunk(const char **, int);
 static void		 excmd_flush(const char **, int);
 static void		 excmd_walk(const char ** , int);
 static void		 excmd_open(const char ** , int);
+static void		 excmd_create(const char ** , int);
 static void		 excmd_read(const char ** , int);
+static void		 excmd_write(const char **, int);
 static void		 excmd(const char **, int);
 
 static const char	*pp_qid_type(uint8_t);
@@ -537,6 +539,42 @@ usage:
 	log_warnx("usage: open fid mode [flag]");
 }
 
+/* create fid path perm mode */
+static void
+excmd_create(const char **argv, int argc)
+{
+	const char	*errstr;
+	uint32_t	 fid;
+	uint8_t		 mode = 0;
+
+	if (argc != 5)
+		goto usage;
+
+	fid = strtonum(argv[1], 0, UINT32_MAX, &errstr);
+	if (errstr != NULL) {
+		log_warnx("fid is %s: %s", errstr, argv[1]);
+		return;
+	}
+
+	/* parse mode */
+	if (!strcmp("write", argv[4]) || !strcmp("w", argv[4]))
+		mode = KOWRITE;
+	else if (!strcmp("readwrite", argv[4]) || !strcmp("rw", argv[4]))
+		mode = KORDWR;
+	else {	    
+		log_warnx("invalid mode %s for create", argv[4]);
+		return;
+	}
+
+	tcreate(fid, argv[2], 0, mode);
+	do_send();
+	return;
+
+usage:
+	log_warnx("usage: create fid path perm mode ; perm is unused");
+}
+
+
 /* read fid offset count */
 static void
 excmd_read(const char **argv, int argc)
@@ -575,6 +613,63 @@ usage:
 	log_warnx("usage: read fid offset count");
 }
 
+/* write fid offset content */
+static void
+excmd_write(const char **argv, int argc)
+{
+	uint64_t	 off;
+	uint32_t	 fid, count;
+	const char	*errstr;
+
+	if (argc != 4)
+		goto usage;
+
+	fid = strtonum(argv[1], 0, UINT32_MAX, &errstr);
+	if (errstr != NULL) {
+		log_warnx("fid is %s: %s", errstr, argv[1]);
+		return;
+	}
+
+	/* should really be UINT64_MAX but... */
+	off = strtonum(argv[2], 0, UINT32_MAX, &errstr);
+	if (errstr != NULL) {
+		log_warnx("offset is %s: %s", errstr, argv[2]);
+		return;
+	}
+
+	count = strlen(argv[3]);
+	twrite(fid, off, argv[3], count);
+	do_send();
+	return;
+
+usage:
+	log_warnx("usage: write fid offset content");
+}
+
+/* remove fid */
+static void
+excmd_remove(const char **argv, int argc)
+{
+	const char	*errstr;
+	uint32_t	 fid;
+
+	if (argc != 2)
+		goto usage;
+
+	fid = strtonum(argv[1], 0, UINT32_MAX, &errstr);
+	if (errstr != NULL) {
+		log_warnx("fid is %s: %s", errstr, argv[1]);
+		return;
+	}
+
+	tremove(fid);
+	do_send();
+	return;
+
+usage:
+	log_warnx("usage: remove fid");
+}
+
 static void
 excmd(const char **argv, int argc)
 {
@@ -588,7 +683,11 @@ excmd(const char **argv, int argc)
 		{"flush",	excmd_flush},
 		{"walk",	excmd_walk},
 		{"open",	excmd_open},
+		{"create",	excmd_create},
 		{"read",	excmd_read},
+		{"write",	excmd_write},
+		/* TODO: stat */
+		{"remove",	excmd_remove},
 	};
 	size_t i;
 
@@ -736,9 +835,10 @@ pp_msg(uint32_t len, uint8_t type, uint16_t tag, const uint8_t *d)
 		break;
 
 	case Ropen:
+	case Rcreate:
 		if (len != QIDSIZE + 4) {
-			printf("invalid Ropen: expected %d bytes; "
-			    "got %u\n", QIDSIZE + 4, len);
+			printf("invalid %s: expected %d bytes; "
+			    "got %u\n", pp_msg_type(type), QIDSIZE + 4, len);
 			break;
 		}
 
@@ -778,6 +878,26 @@ pp_msg(uint32_t len, uint8_t type, uint16_t tag, const uint8_t *d)
 		printf("data=%s", v);
 		free(v);
 
+		break;
+
+	case Rwrite:
+		if (len != sizeof(count)) {
+			printf("invalid Rwrite: expected %zu data bytes; "
+			    "got %u\n", sizeof(count), len);
+			break;
+		}
+
+		memcpy(&count, d, sizeof(count));
+		d += sizeof(count);
+		len -= sizeof(count);
+		count = le32toh(count);
+
+		printf("count=%d", count);
+		break;
+
+	case Rremove:
+		if (len != 0)
+			printf("invalid Rremove: %"PRIu32" extra bytes", len);
 		break;
 
 	case Rerror:
