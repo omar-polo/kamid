@@ -583,7 +583,9 @@
 
 (defun create-path (stream parent-fid path &key (file-permissions #o640))
   (let ((fs:*directory-sep-regexp* "\\/")
-        (path-elements             (fs:split-path-elements path))
+        (path-elements             (remove "/"
+                                           (fs:split-path-elements path)
+                                           :test #'string=))
         (last-is-dir-p             (cl-ppcre:scan "\\/$" path)))
     (labels ((%create-dirs (path-elements)
                (when path-elements

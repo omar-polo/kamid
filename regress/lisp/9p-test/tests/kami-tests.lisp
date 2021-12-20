@@ -222,3 +222,37 @@
       (stat-entry-type (example-stat "/")))
   (assert-eq   :file
       (stat-entry-type (example-stat *remote-test-path*))))
+
+(defun example-create-file (path &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (root-fid        (mount stream root)))
+      (with-new-fid (fid)
+        (9p-create stream root-fid path)
+        (read-all-pending-message stream)
+        t))))
+
+(alexandria:define-constant +create-file+ "test-file-create" :test #'string=)
+
+(defun example-create-directory (path &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (root-fid        (mount stream root)))
+      (create-directory stream root-fid path)
+      t)))
+
+(alexandria:define-constant +create-directory+ "test-dir-create" :test #'string=)
+
+(deftest test-create ((kami-suite) (test-open-path))
+  (assert-true (ignore-errors (example-create-file +create-file+)))
+  (assert-true (ignore-errors (example-create-directory +create-directory+))))

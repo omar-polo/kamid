@@ -1051,7 +1051,7 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 			return;
 		}
 
-		if (*wnam == '\0' || 
+		if (*wnam == '\0' ||
 		    strchr(wnam, '/') != NULL ||
 		    !strcmp(wnam, ".")) {
 			errno = EINVAL;
