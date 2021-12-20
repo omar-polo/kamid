@@ -17,25 +17,15 @@
 
 (in-package :kami-tests)
 
-(defsuite kami-suite (all-suite))
+(defparameter *remote-test-file*   "test-file") ; note: missing "/" is intentional
 
-(defparameter *client-certificate* nil)
+(defparameter *remote-test-path*   "/test-file")
 
-(defparameter *certificate-key*    nil)
-
-(defparameter *host*               "localhost")
-
-(defparameter *port*               10564)
-
-(defparameter *remote-test-file*   "kami-test")
-
-(defparameter *remote-test-path*   "/kamid/regress/root/dir/subdir/file")
-
-(defparameter *remote-test-path-write*   "/kamid/regress/root/dir/subdir/test-file-write")
+(defparameter *remote-test-path-write*   "/dir/subdir/test-file-write")
 
 (defparameter *remote-test-path-contents* (format nil "qwertyuiopasdfghjklòàù è~%"))
 
-(alexandria:define-constant +remote-test-path-ovewrwrite-data+ "12" :test #'string=)
+(defsuite kami-suite (all-suite))
 
 (defun start-non-tls-socket (host port)
   (usocket:socket-connect host

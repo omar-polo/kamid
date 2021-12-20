@@ -24,14 +24,6 @@
 
 (defparameter *port*               10564)
 
-(defparameter *remote-test-file*   "test-file") ; note: missing "/" is intentional
-
-(defparameter *remote-test-path*   "/test-file")
-
-(defparameter *remote-test-path-write*   "/dir/subdir/file/test-file-write")
-
-(defparameter *remote-test-path-contents* (format nil "qwertyuiopasdfghjklòàù è~%"))
-
 (alexandria:define-constant +remote-test-path-ovewrwrite-data+ "12" :test #'string=)
 
 (defun open-tls-socket (host port)
