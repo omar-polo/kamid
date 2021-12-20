@@ -179,6 +179,23 @@
     (setf (subseq expected-sequence 2 4) +remote-test-path-ovewrwrite-data+)
     (assert-equality #'string= file-sequence expected-sequence)))
 
+(defun example-write-fails (path &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (*buffer-size*   256)
+           (root-fid        (mount stream root))
+           (fid             (open-path stream root-fid path :mode +create-for-read-write+)))
+      (9p-write stream fid 0 *remote-test-path-contents*)
+      (read-all-pending-message stream))))
+
+(deftest test-write-on-directory-fails ((kami-suite) (test-write))
+  (assert-condition 9p-error (example-write-fails "/")))
+
 (defun example-stat (path &optional (root "/"))
   (with-open-ssl-stream (stream
                          socket

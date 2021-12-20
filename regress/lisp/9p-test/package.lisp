@@ -58,6 +58,7 @@
    :+nwname-clone+
    :*buffer-size*
    :*messages-sent*
+   :9p-error
    :read-all-pending-message
    :close-client
    :encode-string
