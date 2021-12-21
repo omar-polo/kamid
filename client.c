@@ -1040,7 +1040,7 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		if (nf == NULL && (nf = new_fid(f->qid, newfid)) == NULL)
 			fatal("new_fid duplication");
 
-		np_walk(hdr->tag, 1, f->qid);
+		np_walk(hdr->tag, 0, NULL);
 		return;
 	}
 
