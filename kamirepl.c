@@ -795,13 +795,11 @@ pp_msg(uint32_t len, uint8_t type, uint16_t tag, const uint8_t *d)
 		break;
 
 	case Rclunk:
-		if (len != 0)
-			printf("invalid Rclunk: %"PRIu32" extra bytes", len);
-		break;
-
 	case Rflush:
+	case Rremove:
 		if (len != 0)
-			printf("invalid Rflush: %"PRIu32" extra bytes", len);
+			printf("invalid %s: %"PRIu32" extra bytes", 
+			    pp_msg_type(type), len);
 		break;
 
 	case Rwalk:
@@ -893,11 +891,6 @@ pp_msg(uint32_t len, uint8_t type, uint16_t tag, const uint8_t *d)
 		count = le32toh(count);
 
 		printf("count=%d", count);
-		break;
-
-	case Rremove:
-		if (len != 0)
-			printf("invalid Rremove: %"PRIu32" extra bytes", len);
 		break;
 
 	case Rerror:
