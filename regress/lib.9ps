@@ -51,6 +51,11 @@ proc walk-ok() {
 	assert m.type == Rwalk
 }
 
+proc expect(t) {
+	m = recv()
+	assert m.type == t
+}
+
 proc expect-error() {
 	m = recv()
 	assert m.type == Rerror

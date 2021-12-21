@@ -40,3 +40,22 @@ testing "multiple attach" dir "./root" {
 		m.qid.type == QTDIR
 	)
 }
+
+testing "don't close used qids" dir "./root" {
+	mount(0, "/")
+
+	walk(0, 2, "dir")
+	expect(Rwalk)
+
+	clunk(0)
+	expect(Rclunk)
+
+	walk(2, 3, "a-file")
+	expect(Rwalk)
+
+	clunk(2)
+	expect(Rclunk)
+
+	open(3, OREAD)
+	expect(Ropen)
+}
