@@ -59,14 +59,21 @@ EOF
 
 logfile="$tmpdir/$(date +%Y-%m-%d-%H-%M).log"
 
-echo "logging on $logfile"
-${DOAS} ./kamid -d -vvv -f regress.conf > "$logfile" 2>&1 &
-
 export REGRESS_CERT="$PWD/client.pem"
 export REGRESS_KEY="$PWD/client.key"
 export REGRESS_HOSTNAME=localhost
 export REGRESS_PORT=1337
 export REGRESS_ROOT="$testroot"
+
+echo "REGRESS_CERT: $REGRESS_CERT"
+echo "REGRESS_KEY: $REGRESS_KEY"
+echo "REGRESS_HOSTNAME: $REGRESS_HOSTNAME"
+echo "REGRESS_PORT: $REGRESS_PORT"
+echo "REGRESS_ROOT: $REGRESS_ROOT"
+echo
+
+echo "logging on $logfile"
+${DOAS} ./kamid -d -vvv -f regress.conf > "$logfile" 2>&1 &
 
 ret=0
 
