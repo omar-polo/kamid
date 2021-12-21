@@ -3,7 +3,7 @@ include "lib.9ps"
 testing "open + clunk works" dir "./root" {
 	mount(0, "/")
 	walk(0, 1, "dir", "subdir", "file")
-	walk-ok()
+	expect(Rwalk)
 
 	open(1, OREAD)
 	m = recv()
@@ -17,7 +17,7 @@ testing "open + clunk works" dir "./root" {
 testing "can open directories" dir "./root" {
 	mount(0, "/")
 	walk(0, 1, "dir", "subdir")
-	walk-ok()
+	expect(Rwalk)
 
 	open(1, OREAD)
 	m = recv()
@@ -31,7 +31,7 @@ testing "can open directories" dir "./root" {
 testing "can't open directories for writing" dir "./root" {
 	mount(0, "/")
 	walk(0, 1, "dir")
-	walk-ok()
+	expect(Rwalk)
 
 	open(1, OWRITE)
 	expect-error()

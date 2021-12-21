@@ -46,11 +46,6 @@ proc mount(fid, path) {
 	)
 }
 
-proc walk-ok() {
-	m = recv()
-	assert m.type == Rwalk
-}
-
 proc expect(t) {
 	m = recv()
 	assert m.type == t
