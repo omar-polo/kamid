@@ -283,7 +283,12 @@ into the given
 .Ar fid .
 .Pp
 It is illegal to use an already opened
-.Ar fid .
+.Ar fid
+or to attempt to create the
+.Dq \&.
+or
+.Dq ..
+entries.
 .It Ic read
 Read data at offset from file
 .Bd -literal
