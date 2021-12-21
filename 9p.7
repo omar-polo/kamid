@@ -362,32 +362,32 @@ fid[4]
 .Aq empty response
 .Ed
 .El
-.Sh 9P2000.L EXTENSIONS
-.Xr kamid 8
-supports also a subset of the
-.Sq 9P2000.L
-dialect.
-The supported messages are
-.Bl -tag -width readdir
-.It Ic readdir
-Read directory entries
-.Bd -literal
-fid[4] offset[8] count[4]
-count[4] data[count]
-.Ed
-.Pp
-Each directory entry is described by a variable-length record:
-.Ql qid[13] offset[8] type[1] name[s] .
-Offset is zero upon the first call.
-If the
-.Ar count
-field in the
-.Ic Rreaddir
-response is not zero then more data is available.
-.Pp
-.Ar count
-is allowed to be zero in the request.
-.El
+.\" .Sh 9P2000.L EXTENSIONS
+.\" .Xr kamid 8
+.\" supports also a subset of the
+.\" .Sq 9P2000.L
+.\" dialect.
+.\" The supported messages are
+.\" .Bl -tag -width readdir
+.\" .It Ic readdir
+.\" Read directory entries
+.\" .Bd -literal
+.\" fid[4] offset[8] count[4]
+.\" count[4] data[count]
+.\" .Ed
+.\" .Pp
+.\" Each directory entry is described by a variable-length record:
+.\" .Ql qid[13] offset[8] type[1] name[s] .
+.\" Offset is zero upon the first call.
+.\" If the
+.\" .Ar count
+.\" field in the
+.\" .Ic Rreaddir
+.\" response is not zero then more data is available.
+.\" .Pp
+.\" .Ar count
+.\" is allowed to be zero in the request.
+.\" .El
 .Sh SEE ALSO
 .Xr utf8 7 ,
 .Xr kamid 8
