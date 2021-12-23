@@ -940,7 +940,6 @@ fail:
 	np_errno(hdr->tag);
 	log_warn("failed to attach %s", aname);
 	return;
-	return;
 
 err:
 	client_send_listener(IMSG_CLOSE, NULL, 0);
