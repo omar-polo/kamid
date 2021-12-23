@@ -54,7 +54,6 @@ struct qid {
 	int			 refcount;
 
 	int			 fd;
-	char			 fpath[PATH_MAX];
 
 	STAILQ_ENTRY(qid)	 entries;
 };
@@ -62,6 +61,8 @@ struct qid {
 STAILQ_HEAD(fidhead, fid) fids;
 struct fid {
 	uint32_t		 fid;
+
+	char			 fpath[PATH_MAX];
 
 	/*
 	 * 0 when the fid was not yet opened for I/O otherwise set to
@@ -102,11 +103,11 @@ static void		client_privdrop(const char *, const char *);
 static int		client_send_listener(int, const void *, uint16_t);
 
 static void		 qid_update_from_sb(struct qid *, struct stat *);
-static struct qid	*qid_from_fd(int, const char *, struct stat *);
+static struct qid	*qid_from_fd(int, struct stat *);
 static struct qid	*qid_incref(struct qid *);
 static void		 qid_decref(struct qid *);
 
-static struct fid	*new_fid(struct qid *, uint32_t);
+static struct fid	*new_fid(struct qid *, uint32_t, const char *);
 static struct fid	*fid_by_id(uint32_t);
 static void		 free_fid(struct fid *);
 
@@ -390,30 +391,20 @@ qid_update_from_sb(struct qid *qid, struct stat *sb)
 
 /* creates a qid given a fd */
 static struct qid *
-qid_from_fd(int fd, const char *path, struct stat *s)
+qid_from_fd(int fd, struct stat *s)
 {
 	struct qid	*qid;
 	struct stat	 sb;
-	int		 r;
 
 	if ((qid = calloc(1, sizeof(*qid))) == NULL)
 		return NULL;
-
-	if (path != NULL)
-		strlcpy(qid->fpath, path, sizeof(qid->fpath));
 
 	qid->fd = fd;
 
 	if (s == NULL) {
 		s = &sb;
-		if (path == NULL)
-			r = fstat(fd, s);
-		else
-			r = fstatat(fd, path, s, 0);
-		if (r == -1) {
-			free(qid);
-			return NULL;
-		}
+		if (fstat(fd, &sb) == -1)
+			fatal("fstat");
 	}
 
 	qid_update_from_sb(qid, s);
@@ -443,7 +434,7 @@ qid_decref(struct qid *qid)
 }
 
 static struct fid *
-new_fid(struct qid *qid, uint32_t fid)
+new_fid(struct qid *qid, uint32_t fid, const char *path)
 {
 	struct fid *f;
 
@@ -453,6 +444,9 @@ new_fid(struct qid *qid, uint32_t fid)
 	f->qid = qid_incref(qid);
 	f->fid = fid;
 	f->fd = -1;
+
+	if (path != NULL)
+		strlcpy(f->fpath, path, sizeof(f->fpath));
 
 	STAILQ_INSERT_HEAD(&fids, f, entries);
 
@@ -491,7 +485,7 @@ free_fid(struct fid *f)
 
 		/* try to honour ORCLOSE if requested */
 		if (f->iomode & O_CLOEXEC)
-			unlinkat(f->qid->fd, f->qid->fpath, 0);
+			unlinkat(f->qid->fd, f->fpath, 0);
 	}
 
 	qid_decref(f->qid);
@@ -923,12 +917,12 @@ tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	if ((fd = open(aname, O_RDONLY|O_DIRECTORY)) == -1)
 		goto fail;
 
-	if ((qid = qid_from_fd(fd, NULL, NULL)) == NULL)
+	if ((qid = qid_from_fd(fd, NULL)) == NULL)
 		goto fail;
 
 	log_debug("attached %s to %d", aname, fid);
 
-	if ((f = new_fid(qid, fid)) == NULL) {
+	if ((f = new_fid(qid, fid, aname)) == NULL) {
 		qid_decref(qid);
 		goto fail;
 	}
@@ -1036,7 +1030,8 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		 * TODO: should we forbid fids duplication when fid ==
 		 * newfid?
 		 */
-		if (nf == NULL && (nf = new_fid(f->qid, newfid)) == NULL)
+		if (nf == NULL && 
+		    (nf = new_fid(f->qid, newfid, f->fpath)) == NULL)
 			fatal("new_fid duplication");
 
 		np_walk(hdr->tag, 0, NULL);
@@ -1089,24 +1084,37 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		oldfd = fd;
 	}
 
-	/*
-	 * There can be two possibilities: fd == -1 means that we've
-	 * reached a file and we should save BOTH the dirfd (oldfd)
-	 * and the path (wnam); or we just reached another directory,
-	 * in which case we can just create a new qid using fd.
+	/* 
+	 * If fd is -1 we've reached a file, otherwise we've just
+	 * reached another directory.  We must pay attention to what
+	 * file descriptor we use to create the qid, because if we've
+	 * reached a file and oldfd is f->qid->fd then we *must* share
+	 * the same qid (it was a walk of one path from a directory to a
+	 * file, otherwise fun is bound to happen as soon as the client
+     	 * closes the fid for the directory but keeps the one for the
+	 * file.
 	 */
-	if (fd == -1)
-		qid = qid_from_fd(oldfd, wnam, &sb);
+	if (fd == -1 && oldfd == f->qid->fd)
+		qid = f->qid;
+	else if (fd == -1)
+		qid = qid_from_fd(oldfd, NULL);
 	else
-		qid = qid_from_fd(oldfd, NULL, &sb);
+		qid = qid_from_fd(fd, &sb);
+
 	if (qid == NULL)
 		fatal("qid_from_fd");
 
 	if (nf == NULL) {
-		if ((nf = new_fid(qid, newfid)) == NULL)
-			fatal("new_fid");
+		const char *fnam = NULL;
+
+		/* reached the file wnam */
+		if (fd == -1)
+			fnam = wnam;
+
+		if ((nf = new_fid(qid, newfid, fnam)) == NULL)
+			fatal("new fid");
 	} else {
-		/* swap qid */
+		/* update the qid */
 		qid_decref(nf->qid);
 		nf->qid = qid_incref(qid);
 	}
@@ -1185,13 +1193,7 @@ topen(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 
-	if (f->qid->type & QTDIR &&
-	    (f->iomode & O_WRONLY || f->iomode & O_RDWR)) {
-		np_error(hdr->tag, "can't open directory for writing");
-		return;
-	}
-
-	path = f->qid->fpath;
+	path = f->fpath;
 	if (*path == '\0')
 		path = ".";
 
@@ -1482,7 +1484,6 @@ tstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	struct evbuffer	*evb;
 	struct stat	 sb;
 	struct fid	*f;
-	const char	*fname;
 	int		 r;
 	uint32_t	 fid;
 
@@ -1505,13 +1506,10 @@ tstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	if ((evb = evbuffer_new()) == NULL)
 		fatal("evbuffer_new");
 
-	if (f->qid->type & QTDIR) {
-		fname = ".";
-		r = fstat(f->qid->fd, &sb);
-	} else {
-		fname = f->qid->fpath;
-		r = fstatat(f->qid->fd, f->qid->fpath, &sb, 0);
-	}
+	if (f->fd != -1)
+		r = fstat(f->fd, &sb);
+	else
+		r = fstatat(f->qid->fd, f->fpath, &sb, 0);
 
 	if (r == -1) {
 		np_errno(hdr->tag);
@@ -1519,7 +1517,7 @@ tstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 
-	serialize_stat(fname, &sb, evb);
+	serialize_stat(f->fpath, &sb, evb);
 	np_stat(hdr->tag, EVBUFFER_LENGTH(evb), EVBUFFER_DATA(evb));
 	evbuffer_free(evb);
 }
@@ -1544,9 +1542,9 @@ tremove(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	}
 
 	if (f->fd == -1 || f->dir == NULL) /* unlink file */
-		r = unlinkat(f->qid->fd, f->qid->fpath, 0);
+		r = unlinkat(f->qid->fd, f->fpath, 0);
 	else /* directory */
-		r = unlinkat(f->qid->fd, f->qid->fpath, AT_REMOVEDIR);
+		r = unlinkat(f->qid->fd, f->fpath, AT_REMOVEDIR);
 
 	if (r == -1)
 		np_errno(hdr->tag);
