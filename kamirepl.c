@@ -56,7 +56,7 @@ struct tls_config	*tlsconf;
 struct tls		*ctx;
 struct bufferevent	*bev, *inbev;
 
-static void ATTR_DEAD	 usage(int);
+static void __dead	 usage(int);
 
 static void		 sig_handler(int, short, void *);
 
@@ -91,7 +91,7 @@ static void		 handle_9p(const uint8_t *, size_t);
 static void		 clr(void);
 static void		 prompt(void);
 
-static void ATTR_DEAD
+static void __dead
 usage(int ret)
 {
 	fprintf(stderr,

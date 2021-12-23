@@ -26,7 +26,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define ATTR_DEAD __attribute__((noreturn))
+#ifndef __dead
+#define __dead __attribute__((noreturn))
+#endif
 
 #if HAVE_EVENT2
 # include <event2/event.h>

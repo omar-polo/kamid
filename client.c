@@ -94,7 +94,7 @@ static uint32_t		 peerid;
 static int		 handshaked;
 uint32_t		 msize;
 
-static ATTR_DEAD void	client_shutdown(void);
+static __dead void	client_shutdown(void);
 static void		client_sig_handler(int, short, void *);
 static void		client_dispatch_listener(int, short, void *);
 static void		client_privdrop(const char *, const char *);
@@ -169,7 +169,7 @@ static void	tstat(struct np_msg_header *, const uint8_t *, size_t);
 static void	tremove(struct np_msg_header *, const uint8_t *, size_t);
 static void	handle_message(struct imsg *, size_t);
 
-ATTR_DEAD void
+__dead void
 client(int debug, int verbose)
 {
 	struct event	ev_sigint, ev_sigterm;
@@ -211,7 +211,7 @@ client(int debug, int verbose)
 	client_shutdown();
 }
 
-static ATTR_DEAD void
+static __dead void
 client_shutdown(void)
 {
 	if (evb != NULL)

@@ -19,6 +19,6 @@
 
 #include "compat.h"
 
-ATTR_DEAD void	client(int, int);
+__dead void	client(int, int);
 
 #endif

@@ -86,7 +86,7 @@ read_line(const char *prompt)
 }
 #endif
 
-static void ATTR_DEAD
+static void __dead
 usage(int ret)
 {
 	fprintf(stderr, "usage: %s [-c] host[:port] [path]\n",

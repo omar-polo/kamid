@@ -35,9 +35,9 @@ void	logit(int, const char *, ...)
 	    __attribute__((__format__ (printf, 2, 3)));
 void	vlog(int, const char *, va_list)
 	    __attribute__((__format__ (printf, 2, 0)));
-ATTR_DEAD void fatal(const char *, ...)
+__dead void fatal(const char *, ...)
 	    __attribute__((__format__ (printf, 1, 2)));
-ATTR_DEAD void fatalx(const char *, ...)
+__dead void fatalx(const char *, ...)
 	    __attribute__((__format__ (printf, 1, 2)));
 
 #endif /* LOG_H */
