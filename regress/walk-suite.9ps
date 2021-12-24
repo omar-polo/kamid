@@ -29,6 +29,16 @@ testing "walk to a file" dir "./root" {
 	)
 }
 
+testing "can't walk from a file" dir "./root" {
+	mount(0, "/")
+
+	walk(0, 1, "dir", "a-file")
+	expect(Rwalk)
+
+	walk(1, 2, "subdir", "file")
+	expect-error()
+}
+
 testing "walk with invalid fid" dir "./root" {
 	mount(0, "/")
 	walk(1, 2)
