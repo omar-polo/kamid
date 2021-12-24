@@ -23,11 +23,6 @@
    :*certificate-key*
    :*host*
    :*port*
-   :*remote-test-file*
-   :*remote-test-path*
-   :*remote-test-path-write*
-   :*remote-test-path-contents*
-   :+remote-test-path-ovewrwrite-data+
    :with-open-ssl-stream
    :all-suite
    :run-all-tests))

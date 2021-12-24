@@ -24,8 +24,6 @@
 
 (defparameter *port*               10564)
 
-(alexandria:define-constant +remote-test-path-ovewrwrite-data+ "12" :test #'string=)
-
 (defun open-tls-socket (host port)
   (flet ((open-socket (hostname)
            (usocket:socket-connect hostname

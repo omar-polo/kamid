@@ -25,6 +25,8 @@
 
 (defparameter *remote-test-path-contents* (format nil "qwertyuiopasdfghjklòàù è~%"))
 
+(alexandria:define-constant +remote-test-path-ovewrwrite-data+ "12" :test #'string=)
+
 (defsuite kami-suite (all-suite))
 
 (defun start-non-tls-socket (host port)
