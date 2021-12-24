@@ -154,11 +154,13 @@
                          *certificate-key*)
     (let* ((*messages-sent* ())
            (*buffer-size*   256)
-           (root-fid        (mount stream root))
-           (fid             (open-path stream root-fid path :mode +create-for-read-write+)))
-      (9p-write stream fid 2 +remote-test-path-ovewrwrite-data+)
-      (read-all-pending-message stream)
-      (babel:octets-to-string (slurp-file stream root-fid path)))))
+           (root-fid        (mount stream root)))
+      (with-new-fid (saved-root-fid)
+        (9p-walk stream root-fid saved-root-fid +nwname-clone+)
+        (let ((fid (open-path stream root-fid path :mode +create-for-read-write+)))
+          (9p-write stream fid 2 +remote-test-path-ovewrwrite-data+)
+          (read-all-pending-message stream)
+          (babel:octets-to-string (slurp-file stream saved-root-fid path)))))))
 
 (defun read-entire-file-as-string (path  &optional (root "/"))
   (with-open-ssl-stream (stream
@@ -225,15 +227,19 @@
 
 (defun example-create-file (path &optional (root "/"))
   (with-open-ssl-stream (stream
-                         socket
-                         *host*
-                         *port*
-                         *client-certificate*
-                         *certificate-key*)
+                                       socket
+                                       *host*
+                                       *port*
+                                       *client-certificate*
+                                       *certificate-key*)
     (let* ((*messages-sent* ())
            (root-fid        (mount stream root)))
-      (with-new-fid (fid)
+      (with-new-fid (saved-root-fid)
+        (9p-walk stream root-fid saved-root-fid +nwname-clone+)
         (9p-create stream root-fid path)
+        (read-all-pending-message stream)
+        (9p-clunk stream root-fid)
+        (open-path stream saved-root-fid path)
         (read-all-pending-message stream)
         t))))
 
@@ -253,6 +259,60 @@
 
 (alexandria:define-constant +create-directory+ "test-dir-create" :test #'string=)
 
+(defun example-create-path (path &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (root-fid        (mount stream root))
+           (saved-root-fid  (clone-fid stream root-fid))
+           (new-path-fid (create-path stream root-fid path)))
+      (9p-write stream new-path-fid 0 *remote-test-path-contents*)
+      (read-all-pending-message stream)
+      (9p-clunk stream new-path-fid)
+      (read-all-pending-message stream)
+      (babel:octets-to-string (slurp-file stream saved-root-fid path)))))
+
+(alexandria:define-constant +create-path+ "/a/totaly/new/path/new-file" :test #'string=)
+
 (deftest test-create ((kami-suite) (test-open-path))
   (assert-true (ignore-errors (example-create-file +create-file+)))
-  (assert-true (ignore-errors (example-create-directory +create-directory+))))
+  (assert-true (ignore-errors (example-create-directory +create-directory+)))
+  (assert-equality #'string=
+      *remote-test-path-contents*
+      (ignore-errors (example-create-path +create-path+))))
+
+(defun close-parent-fid ()
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+
+    (let* ((*messages-sent* ())
+           (root-fid        (mount stream "/")))
+      (with-new-fid (dir-fid)
+        (9p-walk stream root-fid dir-fid "dir")
+        (read-all-pending-message stream)
+        (9p-clunk stream root-fid)
+        (read-all-pending-message stream)
+        (with-new-fid (subdir-fid)
+          (9p-walk stream dir-fid subdir-fid "subdir")
+          (read-all-pending-message stream)
+          (9p-clunk stream dir-fid)
+          (read-all-pending-message stream)
+          (with-new-fid (file-fid)
+            (9p-walk stream subdir-fid file-fid "test-file-write")
+            (read-all-pending-message stream)
+            (9p-clunk stream subdir-fid)
+            (read-all-pending-message stream)
+            (9p-open stream file-fid)
+            (read-all-pending-message stream)
+            t))))))
+
+(deftest test-close-parent-fid ((kami-suite) (test-walk))
+  (assert-true (ignore-errors (close-parent-fid))))

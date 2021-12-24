@@ -97,6 +97,7 @@
    :stat-last-modified-from-id
    :decode-rstat
    :read-all-pending-messages-ignoring-errors
+   :clone-fid
    :create-directory
    :create-path
    :mount

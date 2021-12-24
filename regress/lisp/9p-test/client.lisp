@@ -573,31 +573,52 @@
                      (invoke-restart 'ignore-error e))))
     (read-all-pending-message stream)))
 
+(defun clone-fid (stream fid)
+  (with-new-fid (saved-fid)
+    (9p-walk stream fid saved-fid +nwname-clone+)
+    (read-all-pending-message stream)
+    saved-fid))
+
 (defun create-directory (stream parent-fid directory-name &key (permissions #o760))
-  (9p-create stream
-             parent-fid
-             directory-name
-             :permissions (logior +create-dir+ permissions)
-             :mode        +create-for-read+)
-  (read-all-pending-messages-ignoring-errors stream))
+  (with-new-fid (saved-parent-dir)
+    (9p-walk stream parent-fid saved-parent-dir +nwname-clone+)
+    (read-all-pending-message stream)
+    (9p-create stream
+               parent-fid
+               directory-name
+               :permissions (logior +create-dir+ permissions)
+               :mode        +create-for-read+)
+    (read-all-pending-message stream)
+    (with-new-fid (new-dir-fid)
+      (9p-walk stream saved-parent-dir new-dir-fid directory-name)
+      (read-all-pending-message stream)
+      new-dir-fid)))
 
 (defun create-path (stream parent-fid path &key (file-permissions #o640))
   (let ((fs:*directory-sep-regexp* "\\/")
         (path-elements             (remove "/"
                                            (fs:split-path-elements path)
                                            :test #'string=))
-        (last-is-dir-p             (cl-ppcre:scan "\\/$" path)))
-    (labels ((%create-dirs (path-elements)
+        (last-is-dir-p             (cl-ppcre:scan "\\/$" path))
+        (last-dir-fid              nil))
+    (labels ((%create-dirs (parent-dir-fid path-elements)
                (when path-elements
-                 (create-directory stream parent-fid (first path-elements))
-                 (read-all-pending-messages-ignoring-errors stream)
-                 (%create-dirs (rest path-elements)))))
-      (%create-dirs (misc:safe-all-but-last-elt path-elements))
+                 (let ((new-dir-fid (create-directory stream
+                                                      parent-dir-fid
+                                                      (first path-elements))))
+                   (read-all-pending-message stream)
+                   (setf last-dir-fid new-dir-fid)
+                   (%create-dirs new-dir-fid (rest path-elements))))))
+      (%create-dirs parent-fid (misc:safe-all-but-last-elt path-elements))
       (if last-is-dir-p
-          (create-directory stream parent-fid (last-elt path-elements))
-          (9p-create        stream parent-fid (last-elt path-elements)
-                            :permissions file-permissions))
-      (read-all-pending-messages-ignoring-errors stream))))
+          (create-directory stream last-dir-fid (last-elt path-elements))
+          (progn
+            (9p-create stream
+                       last-dir-fid
+                       (last-elt path-elements)
+                       :permissions file-permissions)
+            (read-all-pending-messages-ignoring-errors stream)
+            last-dir-fid)))))
 
 (defun mount (stream root-path)
   (let ((protocol-version (initialize-session stream))
@@ -623,10 +644,12 @@
                                 fid
                                 (first path-elements)
                                 :callback walk-callback)
+                       (9p-clunk stream parent-fid)
                        (read-all-pending-message stream)
                        (walk-dirs (rest path-elements) fid))
                      parent-fid))))
       (let ((fid (walk-dirs path-elements root-fid)))
+        (read-all-pending-message stream)
         (9p-open stream fid :callback open-callback :mode mode)
         (read-all-pending-message stream)
         fid))))
