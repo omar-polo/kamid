@@ -65,15 +65,14 @@ struct fid {
 	char			 fpath[PATH_MAX];
 
 	/*
-	 * 0 when the fid was not yet opened for I/O otherwise set to
 	 * the flags passed to open(2).  O_CLOEXEC means ORCLOSE, that
 	 * is to unlink the file upon Tclunk.
 	 */
 	int			 iomode;
 
 	/*
-	 * if iomode is set, this fid was opened and fd represents its
-	 * file descriptor.
+	 * if fd is not -1 this fid was opened, fd represents its
+	 * file descriptor and iomode the flags passed to open(2).
 	 */
 	int			 fd;
 	DIR			*dir;
