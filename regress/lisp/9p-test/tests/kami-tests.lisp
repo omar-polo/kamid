@@ -287,16 +287,15 @@
       *remote-test-path-contents*
       (ignore-errors (example-create-path +create-path+))))
 
-(defun close-parent-fid ()
+(defun close-parent-fid (&optional (root "/"))
   (with-open-ssl-stream (stream
                          socket
                          *host*
                          *port*
                          *client-certificate*
                          *certificate-key*)
-
     (let* ((*messages-sent* ())
-           (root-fid        (mount stream "/")))
+           (root-fid        (mount stream root)))
       (with-new-fid (dir-fid)
         (9p-walk stream root-fid dir-fid "dir")
         (read-all-pending-message stream)
@@ -318,3 +317,19 @@
 
 (deftest test-close-parent-fid ((kami-suite) (test-walk))
   (assert-true (ignore-errors (close-parent-fid))))
+
+(defun %remove-path (path &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+
+    (let* ((*messages-sent* ())
+           (root-fid        (mount stream root)))
+      (remove-path stream root-fid path)
+      t)))
+
+(deftest test-remove-file ((kami-suite) (test-create))
+  (assert-true (ignore-errors (%remove-path +create-path+))))

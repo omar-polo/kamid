@@ -102,4 +102,5 @@
    :create-path
    :mount
    :open-path
-   :slurp-file))
+   :slurp-file
+   :remove-path))

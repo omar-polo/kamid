@@ -676,3 +676,9 @@
       (slurp 0)
       (read-all-pending-message stream)
       res)))
+
+(defun remove-path (stream root-fid path)
+  (let* ((saved-root-fid (clone-fid stream root-fid))
+         (path-fid       (open-path stream saved-root-fid path)))
+    (9p-remove stream path-fid)
+    (read-all-pending-message stream)))
