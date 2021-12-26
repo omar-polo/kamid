@@ -1522,6 +1522,7 @@ tremove(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	struct fid	*f;
 	uint32_t	 fid;
 	int		 r;
+	char		 dirpath[PATH_MAX + 3];
 
 	/* fid[4] */
 	if (!NPREAD32("fid", &fid, &data, &len)) {
@@ -1535,10 +1536,12 @@ tremove(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 
-	if (f->fd == -1 || f->d == NULL) /* unlink file */
+	if (f->qid.type & QTDIR) { /* directory */
+		strlcpy(dirpath, "../", sizeof(dirpath));
+		strlcat(dirpath, f->fpath, sizeof(dirpath));
+		r = unlinkat(f->dir->fd, dirpath, AT_REMOVEDIR);
+	} else /* file */
 		r = unlinkat(f->dir->fd, f->fpath, 0);
-	else /* directory */
-		r = unlinkat(f->dir->fd, f->fpath, AT_REMOVEDIR);
 
 	if (r == -1)
 		np_errno(hdr->tag);
