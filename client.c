@@ -1387,7 +1387,7 @@ tread(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	}
 
 	if (TYPE_OVERFLOW(off_t, off)) {
-		log_warnx("unexpected size_t size");
+		log_warnx("unexpected off_t size");
 		np_error(hdr->tag, "invalid offset");
 		return;
 	}
