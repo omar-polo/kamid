@@ -1060,7 +1060,6 @@ eval(struct op *op)
 		popv(&b);
 		popv(&a);
 		pushbool(val_eq(&a, &b));
-
 		break;
 
 	case OP_FACCESS:
