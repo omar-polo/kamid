@@ -8,3 +8,9 @@
    user and not by root.
 
  - tweak iounit so it's always lower than the choosen msize
+
+ - handle message bigger than MAX_IMSGSIZE - IMSG_HEADER_SIZE.  One
+   way to do that would be to *not* use asynchroonus imsgs in client.c
+   but synchronous I/O: this way, once a message has been processed,
+   we can just receive the next in the same function (i.e. twrite) and
+   go ahead.
