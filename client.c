@@ -1412,6 +1412,7 @@ tread(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		if (off == 0 && f->offset != 0) {
 			rewinddir(f->d);
 			f->offset = 0;
+			evbuffer_drain(f->evb, EVBUFFER_LENGTH(f->evb));
 		}
 
 		if (off != f->offset) {
