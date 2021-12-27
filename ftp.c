@@ -404,6 +404,7 @@ main(int argc, char **argv)
 		if ((line = read_line("kamiftp> ")) == NULL)
 			break;
 		printf("read: %s\n", line);
+		free(line);
 	}
 
 	printf("\n");
