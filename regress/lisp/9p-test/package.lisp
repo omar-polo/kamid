@@ -35,6 +35,7 @@
    :*directory-sep-regexp*
    :getenv
    :cat-parent-dir
+   :parent-dir-path
    :split-path-elements
    :collect-children
    :prepend-pwd))

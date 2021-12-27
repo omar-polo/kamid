@@ -333,3 +333,7 @@
 
 (deftest test-remove-file ((kami-suite) (test-create))
   (assert-true (ignore-errors (%remove-path +create-path+))))
+
+(deftest test-remove-directory ((kami-suite) (test-remove-file))
+  (assert-true
+      (ignore-errors (%remove-path (filesystem-utils:parent-dir-path +create-path+)))))
