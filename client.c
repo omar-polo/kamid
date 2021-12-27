@@ -35,6 +35,15 @@
 #include "sandbox.h"
 #include "utils.h"
 
+/*
+ * XXX: atm is difficult to accept messages bigger than MAX_IMSGSIZE
+ * minus IMSG_HEADER_SIZE, we need something to split messages into
+ * chunks and receive them one by the other.
+ *
+ * CLIENT_MSIZE is thus the maximum message size we can handle now.
+ */
+#define CLIENT_MSIZE (MAX_IMSGSIZE - IMSG_HEADER_SIZE)
+
 #define DEBUG_PACKETS 0
 
 /* straight outta /src/usr.bin/ssh/scp.c */
@@ -861,7 +870,7 @@ tversion(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 
 	/* version matched */
 	handshaked = 1;
-	msize = MIN(msize, MSIZE9P);
+	msize = MIN(msize, CLIENT_MSIZE);
 	client_send_listener(IMSG_MSIZE, &msize, sizeof(msize));
 	np_version(hdr->tag, msize, VERSION9P);
 	return;
