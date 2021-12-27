@@ -29,7 +29,7 @@
 #include <tls.h>
 #include <unistd.h>
 
-#if HAVE_READLINE
+#if HAVE_LIBREADLINE
 #include <readline/readline.h>
 #include <readline/history.h>
 #endif
@@ -60,7 +60,7 @@ uint32_t		 msize;
 
 #define ASSERT_EMPTYBUF() assert(EVBUFFER_LENGTH(buf) == 0)
 
-#if HAVE_READLINE
+#if HAVE_LIBREADLINE
 static char *
 read_line(const char *prompt)
 {
