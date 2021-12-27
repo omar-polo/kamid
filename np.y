@@ -163,7 +163,9 @@ literal	: STRING		{ $$ = op_lit_str($1); }
  * interested in checking all the possibilities here.
  */
 cexpr	: literal | varref | funcall | faccess ;
-check	: cexpr '=' '=' cexpr	{ $$ = op_cmp_eq($1, $4); }	;
+check	: cexpr '=' '=' cexpr	{ $$ = op_cmp_eq($1, $4); }
+	| cexpr '<' '=' cexpr	{ $$ = op_cmp_leq($1, $4); }
+	;
 
 expr	: literal | funcall | varref | check | cast | faccess | vargs ;
 
