@@ -55,6 +55,7 @@ int			 sock;
 struct evbuffer		*buf;
 struct evbuffer		*dirbuf;
 uint32_t		 msize;
+int			 bell;
 
 #define PWDFID		0
 
@@ -413,6 +414,37 @@ do_connect(const char *connspec, const char *path)
 }
 
 static void
+cmd_bell(int argc, const char **argv)
+{
+	if (argc == 0) {
+		bell = !bell;
+		if (bell)
+			puts("bell mode enabled");
+		else
+			puts("bell mode disabled");
+		return;
+	}
+
+	if (argc != 1)
+		goto usage;
+
+	if (!strcmp(*argv, "on")) {
+		bell = 1;
+		puts("bell mode enabled");
+		return;
+	}
+
+	if (!strcmp(*argv, "off")) {
+		bell = 0;
+		puts("bell mode disabled");
+		return;
+	}
+
+usage:
+	printf("bell [on | off]\n");
+}
+
+static void
 cmd_ls(int argc, const char **argv)
 {
 	uint64_t off = 0;
@@ -479,13 +511,46 @@ cmd_ls(int argc, const char **argv)
 }
 
 static void
+cmd_verbose(int argc, const char **argv)
+{
+	if (argc == 0) {
+		log_setverbose(!log_getverbose());
+		if (log_getverbose())
+			puts("verbose mode enabled");
+		else
+			puts("verbose mode disabled");
+		return;
+	}
+
+	if (argc != 1)
+		goto usage;
+
+	if (!strcmp(*argv, "on")) {
+		log_setverbose(1);
+		puts("verbose mode enabled");
+		return;
+	}
+
+	if (!strcmp(*argv, "off")) {
+		log_setverbose(0);
+		puts("verbose mode disabled");
+		return;
+	}
+
+usage:
+	printf("verbose [on | off]\n");
+}
+
+static void
 excmd(int argc, const char **argv)
 {
 	struct cmd {
 		const char	*name;
 		void		(*fn)(int, const char **);
 	} cmds[] = {
+		{"bell",	cmd_bell},
 		{"ls",		cmd_ls},
+		{"verbose",	cmd_verbose},
 	};
 	size_t i;
 
@@ -507,7 +572,7 @@ main(int argc, char **argv)
 	int	ch;
 
 	log_init(1, LOG_DAEMON);
-	log_setverbose(1);
+	log_setverbose(0);
 	log_procinit(getprogname());
 
 	while ((ch = getopt(argc, argv, "C:cK:")) != -1) {
@@ -556,7 +621,12 @@ main(int argc, char **argv)
 			if (**ap != '\0')
 				ap++, argc++;
 		}
-		excmd(argc, argv);
+		excmd(argc, (const char **)argv);
+
+		if (bell) {
+			printf("\a");
+			fflush(stdout);
+		}
 
 		free(line);
 	}
