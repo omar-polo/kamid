@@ -206,7 +206,7 @@ main(int argc, char **argv)
 	for (;;) {
 		char *line;
 
-		if ((line = read_line("ftp> ")) == NULL)
+		if ((line = read_line("kamiftp> ")) == NULL)
 			break;
 		printf("read: %s\n", line);
 	}
