@@ -445,6 +445,13 @@ usage:
 }
 
 static void
+cmd_bye(int argc, const char **argv)
+{
+	log_warnx("bye\n");
+	exit(0);
+}
+
+static void
 cmd_ls(int argc, const char **argv)
 {
 	uint64_t off = 0;
@@ -549,7 +556,9 @@ excmd(int argc, const char **argv)
 		void		(*fn)(int, const char **);
 	} cmds[] = {
 		{"bell",	cmd_bell},
+		{"bye",		cmd_bye},
 		{"ls",		cmd_ls},
+		{"quit",	cmd_bye},
 		{"verbose",	cmd_verbose},
 	};
 	size_t i;
