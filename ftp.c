@@ -76,6 +76,9 @@ read_line(const char *prompt)
 	size_t linesize = 0;
 	ssize_t linelen;
 
+	printf("%s", prompt);
+	fflush(stdout);
+
 	linelen = getline(&line, &linesize, stdin);
 	if (linelen == -1)
 		return NULL;
