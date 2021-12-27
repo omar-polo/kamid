@@ -33,7 +33,7 @@ proc mount(fid, path) {
 	assert (
 		m.type == Rversion
 		m.tag == notag
-		m.msize == msize
+		m.msize <= msize
 		# m.version == version
 	)
 

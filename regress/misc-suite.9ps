@@ -18,7 +18,7 @@ testing "multiple attach" dir "./root" {
 	assert (
 		m.type == Rversion
 		m.tag == notag
-		m.msize == msize
+		m.msize <= msize
 	)
 
 	fid1 = 0
