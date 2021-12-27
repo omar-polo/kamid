@@ -151,6 +151,12 @@ struct np_msg_header {
 	uint16_t	tag;
 };
 
+struct qid {
+	uint64_t		 path;
+	uint32_t		 vers;
+	uint8_t			 type;
+};
+
 /* useful constants */
 #define HEADERSIZE	(4 + 1 + 2)
 #define	VERSION9P	"9P2000"

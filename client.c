@@ -52,12 +52,6 @@
 	 (sizeof(type) == 8 && (val) > INT64_MAX) || \
 	 (sizeof(type) != 4 && sizeof(type) != 8))
 
-struct qid {
-	uint64_t		 path;
-	uint32_t		 vers;
-	uint8_t			 type;
-};
-
 STAILQ_HEAD(dirhead, dir) dirs;
 struct dir {
 	int			 refcount;
