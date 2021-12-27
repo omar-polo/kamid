@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#include <assert.h>
 #include <netdb.h>
 #include <limits.h>
 #include <stdio.h>
@@ -47,8 +48,12 @@ const char	*keypath;
 struct tls_config	*tlsconf;
 struct tls		*ctx;
 int			 sock;
+struct evbuffer		*buf;
+uint32_t		 msize;
 
 #define PWDFID		0
+
+#define ASSERT_EMPTYBUF() assert(EVBUFFER_LENGTH(buf) == 0)
 
 #if HAVE_READLINE
 static char *
@@ -99,19 +104,206 @@ usage(int ret)
 }
 
 static void
+do_send(void)
+{
+	ssize_t r;
+
+	while (EVBUFFER_LENGTH(evb) != 0) {
+		r = tls_write(ctx, EVBUFFER_DATA(evb), EVBUFFER_LENGTH(evb));
+		switch (r) {
+		case TLS_WANT_POLLIN:
+		case TLS_WANT_POLLOUT:
+			continue;
+		case -1:
+			errx(1, "tls: %s", tls_error(ctx));
+		default:
+			evbuffer_drain(evb, r);
+		}
+	}
+}
+
+static void
+mustread(void *d, size_t len)
+{
+	ssize_t r;
+
+	while (len != 0) {
+		switch (r = tls_read(ctx, d, len)) {
+		case TLS_WANT_POLLIN:
+		case TLS_WANT_POLLOUT:
+			continue;
+		case -1:
+			errx(1, "tls: %s", tls_error(ctx));
+		default:
+			d += r;
+			len -= r;
+		}
+	}
+}
+
+static void
+recv_msg(void)
+{
+	uint32_t	len;
+	ssize_t		r;
+	char		tmp[BUFSIZ];
+
+	mustread(&len, sizeof(len));
+	len = le32toh(len);
+	if (len < HEADERSIZE)
+		errx(1, "read message of invalid length %d", len);
+
+	len -= 4; /* skip the length just read */
+
+	while (len != 0) {
+		switch (r = tls_read(ctx, tmp, sizeof(tmp))) {
+		case TLS_WANT_POLLIN:
+		case TLS_WANT_POLLOUT:
+			continue;
+		case -1:
+			errx(1, "tls: %s", tls_error(ctx));
+		default:
+			len -= r;
+			evbuffer_add(buf, tmp, r);
+		}
+	}
+}
+
+static uint64_t
+np_read64(void)
+{
+	uint64_t n;
+
+	evbuffer_remove(buf, &n, sizeof(n));
+	return le64toh(n);
+}
+
+static uint32_t
+np_read32(void)
+{
+	uint32_t n;
+
+	evbuffer_remove(buf, &n, sizeof(n));
+	return le32toh(n);
+}
+
+static uint16_t
+np_read16(void)
+{
+	uint16_t n;
+
+	evbuffer_remove(buf, &n, sizeof(n));
+	return le16toh(n);
+}
+
+static uint16_t
+np_read8(void)
+{
+	uint8_t n;
+
+	evbuffer_remove(buf, &n, sizeof(n));
+	return n;
+}
+
+static char *
+np_readstr(void)
+{
+	uint16_t	 len;
+	char		*str;
+
+	len = np_read16();
+	assert(EVBUFFER_LENGTH(buf) >= len);
+
+	if ((str = calloc(1, len+1)) == NULL)
+		err(1, "calloc");
+	evbuffer_remove(buf, str, len);
+	return str;
+}
+
+static void
+np_read_qid(struct qid *qid)
+{
+	assert(EVBUFFER_LENGTH(buf) >= QIDSIZE);
+
+	qid->type = np_read8();
+	qid->vers = np_read32();
+	qid->path = np_read64();
+}
+
+static void
+expect(uint8_t type)
+{
+	uint8_t t;
+
+	t = np_read8();
+	if (t == type)
+		return;
+
+	if (t == Terror) {
+		char *err;
+
+		err = np_readstr();
+		errx(1, "expected %s, got error %s",
+		    pp_msg_type(type), err);
+	}
+
+	errx(1, "expected %s, got msg type %s",
+	    pp_msg_type(type), pp_msg_type(t));
+}
+
+static void
+expect2(uint8_t type, uint16_t tag)
+{
+	uint16_t t;
+
+	expect(type);
+
+	t = np_read16();
+	if (t == tag)
+		return;
+
+	errx(1, "expected tag 0x%x, got 0x%x", tag, t);
+}
+
+static void
 do_version(void)
 {
+	char		*version;
+
 	tversion(VERSION9P, MSIZE9P);
-	/* TODO: get reply */
+	do_send();
+	recv_msg();
+	expect2(Rversion, NOTAG);
+
+	msize = np_read32();
+	version = np_readstr();
+
+	if (msize > MSIZE9P)
+		errx(1, "got unexpected msize: %d", msize);
+	if (strcmp(version, VERSION9P))
+		errx(1, "unexpected 9p version: %s", version);
+
+	free(version);
+	ASSERT_EMPTYBUF();
 }
 
 static void
 do_attach(const char *path)
 {
+	const char *user;
+	struct qid qid;
+
 	if (path == NULL)
 		path = "/";
+	if ((user = getenv("USER")) == NULL)
+		user = "flan";
 
-	/* TODO: do attach */
+	tattach(PWDFID, NOFID, user, path);
+	do_send();
+	recv_msg();
+	expect2(Rattach, iota_tag);
+	np_read_qid(&qid);
+	ASSERT_EMPTYBUF();
 }
 
 static void
@@ -199,6 +391,9 @@ main(int argc, char **argv)
 		usage(1);
 
 	if ((evb = evbuffer_new()) == NULL)
+		fatal("evbuffer_new");
+
+	if ((buf = evbuffer_new()) == NULL)
 		fatal("evbuffer_new");
 
 	do_connect(argv[0], argv[1]);
