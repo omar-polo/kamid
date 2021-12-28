@@ -21,21 +21,12 @@
   :version     "0.0.1"
   :serial      t
   :depends-on (:alexandria
-               :cl-ppcre
-               :osicat
                :cl+ssl
                :clunit2
                :usocket
                :babel
-               :uiop)
+               :uiop
+               :9p-client)
   :components ((:file "package")
-               (:file "text-utils")
-               (:file "misc-utils")
-               (:file "filesystem-utils")
-               (:file "conditions")
-               (:file "message-types")
-               (:file "client")
-               (:module tests
-                :components ((:file "package")
-                             (:file "all-tests")
-                             (:file "kami-tests")))))
+               (:file "all-tests")
+               (:file "kami-tests")))

@@ -334,9 +334,13 @@
 (deftest test-remove-file ((kami-suite) (test-create))
   (assert-true (ignore-errors (%remove-path +create-path+))))
 
+(defun parent-dir-path (path)
+  (let ((position-backslash (position #\/ path :from-end t :test #'char=)))
+    (subseq path 0 position-backslash)))
+
 (deftest test-remove-directory ((kami-suite) (test-remove-file))
   (assert-true
-      (ignore-errors (%remove-path (filesystem-utils:parent-dir-path +create-path+)))))
+      (ignore-errors (%remove-path (parent-dir-path +create-path+)))))
 
 (defun read-dir-same-offset (dir-path &optional (root "/"))
   (with-open-ssl-stream (stream

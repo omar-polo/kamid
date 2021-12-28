@@ -14,98 +14,22 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(defpackage :text-utils
-  (:use
-   :cl)
+(defpackage :all-tests
+  (:use :cl
+        :clunit
+        :cl+ssl)
   (:export
-   :strcat))
+   :*client-certificate*
+   :*certificate-key*
+   :*host*
+   :*port*
+   :with-open-ssl-stream
+   :all-suite
+   :run-all-tests))
 
-(defpackage :misc-utils
-  (:use :cl)
-  (:nicknames :misc)
-  (:export
-   :safe-all-but-last-elt))
-
-(defpackage :filesystem-utils
-  (:use
-   :cl
-   :alexandria)
-  (:nicknames :fs)
-  (:export
-   :*directory-sep-regexp*
-   :getenv
-   :cat-parent-dir
-   :parent-dir-path
-   :split-path-elements
-   :collect-children
-   :prepend-pwd))
-
-(defpackage :9p-client
-  (:use
-   :cl
-   :alexandria)
-  (:export
-   :+byte-type+
-   :+version+
-   :+nofid+
-   :+create-for-read+
-   :+create-for-write+
-   :+create-for-read-write+
-   :+create-for-exec+
-   :+create-dir+
-   :+open-truncate+
-   :+open-remove-on-clunk+
-   :+standard-socket-port+
-   :+nwname-clone+
-   :*buffer-size*
-   :*messages-sent*
-   :9p-error
-   :read-all-pending-message
-   :close-client
-   :encode-string
-   :decode-string
-   :encode
-   :decode
-   :read-message
-   :initialize-session
-   :with-new-tag
-   :with-new-fid
-   :dummy-callback
-   :dump-callback
-   :9p-attach
-   :9p-create
-   :9p-open
-   :9p-write
-   :9p-remove
-   :9p-clunk
-   :9p-stat
-   :9p-read
-   :9p-walk
-   :decode-read-reply
-   :stat-entry-size
-   :stat-ktype
-   :stat-kdev
-   :stat-entry-type
-   :stat-version
-   :stat-path
-   :stat-mode
-   :stat-atime
-   :stat-mtime
-   :stat-size
-   :stat-name
-   :stat-user-id
-   :stat-group-id
-   :stat-last-modified-from-id
-   :decode-rstat
-   :read-all-pending-messages-ignoring-errors
-   :clone-fid
-   :create-directory
-   :create-path
-   :mount
-   :open-path
-   :slurp-file
-   :remove-path
-   :open-directory
-   :read-directory
-   :sort-dir-stats
-   :collect-directory-children))
+(defpackage :kami-tests
+  (:use :cl
+        :clunit
+        :9p-client
+        :all-tests)
+  (:export))
