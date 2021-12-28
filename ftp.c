@@ -505,6 +505,28 @@ cmd_bye(int argc, const char **argv)
 }
 
 static void
+cmd_lcd(int argc, const char **argv)
+{
+	const char *dir;
+
+	if (argc > 1) {
+		printf("lcd takes only one argument\n");
+		return;
+	}
+
+	if (argc == 1)
+		dir = *argv;
+
+	if (argc == 0 && (dir = getenv("HOME")) == NULL) {
+		printf("HOME is not defined\n");
+		return;
+	}
+
+	if (chdir(dir) == -1)
+		printf("cd: %s: %s\n", dir, strerror(errno));
+}
+
+static void
 cmd_ls(int argc, const char **argv)
 {
 	uint64_t off = 0;
@@ -610,6 +632,7 @@ excmd(int argc, const char **argv)
 	} cmds[] = {
 		{"bell",	cmd_bell},
 		{"bye",		cmd_bye},
+		{"lcd",		cmd_lcd},
 		{"ls",		cmd_ls},
 		{"quit",	cmd_bye},
 		{"verbose",	cmd_verbose},
