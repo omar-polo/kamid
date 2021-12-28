@@ -527,6 +527,19 @@ cmd_lcd(int argc, const char **argv)
 }
 
 static void
+cmd_lpwd(int argc, const char **argv)
+{
+	char path[PATH_MAX];
+
+	if (getcwd(path, sizeof(path)) == NULL) {
+		printf("lpwd: %s\n", strerror(errno));
+		return;
+	}
+
+	printf("%s\n", path);
+}
+
+static void
 cmd_ls(int argc, const char **argv)
 {
 	uint64_t off = 0;
@@ -633,6 +646,7 @@ excmd(int argc, const char **argv)
 		{"bell",	cmd_bell},
 		{"bye",		cmd_bye},
 		{"lcd",		cmd_lcd},
+		{"lpwd",	cmd_lpwd},
 		{"ls",		cmd_ls},
 		{"quit",	cmd_bye},
 		{"verbose",	cmd_verbose},
