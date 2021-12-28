@@ -14,3 +14,9 @@
    but synchronous I/O: this way, once a message has been processed,
    we can just receive the next in the same function (i.e. twrite) and
    go ahead.
+
+ - fill user and group name in struct stat.  The problem is that, being
+   chrooted, we don't have access to /etc/passwd nor /etc/group. We
+   could use setpassent(3) and setgroupent(3), but if they change in the
+   meantime we can't do anything.  Another solution would be to not
+   to chroot(2) and just switch to the targeted user.
