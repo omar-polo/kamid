@@ -682,3 +682,51 @@
          (path-fid       (open-path stream saved-root-fid path)))
     (9p-remove stream path-fid)
     (read-all-pending-message stream)))
+
+
+(defun open-directory (stream root-fid path)
+  (let* ((root-fid-cloned (clone-fid stream root-fid))
+         (path-fid        (open-path stream root-fid-cloned path)))
+    path-fid))
+
+(defun read-directory (stream dir-fid &optional (offset 0))
+  (let* ((stat-size       nil)
+         (stat-size-bytes nil)
+         (rstat           nil))
+    (9p-read stream
+             dir-fid
+             offset  2
+             :callback (lambda (x data)
+                         (declare (ignore x))
+                         (setf stat-size-bytes (subseq data 4))
+                         (setf stat-size (9p-client::bytes->int stat-size-bytes))))
+    (read-all-pending-message stream)
+    (when (> stat-size 0)
+      (9p-read stream
+               dir-fid
+               (+ offset 2) stat-size
+               :callback (lambda (x data)
+                           (declare (ignore x))
+                           (setf rstat (decode-rstat (concatenate '(vector (unsigned-byte 8))
+                                                                  stat-size-bytes
+                                                                  (subseq data 4))))))
+      (read-all-pending-message stream)
+      (values dir-fid rstat (+ offset 2 stat-size)))))
+
+(defun sort-dir-stats (data &optional (fn (lambda (a b) (string< (stat-name a) (stat-name b)))))
+  (sort data fn))
+
+(defun collect-directory-children (stream root-fid path)
+  (let* ((dir-fid   (open-directory stream root-fid path))
+         (dir-stats '()))
+    (loop named collecting-loop
+          with stat-size = 0
+          do
+             (multiple-value-bind (next-dir-fid stat next-stat-size)
+                 (read-directory stream dir-fid stat-size)
+               (if next-dir-fid
+                   (progn
+                     (push stat dir-stats)
+                     (setf stat-size next-stat-size))
+                   (return-from collecting-loop t))))
+    (sort-dir-stats dir-stats)))

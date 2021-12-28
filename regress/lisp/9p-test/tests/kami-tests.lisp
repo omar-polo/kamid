@@ -337,3 +337,45 @@
 (deftest test-remove-directory ((kami-suite) (test-remove-file))
   (assert-true
       (ignore-errors (%remove-path (filesystem-utils:parent-dir-path +create-path+)))))
+
+(defun read-dir-same-offset (dir-path &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (root-fid        (mount stream root))
+           (root-fid-cloned (clone-fid stream root-fid))
+           (dir-fid         (open-path stream root-fid-cloned dir-path))
+           (res-read-1      nil)
+           (res-read-2      nil))
+      (9p-read stream
+               dir-fid
+               0  10
+               :callback (lambda (x data)
+                           (declare (ignore x))
+                           (setf res-read-1 data)))
+      (9p-read stream
+               dir-fid
+               0  10
+               :callback (lambda (x data)
+                           (declare (ignore x))
+                           (setf res-read-2 data)))
+      (read-all-pending-message stream)
+      (not (mismatch res-read-1 res-read-2)))))
+
+(defun example-directory-children (path &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (root-fid        (mount stream root)))
+      (collect-directory-children stream root-fid path))))
+
+(deftest collect-dir-root-children ((kami-suite) (test-read))
+  (assert-true (example-directory-children "/")))

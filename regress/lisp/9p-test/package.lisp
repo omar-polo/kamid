@@ -104,4 +104,8 @@
    :mount
    :open-path
    :slurp-file
-   :remove-path))
+   :remove-path
+   :open-directory
+   :read-directory
+   :sort-dir-stats
+   :collect-directory-children))
