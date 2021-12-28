@@ -49,8 +49,29 @@ Specify the path to the client certificate
 .Ar key
 to be used during the TLS handshake.
 .El
+.Pp
+The following commands are recognized by
+.Nm :
+.Bl -tag -width Ds
+.It Ic bell Oo Cm on | off Oc
+Request terminal to sound a bell after each command.
+Without arguments toggle the current state.
+.It Ic bye
+Terminate the session.
+Synomym of
+.Ic quit .
+.It Ic ls
+List the file in the current directory
+.It Ic quit
+Terminate the session.
+Synomym of
+.Ic bye .
+.It Ic verbose Oo Cm on | off Oc
+Print verbose information.
+Without arguments toggle the current state.
+.El
 .Sh SEE ALSO
-.Xr 9p 7
+.Xr 9p 7 ,
 .Xr kamid 8
 .Sh AUTHORS
 The

@@ -102,6 +102,23 @@ pp_msg_type(uint8_t type)
 	}
 }
 
+const char *
+pp_qid_type(uint8_t type)
+{
+	switch (type) {
+	case QTDIR:     return "dir";
+	case QTAPPEND:  return "append-only";
+	case QTEXCL:    return "exclusive";
+	case QTMOUNT:   return "mounted-channel";
+	case QTAUTH:    return "authentication";
+	case QTTMP:     return "non-backed-up";
+	case QTSYMLINK: return "symlink";
+	case QTFILE:    return "file";
+	}
+	
+	return "unknown";
+}
+
 static void
 hexdump_ppline(int x, uint8_t *data, size_t len)
 {

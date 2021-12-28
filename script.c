@@ -428,8 +428,9 @@ free_op(struct op *op)
 		free_op_rec(op->v.cast.expr);
 		break;
 	case OP_CMP_EQ:
-		free_op_rec(op->v.cmp_eq.a);
-		free_op_rec(op->v.cmp_eq.b);
+	case OP_CMP_LEQ:
+		free_op_rec(op->v.bin_cmp.a);
+		free_op_rec(op->v.bin_cmp.b);
 		break;
 	case OP_FACCESS:
 		free_op_rec(op->v.faccess.expr);
@@ -517,8 +518,20 @@ op_cmp_eq(struct op *a, struct op *b)
 	struct op *op;
 
 	op = newop(OP_CMP_EQ);
-	op->v.cmp_eq.a = a;
-	op->v.cmp_eq.b = b;
+	op->v.bin_cmp.a = a;
+	op->v.bin_cmp.b = b;
+
+	return op;
+}
+
+struct op *
+op_cmp_leq(struct op *a, struct op *b)
+{
+	struct op *op;
+
+	op = newop(OP_CMP_LEQ);
+	op->v.bin_cmp.a = a;
+	op->v.bin_cmp.b = b;
 
 	return op;
 }
@@ -678,6 +691,14 @@ val_eq(struct value *a, struct value *b)
 		return !strcmp(a->v.str, b->v.str);
 	}
 
+	return 0;
+}
+
+int
+val_leq(struct value *a, struct value *b)
+{
+	if (val_isnum(a) && val_isnum(b))
+		return val_tonum(a) <= val_tonum(b);
 	return 0;
 }
 
@@ -879,9 +900,14 @@ pp_op(struct op *op)
 		}
 		break;
 	case OP_CMP_EQ:
-		pp_op(op->v.cmp_eq.a);
+		pp_op(op->v.bin_cmp.a);
 		printf(" == ");
-		pp_op(op->v.cmp_eq.b);
+		pp_op(op->v.bin_cmp.b);
+		break;
+	case OP_CMP_LEQ:
+		pp_op(op->v.bin_cmp.a);
+		printf(" <= ");
+		pp_op(op->v.bin_cmp.b);
 		break;
 	case OP_FACCESS:
 		pp_op(op->v.faccess.expr);
@@ -1052,15 +1078,25 @@ eval(struct op *op)
 		break;
 
 	case OP_CMP_EQ:
-		if ((ret = eval(op->v.cmp_eq.a)) != EVAL_OK)
+		if ((ret = eval(op->v.bin_cmp.a)) != EVAL_OK)
 			return ret;
-		if ((ret = eval(op->v.cmp_eq.b)) != EVAL_OK)
+		if ((ret = eval(op->v.bin_cmp.b)) != EVAL_OK)
 			return ret;
 
 		popv(&b);
 		popv(&a);
 		pushbool(val_eq(&a, &b));
+		break;
 
+	case OP_CMP_LEQ:
+		if ((ret = eval(op->v.bin_cmp.a)) != EVAL_OK)
+			return ret;
+		if ((ret = eval(op->v.bin_cmp.b)) != EVAL_OK)
+			return ret;
+
+		popv(&b);
+		popv(&a);
+		pushbool(val_leq(&a, &b));
 		break;
 
 	case OP_FACCESS:

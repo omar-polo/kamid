@@ -69,10 +69,17 @@ It evaluates to the value of the variable or constant in the current
 scope.
 .It comparison
 The syntax is
-.Ql Ar expression Cm == Ar expression
+.Bd -literal -offset Ds
+.Ar expression Cm == Ar expression
+.Ar expression Cm <= Ar expression
+.Ed
+.Pp
 and yields a true value if the two expressions are considered to be
+respectively
 .Sq equal
-or a false value otherwise.
+or
+.Sq lesser equal ,
+a false value otherwise.
 Two values are equal if they are both number and represent the same
 value
 .Pq regardless of the size
@@ -168,9 +175,9 @@ Execute
 .Ar procedure
 with the given
 .Ar arguments .
-.It Ic assert Ar expression
+.It Ic assert Ar comparison
 Evaluate
-.Ar expression
+.Ar comparison
 and if it not yields a true-ish value terminate the current running
 test and mark it as failed.
 Multiple assertion can be done in one single
@@ -178,15 +185,15 @@ Multiple assertion can be done in one single
 block using the following syntax:
 .Bd -literal -offset Ds
 .Ic assert (
-	expression_1
-	expression_2
+	comparison_1
+	comparison_2
 	...
-	expression_n
+	comparison_n
 )
 .Ed
 .Pp
 Note that newlines are mandatory after every
-.Ar expression
+.Ar comparison
 in this case.
 .It Ic should-fail Ar expression Op : Ar reason
 Evaluate

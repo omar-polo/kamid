@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#include <assert.h>
 #include <netdb.h>
 #include <limits.h>
 #include <stdio.h>
@@ -28,9 +29,13 @@
 #include <tls.h>
 #include <unistd.h>
 
-#if HAVE_READLINE
+#if HAVE_LIBREADLINE
 #include <readline/readline.h>
 #include <readline/history.h>
+#endif
+
+#ifndef nitems
+#define nitems(_a)	(sizeof((_a)) / sizeof((_a)[0]))
 #endif
 
 #include "9pclib.h"
@@ -47,10 +52,16 @@ const char	*keypath;
 struct tls_config	*tlsconf;
 struct tls		*ctx;
 int			 sock;
+struct evbuffer		*buf;
+struct evbuffer		*dirbuf;
+uint32_t		 msize;
+int			 bell;
 
 #define PWDFID		0
 
-#if HAVE_READLINE
+#define ASSERT_EMPTYBUF() assert(EVBUFFER_LENGTH(buf) == 0)
+
+#if HAVE_LIBREADLINE
 static char *
 read_line(const char *prompt)
 {
@@ -76,6 +87,9 @@ read_line(const char *prompt)
 	size_t linesize = 0;
 	ssize_t linelen;
 
+	printf("%s", prompt);
+	fflush(stdout);
+
 	linelen = getline(&line, &linesize, stdin);
 	if (linelen == -1)
 		return NULL;
@@ -96,19 +110,253 @@ usage(int ret)
 }
 
 static void
+do_send(void)
+{
+	ssize_t r;
+
+	while (EVBUFFER_LENGTH(evb) != 0) {
+		r = tls_write(ctx, EVBUFFER_DATA(evb), EVBUFFER_LENGTH(evb));
+		switch (r) {
+		case TLS_WANT_POLLIN:
+		case TLS_WANT_POLLOUT:
+			continue;
+		case -1:
+			errx(1, "tls: %s", tls_error(ctx));
+		default:
+			evbuffer_drain(evb, r);
+		}
+	}
+}
+
+static void
+mustread(void *d, size_t len)
+{
+	ssize_t r;
+
+	while (len != 0) {
+		switch (r = tls_read(ctx, d, len)) {
+		case TLS_WANT_POLLIN:
+		case TLS_WANT_POLLOUT:
+			continue;
+		case -1:
+			errx(1, "tls: %s", tls_error(ctx));
+		default:
+			d += r;
+			len -= r;
+		}
+	}
+}
+
+static void
+recv_msg(void)
+{
+	uint32_t	len;
+	ssize_t		r;
+	char		tmp[BUFSIZ];
+
+	mustread(&len, sizeof(len));
+	len = le32toh(len);
+	if (len < HEADERSIZE)
+		errx(1, "read message of invalid length %d", len);
+
+	len -= 4; /* skip the length just read */
+
+	while (len != 0) {
+		switch (r = tls_read(ctx, tmp, sizeof(tmp))) {
+		case TLS_WANT_POLLIN:
+		case TLS_WANT_POLLOUT:
+			continue;
+		case -1:
+			errx(1, "tls: %s", tls_error(ctx));
+		default:
+			len -= r;
+			evbuffer_add(buf, tmp, r);
+		}
+	}
+}
+
+static uint64_t
+np_read64(struct evbuffer *buf)
+{
+	uint64_t n;
+
+	evbuffer_remove(buf, &n, sizeof(n));
+	return le64toh(n);
+}
+
+static uint32_t
+np_read32(struct evbuffer *buf)
+{
+	uint32_t n;
+
+	evbuffer_remove(buf, &n, sizeof(n));
+	return le32toh(n);
+}
+
+static uint16_t
+np_read16(struct evbuffer *buf)
+{
+	uint16_t n;
+
+	evbuffer_remove(buf, &n, sizeof(n));
+	return le16toh(n);
+}
+
+static uint16_t
+np_read8(struct evbuffer *buf)
+{
+	uint8_t n;
+
+	evbuffer_remove(buf, &n, sizeof(n));
+	return n;
+}
+
+static char *
+np_readstr(struct evbuffer *buf)
+{
+	uint16_t	 len;
+	char		*str;
+
+	len = np_read16(buf);
+	assert(EVBUFFER_LENGTH(buf) >= len);
+
+	if ((str = calloc(1, len+1)) == NULL)
+		err(1, "calloc");
+	evbuffer_remove(buf, str, len);
+	return str;
+}
+
+static void
+np_read_qid(struct evbuffer *buf, struct qid *qid)
+{
+	assert(EVBUFFER_LENGTH(buf) >= QIDSIZE);
+
+	qid->type = np_read8(buf);
+	qid->vers = np_read32(buf);
+	qid->path = np_read64(buf);
+}
+
+static void
+expect(uint8_t type)
+{
+	uint8_t t;
+
+	t = np_read8(buf);
+	if (t == type)
+		return;
+
+	if (t == Terror) {
+		char *err;
+
+		err = np_readstr(buf);
+		errx(1, "expected %s, got error %s",
+		    pp_msg_type(type), err);
+	}
+
+	errx(1, "expected %s, got msg type %s",
+	    pp_msg_type(type), pp_msg_type(t));
+}
+
+static void
+expect2(uint8_t type, uint16_t tag)
+{
+	uint16_t t;
+
+	expect(type);
+
+	t = np_read16(buf);
+	if (t == tag)
+		return;
+
+	errx(1, "expected tag 0x%x, got 0x%x", tag, t);
+}
+
+static void
 do_version(void)
 {
+	char		*version;
+
 	tversion(VERSION9P, MSIZE9P);
-	/* TODO: get reply */
+	do_send();
+	recv_msg();
+	expect2(Rversion, NOTAG);
+
+	msize = np_read32(buf);
+	version = np_readstr(buf);
+
+	if (msize > MSIZE9P)
+		errx(1, "got unexpected msize: %d", msize);
+	if (strcmp(version, VERSION9P))
+		errx(1, "unexpected 9p version: %s", version);
+
+	free(version);
+	ASSERT_EMPTYBUF();
 }
 
 static void
 do_attach(const char *path)
 {
+	const char *user;
+	struct qid qid;
+
 	if (path == NULL)
 		path = "/";
+	if ((user = getenv("USER")) == NULL)
+		user = "flan";
 
-	/* TODO: do attach */
+	tattach(PWDFID, NOFID, user, path);
+	do_send();
+	recv_msg();
+	expect2(Rattach, iota_tag);
+	np_read_qid(buf, &qid);
+
+	ASSERT_EMPTYBUF();
+}
+
+static uint32_t
+do_open(uint32_t fid, uint8_t mode)
+{
+	struct qid qid;
+	uint32_t iounit;
+
+	topen(fid, mode);
+	do_send();
+	recv_msg();
+	expect2(Ropen, iota_tag);
+
+	np_read_qid(buf, &qid);
+	iounit = np_read32(buf);
+
+	ASSERT_EMPTYBUF();
+
+	return iounit;
+}
+
+static void
+do_clunk(uint32_t fid)
+{
+	tclunk(fid);
+	do_send();
+	recv_msg();
+	expect2(Rclunk, iota_tag);
+
+	ASSERT_EMPTYBUF();
+}
+
+static void
+dup_fid(int fid, int nfid)
+{
+	uint16_t nwqid;
+
+	twalk(fid, nfid, NULL, 0);
+	do_send();
+	recv_msg();
+	expect2(Rwalk, iota_tag);
+
+	nwqid = np_read16(buf);
+	assert(nwqid == 0);
+
+	ASSERT_EMPTYBUF();
 }
 
 static void
@@ -165,13 +413,175 @@ do_connect(const char *connspec, const char *path)
 	free(host);
 }
 
+static void
+cmd_bell(int argc, const char **argv)
+{
+	if (argc == 0) {
+		bell = !bell;
+		if (bell)
+			puts("bell mode enabled");
+		else
+			puts("bell mode disabled");
+		return;
+	}
+
+	if (argc != 1)
+		goto usage;
+
+	if (!strcmp(*argv, "on")) {
+		bell = 1;
+		puts("bell mode enabled");
+		return;
+	}
+
+	if (!strcmp(*argv, "off")) {
+		bell = 0;
+		puts("bell mode disabled");
+		return;
+	}
+
+usage:
+	printf("bell [on | off]\n");
+}
+
+static void
+cmd_bye(int argc, const char **argv)
+{
+	log_warnx("bye\n");
+	exit(0);
+}
+
+static void
+cmd_ls(int argc, const char **argv)
+{
+	uint64_t off = 0;
+	uint32_t len;
+
+	if (argc != 0) {
+		printf("ls don't take arguments (yet)\n");
+		return;
+	}
+
+	dup_fid(PWDFID, 1);
+	do_open(1, KOREAD);
+
+	evbuffer_drain(dirbuf, EVBUFFER_LENGTH(dirbuf));
+
+	for (;;) {
+		tread(1, off, BUFSIZ);
+		do_send();
+		recv_msg();
+		expect2(Rread, iota_tag);
+
+		len = np_read32(buf);
+		if (len == 0)
+			break;
+
+		evbuffer_add_buffer(dirbuf, buf);
+		off += len;
+
+		ASSERT_EMPTYBUF();
+	}
+
+	while (EVBUFFER_LENGTH(dirbuf) != 0) {
+		struct qid	 qid;
+		uint64_t	 len;
+		uint16_t	 size;
+		char		*name;
+
+		size = np_read16(dirbuf);
+		assert(size <= EVBUFFER_LENGTH(dirbuf));
+
+		np_read16(dirbuf); /* skip type */
+		np_read32(dirbuf); /* skip dev */
+
+		np_read_qid(dirbuf, &qid);
+		printf("%s ", pp_qid_type(qid.type));
+
+		np_read32(dirbuf); /* skip mode */
+		np_read32(dirbuf); /* skip atime */
+		np_read32(dirbuf); /* skip mtime */
+
+		len = np_read64(dirbuf);
+		printf("%llu ", (unsigned long long)len);
+
+		name = np_readstr(dirbuf);
+		printf("%s\n", name);
+		free(name);
+
+		free(np_readstr(dirbuf)); /* skip uid */
+		free(np_readstr(dirbuf)); /* skip gid */
+		free(np_readstr(dirbuf)); /* skip muid */
+	}
+
+	do_clunk(1);
+}
+
+static void
+cmd_verbose(int argc, const char **argv)
+{
+	if (argc == 0) {
+		log_setverbose(!log_getverbose());
+		if (log_getverbose())
+			puts("verbose mode enabled");
+		else
+			puts("verbose mode disabled");
+		return;
+	}
+
+	if (argc != 1)
+		goto usage;
+
+	if (!strcmp(*argv, "on")) {
+		log_setverbose(1);
+		puts("verbose mode enabled");
+		return;
+	}
+
+	if (!strcmp(*argv, "off")) {
+		log_setverbose(0);
+		puts("verbose mode disabled");
+		return;
+	}
+
+usage:
+	printf("verbose [on | off]\n");
+}
+
+static void
+excmd(int argc, const char **argv)
+{
+	struct cmd {
+		const char	*name;
+		void		(*fn)(int, const char **);
+	} cmds[] = {
+		{"bell",	cmd_bell},
+		{"bye",		cmd_bye},
+		{"ls",		cmd_ls},
+		{"quit",	cmd_bye},
+		{"verbose",	cmd_verbose},
+	};
+	size_t i;
+
+	if (argc == 0)
+		return;
+	for (i = 0; i < nitems(cmds); ++i) {
+		if (!strcmp(cmds[i].name, *argv)) {
+			cmds[i].fn(argc-1, argv+1);
+			return;
+		}
+	}
+
+	log_warnx("unknown command %s", *argv);
+}
+
 int
 main(int argc, char **argv)
 {
 	int	ch;
 
 	log_init(1, LOG_DAEMON);
-	log_setverbose(1);
+	log_setverbose(0);
 	log_procinit(getprogname());
 
 	while ((ch = getopt(argc, argv, "C:cK:")) != -1) {
@@ -198,14 +608,36 @@ main(int argc, char **argv)
 	if ((evb = evbuffer_new()) == NULL)
 		fatal("evbuffer_new");
 
+	if ((buf = evbuffer_new()) == NULL)
+		fatal("evbuffer_new");
+
+	if ((dirbuf = evbuffer_new()) == NULL)
+		fatal("evbuferr_new");
+
 	do_connect(argv[0], argv[1]);
 
-	for (;;) {
-		char *line;
+	/* cmd_ls(0, NULL); */
 
-		if ((line = read_line("ftp> ")) == NULL)
+	for (;;) {
+		int argc = 0;
+		char *line, *argv[16] = {0}, **ap;
+
+		if ((line = read_line("kamiftp> ")) == NULL)
 			break;
-		printf("read: %s\n", line);
+
+		for (argc = 0, ap = argv; ap < &argv[15] &&
+		    (*ap = strsep(&line, " \t")) != NULL;) {
+			if (**ap != '\0')
+				ap++, argc++;
+		}
+		excmd(argc, (const char **)argv);
+
+		if (bell) {
+			printf("\a");
+			fflush(stdout);
+		}
+
+		free(line);
 	}
 
 	printf("\n");

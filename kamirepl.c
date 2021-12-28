@@ -84,7 +84,6 @@ static void		 excmd_read(const char ** , int);
 static void		 excmd_write(const char **, int);
 static void		 excmd(const char **, int);
 
-static const char	*pp_qid_type(uint8_t);
 static void		 pp_qid(const uint8_t *, uint32_t);
 static void		 pp_msg(uint32_t, uint8_t, uint16_t, const uint8_t *);
 static void		 handle_9p(const uint8_t *, size_t);
@@ -702,23 +701,6 @@ excmd(const char **argv, int argc)
 	}
 
 	log_warnx("Unknown command %s", *argv);
-}
-
-static const char *
-pp_qid_type(uint8_t type)
-{
-        switch (type) {
-	case QTDIR:	return "dir";
-	case QTAPPEND:	return "append-only";
-	case QTEXCL:	return "exclusive";
-	case QTMOUNT:	return "mounted-channel";
-	case QTAUTH:	return "authentication";
-	case QTTMP:	return "non-backed-up";
-	case QTSYMLINK: return "symlink";
-	case QTFILE:	return "file";
-	}
-
-	return "unknown";
 }
 
 static void

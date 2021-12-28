@@ -35,6 +35,15 @@
 #include "sandbox.h"
 #include "utils.h"
 
+/*
+ * XXX: atm is difficult to accept messages bigger than MAX_IMSGSIZE
+ * minus IMSG_HEADER_SIZE, we need something to split messages into
+ * chunks and receive them one by the other.
+ *
+ * CLIENT_MSIZE is thus the maximum message size we can handle now.
+ */
+#define CLIENT_MSIZE (MAX_IMSGSIZE - IMSG_HEADER_SIZE)
+
 #define DEBUG_PACKETS 0
 
 /* straight outta /src/usr.bin/ssh/scp.c */
@@ -42,12 +51,6 @@
 	((sizeof(type) == 4 && (val) > INT32_MAX) || \
 	 (sizeof(type) == 8 && (val) > INT64_MAX) || \
 	 (sizeof(type) != 4 && sizeof(type) != 8))
-
-struct qid {
-	uint64_t		 path;
-	uint32_t		 vers;
-	uint8_t			 type;
-};
 
 STAILQ_HEAD(dirhead, dir) dirs;
 struct dir {
@@ -861,7 +864,7 @@ tversion(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 
 	/* version matched */
 	handshaked = 1;
-	msize = MIN(msize, MSIZE9P);
+	msize = MIN(msize, CLIENT_MSIZE);
 	client_send_listener(IMSG_MSIZE, &msize, sizeof(msize));
 	np_version(hdr->tag, msize, VERSION9P);
 	return;
@@ -1387,7 +1390,7 @@ tread(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	}
 
 	if (TYPE_OVERFLOW(off_t, off)) {
-		log_warnx("unexpected size_t size");
+		log_warnx("unexpected off_t size");
 		np_error(hdr->tag, "invalid offset");
 		return;
 	}
@@ -1403,6 +1406,7 @@ tread(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		if (off == 0 && f->offset != 0) {
 			rewinddir(f->d);
 			f->offset = 0;
+			evbuffer_drain(f->evb, EVBUFFER_LENGTH(f->evb));
 		}
 
 		if (off != f->offset) {

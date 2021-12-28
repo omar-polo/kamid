@@ -69,6 +69,7 @@ enum {
 	OP_VAR,
 	OP_CAST,
 	OP_CMP_EQ,
+	OP_CMP_LEQ,
 	OP_FACCESS,
 	OP_SFAIL,
 	OP_VARGS,
@@ -99,7 +100,7 @@ struct op {
 		struct {
 			struct op	*a;
 			struct op	*b;
-		} cmp_eq;
+		} bin_cmp;
 		struct {
 			struct op	*expr;
 			char		*field;
@@ -177,6 +178,7 @@ struct op	*op_var(char *);
 struct op	*op_lit_str(char *);
 struct op	*op_lit_num(uint64_t);
 struct op	*op_cmp_eq(struct op *, struct op *);
+struct op	*op_cmp_leq(struct op *, struct op *);
 struct op	*op_cast(struct op *, int);
 struct op	*op_faccess(struct op *, char *);
 struct op	*op_sfail(struct op *, char *);
@@ -190,6 +192,7 @@ int		 val_trueish(struct value *);
 int		 val_isnum(struct value *);
 int64_t		 val_tonum(struct value *);
 int		 val_eq(struct value *, struct value *);
+int		 val_leq(struct value *, struct value *);
 int		 val_cast(struct value *, int);
 int		 val_faccess(struct value *, const char *, struct value *);
 void		 pp_op(struct op *);
