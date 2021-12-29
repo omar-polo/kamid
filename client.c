@@ -724,7 +724,7 @@ static void
 np_errno(uint16_t tag)
 {
 	int saved_errno;
-	char buf[64];
+	char buf[NL_TEXTMAX] = {0};
 
 	saved_errno = errno;
 
