@@ -1506,6 +1506,8 @@ tstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 
 	if (f->fd != -1)
 		r = fstat(f->fd, &sb);
+	else if (f->qid.type & QTDIR)
+		r = fstat(f->dir->fd, &sb);
 	else
 		r = fstatat(f->dir->fd, f->fpath, &sb, 0);
 
