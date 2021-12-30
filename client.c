@@ -1494,8 +1494,10 @@ tstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 
 	/*
 	 * plan9' stat(9P) is not clear on whether the stat is allowed
-	 * on opened fids or not.
+	 * on opened fids or not.  We're allowing stat regardless of the
+	 * status of the fid.
 	 */
+
 	if ((f = fid_by_id(fid)) == NULL) {
 		np_error(hdr->tag, "invalid fid");
 		return;
