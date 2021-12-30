@@ -31,3 +31,5 @@ Stuff that's still to-do
    to avoid because we need to fdopendir(3) and upon closedir it'll
    close the file descriptor, while the same file descriptor could
    be shared with other fids (f->dir is a shared read-only resource).
+   One solution may be to not use readdir and roll our own on top
+   of getdents(2) and lseek(2), but that may not be portable.
