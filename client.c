@@ -1034,7 +1034,7 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		 * TODO: should we forbid fids duplication when fid ==
 		 * newfid?
 		 */
-		if (nf == NULL && 
+		if (nf == NULL &&
 		    (nf = new_fid(f->dir, newfid, f->fpath, &f->qid)) == NULL)
 			fatal("new_fid duplication");
 
@@ -1088,7 +1088,7 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		oldfd = fd;
 	}
 
-	/* 
+	/*
 	 * If fd is -1 we've reached a file, otherwise we've just
 	 * reached another directory.  We must pay attention to what
 	 * file descriptor we use to create the dir, because if we've
