@@ -20,3 +20,10 @@
    could use setpassent(3) and setgroupent(3), but if they change in the
    meantime we can't do anything.  Another solution would be to not
    to chroot(2) and just switch to the targeted user.
+
+ - find a way to avoid opening directories twice.  During a walk
+   we open the directories, but if later we try to open that fid,
+   we end up re-opening the same directory again!  It's not easy
+   to avoid because we need to fdopendir(3) and upon closedir it'll
+   close the file descriptor, while the same file descriptor could
+   be shared with other fids (f->dir is a shared read-only resource).
