@@ -1,3 +1,7 @@
+Stuff that's still to-do
+========================
+
+
  - compile with -D_FILE_OFFSET_BITS=64 on linux.
    related: this is needed only for glibc or musl too?
 
