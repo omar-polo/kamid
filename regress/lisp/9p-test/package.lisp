@@ -30,6 +30,6 @@
 (defpackage :kami-tests
   (:use :cl
         :clunit
-        :9p-client
+        :purgatory
         :all-tests)
   (:export))

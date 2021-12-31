@@ -26,7 +26,7 @@
                :usocket
                :babel
                :uiop
-               :9p-client)
+               :purgatory)
   :components ((:file "package")
                (:file "all-tests")
                (:file "kami-tests")))
