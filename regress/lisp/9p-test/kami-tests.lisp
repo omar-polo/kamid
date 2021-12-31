@@ -227,6 +227,22 @@
   (assert-eq   :file
       (stat-entry-type (example-stat *remote-test-path*))))
 
+(defun example-path-exists (path &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (root-fid        (mount stream root)))
+      (path-exists-p stream root-fid path)
+      (path-exists-p stream root-fid path))))
+
+(deftest test-path-exists ((kami-suite) (test-stat))
+  (assert-true  (example-path-exists *remote-test-path*))
+  (assert-false (example-path-exists (concatenate 'string *remote-test-path* ".$$$"))))
+
 (defun example-create-file (path &optional (root "/"))
   (with-open-ssl-stream (stream
                                        socket
@@ -261,7 +277,7 @@
 
 (alexandria:define-constant +create-directory+ "test-dir-create" :test #'string=)
 
-(defun example-create-path (path &optional (root "/"))
+(defun example-create-path-read-write (path &optional (root "/"))
   (with-open-ssl-stream (stream
                          socket
                          *host*
@@ -271,21 +287,41 @@
     (let* ((*messages-sent* ())
            (root-fid        (mount stream root))
            (saved-root-fid  (clone-fid stream root-fid))
-           (new-path-fid (create-path stream root-fid path)))
+           (new-path-fid    (create-path stream root-fid path)))
       (9p-write stream new-path-fid 0 *remote-test-path-contents*)
       (read-all-pending-message stream)
       (9p-clunk stream new-path-fid)
       (read-all-pending-message stream)
       (babel:octets-to-string (slurp-file stream saved-root-fid path)))))
 
-(alexandria:define-constant +create-path+ "/a/totaly/new/path/new-file" :test #'string=)
+(defun example-create-path (path &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (root-fid        (mount stream root)))
+      (create-path stream root-fid path))))
+
+(alexandria:define-constant +create-path-read-write+ "/a/totaly/new/path/new-file" :test #'string=)
+
+(alexandria:define-constant +create-path-dir+ "/this/" :test #'string=)
+
+(alexandria:define-constant +create-path-file+ "/this-file" :test #'string=)
 
 (deftest test-create ((kami-suite) (test-open-path))
   (assert-true (ignore-errors (example-create-file +create-file+)))
   (assert-true (ignore-errors (example-create-directory +create-directory+)))
+  (assert-true (ignore-errors (example-create-path +create-path-dir+)))
+  (assert-true (ignore-errors (example-create-path +create-path-file+)))
   (assert-equality #'string=
       *remote-test-path-contents*
-      (ignore-errors (example-create-path +create-path+))))
+      (ignore-errors (example-create-path-read-write +create-path-read-write+))))
+
+(deftest test-create-existing-path ((kami-suite) (test-create))
+  (assert-true (ignore-errors (example-create-path +create-path-read-write+))))
 
 (defun close-parent-fid (&optional (root "/"))
   (with-open-ssl-stream (stream
@@ -331,8 +367,8 @@
       (remove-path stream root-fid path)
       t)))
 
-(deftest test-remove-file ((kami-suite) (test-create))
-  (assert-true (ignore-errors (%remove-path +create-path+))))
+(deftest test-remove-file ((kami-suite) (test-create-existing-path))
+  (assert-true (ignore-errors (%remove-path +create-path-read-write+))))
 
 (defun parent-dir-path (path)
   (let ((position-backslash (position #\/ path :from-end t :test #'char=)))
@@ -340,7 +376,7 @@
 
 (deftest test-remove-directory ((kami-suite) (test-remove-file))
   (assert-true
-      (ignore-errors (%remove-path (parent-dir-path +create-path+)))))
+      (ignore-errors (%remove-path (parent-dir-path +create-path-read-write+)))))
 
 (defun read-dir-same-offset (dir-path &optional (root "/"))
   (with-open-ssl-stream (stream
