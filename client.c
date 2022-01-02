@@ -679,6 +679,11 @@ np_create(uint16_t tag, struct qid *qid, uint32_t iounit)
 static void
 np_read(uint16_t tag, uint32_t count, void *data)
 {
+	if (sizeof(count) + count + HEADERSIZE >= msize) {
+		np_error(tag, "Rread would overflow");
+		return;
+	}
+
 	np_header(sizeof(count) + count, Rread, tag);
 	np_write32(evb, count);
 	np_writebuf(evb, count, data);
@@ -696,6 +701,11 @@ np_write(uint16_t tag, uint32_t count)
 static void
 np_stat(uint16_t tag, uint32_t count, void *data)
 {
+	if (sizeof(count) + count + HEADERSIZE >= msize) {
+		np_error(tag, "Rstat would overflow");
+		return;
+	}
+
 	np_header(count, Rstat, tag);
 	np_writebuf(evb, count, data);
 	do_send();
