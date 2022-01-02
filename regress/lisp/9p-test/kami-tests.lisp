@@ -525,6 +525,5 @@
 
 (deftest test-read-a-tiny-amount-of-data ((kami-suite) (test-write-huge-file))
   (let ((buffer-size 256))
-    (assert-equality #'=
-        buffer-size
-        (length (read-data-exceeding-msize *remote-test-path-huge* buffer-size)))))
+    (assert-condition 9p-error
+        (read-data-exceeding-msize *remote-test-path-huge* buffer-size))))
