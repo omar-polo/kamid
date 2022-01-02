@@ -1371,6 +1371,7 @@ tread(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 {
 	struct fid	*f;
 	ssize_t		 r;
+	size_t		 howmuch;
 	uint64_t	 off;
 	uint32_t	 fid, count;
 	char		 buf[2048];
@@ -1397,7 +1398,8 @@ tread(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 
 	if (f->d == NULL) {
 		/* read a file */
-		r = pread(f->fd, buf, sizeof(buf), (off_t)off);
+		howmuch = MIN(sizeof(buf), count);
+		r = pread(f->fd, buf, howmuch, (off_t)off);
 		if (r == -1)
 			np_errno(hdr->tag);
 		else
