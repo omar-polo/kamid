@@ -499,3 +499,32 @@
     (assert-equality #'=
         amount
         (length (read-a-tiny-amount-of-data *remote-test-path-huge* amount)))))
+
+(defun read-data-exceeding-msize (path buffer-size &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (*buffer-size*   buffer-size)
+           (root-fid        (mount stream root))
+           (path-fid        (open-path stream root-fid path))
+           (results         nil))
+      (9p-read stream
+               path-fid
+               0
+               (* 2 buffer-size)
+               :callback (lambda (x reply)
+                           (declare (ignore x))
+                           (let ((data (decode-read-reply reply nil)))
+                             (setf results data))))
+      (read-all-pending-message stream)
+      results)))
+
+(deftest test-read-a-tiny-amount-of-data ((kami-suite) (test-write-huge-file))
+  (let ((buffer-size 256))
+    (assert-equality #'=
+        buffer-size
+        (length (read-data-exceeding-msize *remote-test-path-huge* buffer-size)))))
