@@ -23,6 +23,8 @@
 
 (defparameter *remote-test-path-write*   "/dir/subdir/test-file-write")
 
+(defparameter *remote-test-path-huge*    "/test-file-huge")
+
 (defparameter *remote-test-path-contents* (format nil "qwertyuiopasdfghjklòàù è~%"))
 
 (alexandria:define-constant +remote-test-path-ovewrwrite-data+ "12" :test #'string=)
@@ -417,5 +419,54 @@
            (root-fid        (mount stream root)))
       (collect-directory-children stream root-fid path))))
 
-(deftest collect-dir-root-children ((kami-suite) (test-read))
+(deftest test-collect-dir-root-children ((kami-suite) (test-read))
   (assert-true (example-directory-children "/")))
+
+(defun make-huge-data ()
+  (let* ((*random-state* (make-random-state t)))
+    (make-array 1000000
+                :element-type '(unsigned-byte 8)
+                :initial-contents (loop repeat 1000000
+                                        collect
+                                        (random 256)))))
+
+(defun write-huge-file (path &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (*buffer-size*   256)
+           (root-fid        (mount stream root))
+           (saved-root-fid  (clone-fid stream root-fid))
+           (fid             (create-path stream root-fid path))
+           (data            (make-huge-data)))
+      (9p-write stream fid 0 data)
+      (9p-clunk stream fid)
+      (read-all-pending-message stream)
+      (path-info stream saved-root-fid path))))
+
+(deftest test-write-huge-file ((kami-suite) (test-collect-dir-root-children))
+  (let* ((size-file  (stat-size (write-huge-file *remote-test-path-huge*))))
+    (assert-equality #'= (length (make-huge-data)) size-file)))
+
+(defun read-huge-file (path &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let ((*messages-sent* ())
+          (*buffer-size*   4096)
+          (root-fid        (mount stream root)))
+      (slurp-file stream
+                  root-fid path
+                  :buffer-size 3000))))
+
+(deftest test-read-huge-data ((kami-suite) (test-write-huge-file))
+  (assert-equality #'=
+      (length (make-huge-data))
+      (length (read-huge-file *remote-test-path-huge*))))
