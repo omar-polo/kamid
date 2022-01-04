@@ -9,15 +9,15 @@ server daemon for UNIX-like systems.
 kamid depends on libtls, libevent and yacc/GNU bison.  To build from a
 release tarball:
 
-	./configure
-	make
-	sudo make install # eventually
+	$ ./configure
+	$ make
+	# make install # eventually
 
 to build from a git checkout:
 
-	./bootstrap
-	./configure
-	make
+	$ ./bootstrap
+	$ ./configure
+	$ make
 
 
 ## Usage
