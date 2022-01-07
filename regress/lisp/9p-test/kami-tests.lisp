@@ -423,7 +423,7 @@
   (assert-true (example-directory-children "/")))
 
 (defun make-huge-data ()
-  (let* ((*random-state* (make-random-state t)))
+  (let* ((*random-state* (make-random-state nil)))
     (make-array 1000000
                 :element-type '(unsigned-byte 8)
                 :initial-contents (loop repeat 1000000
@@ -527,3 +527,46 @@
   (let ((buffer-size 256))
     (assert-condition 9p-error
         (read-data-exceeding-msize *remote-test-path-huge* buffer-size))))
+
+(deftest test-read-a-tiny-amount-of-data ((kami-suite) (test-write-huge-file))
+  (let ((buffer-size 256))
+    (assert-condition 9p-error
+        (read-data-exceeding-msize *remote-test-path-huge* buffer-size))))
+
+(defun example-copy-file (from to &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (root-fid        (mount stream root)))
+      (copy-file stream root-fid from to)
+      (slurp-file stream root-fid to))))
+
+(deftest test-copy-file ((kami-suite) (test-write-huge-file))
+  (assert-equality #'equalp
+      (make-huge-data)
+      (example-copy-file *remote-test-path-huge*
+                         (concatenate 'string
+                                      *remote-test-path-huge*
+                                      "-copy"))))
+
+(defun example-move-file (from to &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (root-fid        (mount stream root)))
+      (move-file stream root-fid from to)
+      (path-exists-p stream root-fid from))))
+
+(deftest test-move-file ((kami-suite) (test-copy-file))
+  (assert-false (example-move-file *remote-test-path-huge*
+                                   (concatenate 'string
+                                                *remote-test-path-huge*
+                                                "-renamed"))))
