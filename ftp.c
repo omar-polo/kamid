@@ -729,7 +729,9 @@ cmd_cd(int argc, const char **argv)
 static void
 cmd_get(int argc, const char **argv)
 {
+	struct qid qid;
 	const char *l;
+	int nfid;
 
 	if (argc != 1 && argc != 2) {
 		printf("usage: get remote-file [local-file]\n");
@@ -738,24 +740,24 @@ cmd_get(int argc, const char **argv)
 
 	if (argc == 2)
 		l = argv[1];
-	else if ((l = strrchr(argv[0], '/')) == NULL)
+	else if ((l = strrchr(argv[0], '/')) != NULL)
+		l++; /* skip / */
+	else
 		l = argv[1];
 
-	/* XXX: do_walk */
-	{
-		uint16_t nwqid;
-
-		twalk(pwdfid, 1, argv, 1);
-		do_send();
-		recv_msg();
-		expect2(Rwalk, iota_tag);
-
-		nwqid = np_read16(buf);
-		assert(nwqid == 1);
-		evbuffer_drain(buf, EVBUFFER_LENGTH(buf));
+	nfid = pwdfid+1;
+	if (walk_path(pwdfid, nfid, argv[0], &qid) == -1) {
+		printf("can't fetch %s\n", argv[0]);
+		return;
 	}
 
-	fetch_fid(1, l);
+	if (qid.type != 0) {
+		printf("can't fetch %s\n", argv[0]);
+		do_clunk(nfid);
+		return;
+	}
+
+	fetch_fid(nfid, l);
 }
 
 static void
