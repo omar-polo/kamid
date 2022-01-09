@@ -125,6 +125,7 @@ AS_CASE([$host_os],
 		], [AC_MSG_ERROR([requires libevent])])])
 
 AC_CHECK_LIB(util, imsg_init, [], [
+	AC_LIBOBJ(fmt_scaled)
 	AC_LIBOBJ(imsg)
 	AC_LIBOBJ(imsg-buffer)
 	AC_LIBOBJ(ohash)
