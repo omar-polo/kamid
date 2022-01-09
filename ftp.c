@@ -708,15 +708,22 @@ static void
 cmd_cd(int argc, const char **argv)
 {
 	struct qid qid;
+	int nfid;
 
 	if (argc != 1) {
 		printf("usage: cd remote-path\n");
 		return;
 	}
 
-	if (walk_path(pwdfid, pwdfid, argv[0], &qid) == -1 ||
-	    !(qid.type & QTDIR))
+	nfid = pwdfid+1;
+	if (walk_path(pwdfid, nfid, argv[0], &qid) == -1 ||
+	    !(qid.type & QTDIR)) {
 		printf("can't cd %s\n", argv[0]);
+		do_clunk(nfid);
+	} else {
+		do_clunk(pwdfid);
+		pwdfid = nfid;
+	}
 }
 
 static void
