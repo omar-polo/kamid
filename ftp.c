@@ -617,7 +617,7 @@ cmd_ls(int argc, const char **argv)
 		if (np_read_stat(dirbuf, &st) == -1)
 			errx(1, "invalid stat struct read");
 
-		printf("%s %"PRIu64" %s\n", pp_qid_type(st.qid.type),
+		printf("%4s %8"PRIu64" %s\n", pp_qid_type(st.qid.type),
 		    st.length, st.name);
 
 		free(st.name);
