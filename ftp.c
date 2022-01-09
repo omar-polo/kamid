@@ -299,8 +299,11 @@ expect(uint8_t type)
 	if (t == type)
 		return;
 
-	if (t == Terror) {
+	if (t == Rerror) {
 		char *err;
+
+		/* skip tag */
+		np_read16(buf);
 
 		err = np_readstr(buf);
 		errx(1, "expected %s, got error %s",
