@@ -7,6 +7,20 @@
 **/parse.c
 **/parse.h
 
+**/Makefile
+**/*.in
+**/.deps
+**/.dirstamp
+
+aclocal.m4
+autom4te.cache
+config.h
+config.log
+config.status
+configure
+etc
+stamp-h1
+
 kamictl/kamictl
 kamid/kamid
 kamiftp/kamiftp
