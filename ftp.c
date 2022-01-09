@@ -80,7 +80,7 @@ struct progress {
 	uint64_t	done;
 };
 
-#define PWDFID		0
+int pwdfid;
 
 #define ASSERT_EMPTYBUF() assert(EVBUFFER_LENGTH(buf) == 0)
 
@@ -361,7 +361,7 @@ do_attach(const char *path)
 	if ((user = getenv("USER")) == NULL)
 		user = "flan";
 
-	tattach(PWDFID, NOFID, user, path);
+	tattach(pwdfid, NOFID, user, path);
 	do_send();
 	recv_msg();
 	expect2(Rattach, iota_tag);
@@ -714,7 +714,7 @@ cmd_cd(int argc, const char **argv)
 		return;
 	}
 
-	if (walk_path(PWDFID, PWDFID, argv[0], &qid) == -1 ||
+	if (walk_path(pwdfid, pwdfid, argv[0], &qid) == -1 ||
 	    !(qid.type & QTDIR))
 		printf("can't cd %s\n", argv[0]);
 }
@@ -738,7 +738,7 @@ cmd_get(int argc, const char **argv)
 	{
 		uint16_t nwqid;
 
-		twalk(PWDFID, 1, argv, 1);
+		twalk(pwdfid, 1, argv, 1);
 		do_send();
 		recv_msg();
 		expect2(Rwalk, iota_tag);
@@ -799,7 +799,7 @@ cmd_ls(int argc, const char **argv)
 		return;
 	}
 
-	dup_fid(PWDFID, 1);
+	dup_fid(pwdfid, 1);
 	do_open(1, KOREAD);
 
 	evbuffer_drain(dirbuf, EVBUFFER_LENGTH(dirbuf));
