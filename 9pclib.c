@@ -40,7 +40,7 @@ write_hdr(uint32_t len, uint8_t type, uint16_t tag)
 	len = htole32(len);
 	/* type is one byte, no endiannes issues */
 	tag = htole16(tag);
-		
+
 	evbuffer_add(evb, &len, sizeof(len));
 	evbuffer_add(evb, &type, sizeof(type));
 	evbuffer_add(evb, &tag, sizeof(tag));

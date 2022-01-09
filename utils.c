@@ -115,7 +115,7 @@ pp_qid_type(uint8_t type)
 	case QTSYMLINK: return "symlink";
 	case QTFILE:    return "file";
 	}
-	
+
 	return "unknown";
 }
 
