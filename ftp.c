@@ -26,6 +26,7 @@
 #include <inttypes.h>
 #include <netdb.h>
 #include <limits.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -60,6 +61,10 @@ struct evbuffer		*buf;
 struct evbuffer		*dirbuf;
 uint32_t		 msize;
 int			 bell;
+
+volatile sig_atomic_t	 resized;
+int			 tty_p;
+int			 tty_width;
 
 struct np_stat {
 	uint16_t	 type;
@@ -122,6 +127,12 @@ read_line(const char *prompt)
 	return line;
 }
 #endif
+
+static void
+tty_resized(int signo)
+{
+	resized = 1;
+}
 
 static void __dead
 usage(int ret)
@@ -495,15 +506,25 @@ draw_progress(const char *pre, const struct progress *p)
 	int i, l, w;
 	double perc;
 
-	if (ioctl(0, TIOCGWINSZ, &ws) == -1)
-		return;
-
-	w = ws.ws_col;
-
-	if (pre == NULL || ((l = printf("\r%s ", pre)) == -1 || l >= w))
-		return;
-
 	perc = 100.0 * p->done / p->max;
+	if (!tty_p) {
+		fprintf(stderr, "%s: %d%%\n", pre, (int)perc);
+		return;
+	}
+
+	if (resized) {
+		resized = 0;
+
+		if (ioctl(0, TIOCGWINSZ, &ws) == -1)
+			return;
+		tty_width = ws.ws_col;
+	}
+	w = tty_width;
+
+	if (pre == NULL ||
+	    ((l = printf("\r%s ", pre)) == -1 || l >= w))
+		return;
+
 	w -= l + 2 + 5; /* 2 for |, 5 for percentage + \n */
 	if (w < 0) {
 		printf("%4d%%\n", (int)perc);
@@ -556,6 +577,14 @@ fetch_fid(int fid, const char *path)
 
 		p.done += r;
 		draw_progress(path, &p);
+
+#if 0
+		/* throttle, for debugging purpose */
+		{
+			struct timespec ts = { 0, 500000000 };
+			nanosleep(&ts, NULL);
+		}
+#endif
 	}
 
 	putchar('\n');
@@ -938,6 +967,12 @@ main(int argc, char **argv)
 
 	if (argc == 0)
 		usage(1);
+
+	if (isatty(1)) {
+		tty_p = 1;
+		resized = 1;
+		signal(SIGWINCH, tty_resized);
+	}
 
 	if ((evb = evbuffer_new()) == NULL)
 		fatal("evbuffer_new");
