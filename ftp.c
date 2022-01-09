@@ -985,8 +985,6 @@ main(int argc, char **argv)
 
 	do_connect(argv[0], argv[1]);
 
-	/* cmd_ls(0, NULL); */
-
 	for (;;) {
 		int argc = 0;
 		char *line, *argv[16] = {0}, **ap;
