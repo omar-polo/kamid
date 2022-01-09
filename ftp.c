@@ -512,7 +512,7 @@ draw_progress(const char *pre, const struct progress *p)
 
 	printf("|");
 
-	l = w * perc / 100.0;
+	l = w * MIN(100.0, perc) / 100.0;
 	for (i = 0; i < l; i++)
 		printf("*");
 	for (; i < w; i++)
