@@ -236,6 +236,14 @@ twrite(uint32_t fid, uint64_t off, const void *data, uint32_t count)
 }
 
 void
+tstat(uint32_t fid)
+{
+	/* fid[4] */
+	write_hdr_auto(sizeof(fid), Tstat);
+	write_fid(fid);
+}
+
+void
 tremove(uint32_t fid)
 {
 	/* fid[4] */
