@@ -1,0 +1,61 @@
+include "lib.9ps"
+
+testing "if version works" dir "./../root" {
+	send(Tversion, notag, msize, np2000)
+	m = recv()
+	assert m.type == Rversion
+}
+
+testing "fails when sending a R-message" dir "./../root" {
+	send(Rversion, notag, msize, np2000)
+	should-fail recv() : "the connection should have been closed"
+}
+
+testing "multiple attach" dir "./../root" {
+	version(msize, np2000)
+
+	m = recv()
+	assert (
+		m.type == Rversion
+		m.tag == notag
+		m.msize <= msize
+	)
+
+	fid1 = 0
+	fid2 = 1
+
+	# attach the first fid
+	attach(fid1, nofid, "op", "/")
+	m = recv()
+	assert (
+		m.type == Rattach
+		m.qid.type == QTDIR
+	)
+
+	# attach the second fid
+	attach(fid2, nofid, "op", "/")
+	m = recv()
+	assert (
+		m.type == Rattach
+		m.qid.type == QTDIR
+	)
+}
+
+testing "don't close used qids" dir "./../root" {
+	mount(0, "/")
+
+	walk(0, 2, "dir")
+	expect(Rwalk)
+
+	clunk(0)
+	expect(Rclunk)
+
+	walk(2, 3, "a-file")
+	expect(Rwalk)
+
+	clunk(2)
+	expect(Rclunk)
+
+	open(3, OREAD)
+	expect(Ropen)
+}

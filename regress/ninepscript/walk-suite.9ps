@@ -1,0 +1,74 @@
+include "lib.9ps"
+
+# TODO: add a test that tries to do a walk after opening a fid for i/o.
+
+testing "walk to a directory" dir "./../root" {
+	mount(0, "/")
+	walk(0, 1, "dir", "subdir")
+
+	m = recv()
+	assert (
+		m.type == Rwalk
+		m.nwqid == 2
+		m.wqid.0.type == QTDIR
+		m.wqid.1.type == QTDIR
+	)
+}
+
+testing "walk to a file" dir "./../root" {
+	mount(0, "/")
+	walk(0, 1, "dir", "subdir", "file")
+
+	m = recv()
+	assert (
+		m.type == Rwalk
+		m.nwqid == 3
+		m.wqid.0.type == QTDIR
+		m.wqid.1.type == QTDIR
+		m.wqid.2.type == QTFILE
+	)
+}
+
+testing "can't walk from a file" dir "./../root" {
+	mount(0, "/")
+
+	walk(0, 1, "dir", "a-file")
+	expect(Rwalk)
+
+	walk(1, 2, "subdir", "file")
+	expect-error()
+}
+
+testing "walk with invalid fid" dir "./../root" {
+	mount(0, "/")
+	walk(1, 2)
+	expect-error()
+}
+
+testing "walk with empty string" dir "./../root" {
+	mount(0, "/")
+	walk(0, 1, "")
+	expect-error()
+}
+
+testing "walk to a non-existant file" dir "./../root" {
+	mount(0, "/")
+	walk(0, 1, "non-exists")
+	expect-error()
+}
+
+testing "walk with an invalid component" dir "./../root" {
+	mount(0, "/")
+	walk(0, 1, "/non-exists")
+	expect-error()
+}
+
+testing "zero-path walk don't reply with a qid" dir "./../root" {
+	mount(0, "/")
+	walk(0, 1)
+	m = recv()
+	assert (
+		m.type == Rwalk
+		m.nwqid == 0
+	)
+}
