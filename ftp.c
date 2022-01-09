@@ -16,11 +16,13 @@
 
 #include "compat.h"
 
+#include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
 #include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <inttypes.h>
 #include <netdb.h>
 #include <limits.h>
@@ -71,6 +73,11 @@ struct np_stat {
 	char		*uid;
 	char		*gid;
 	char		*muid;
+};
+
+struct progress {
+	uint64_t	max;
+	uint64_t	done;
 };
 
 #define PWDFID		0
@@ -407,6 +414,117 @@ dup_fid(int fid, int nfid)
 }
 
 static void
+do_stat(int fid, struct np_stat *st)
+{
+	tstat(fid);
+	do_send();
+	recv_msg();
+	expect2(Rstat, iota_tag);
+
+	if (np_read_stat(buf, st) == -1)
+		errx(1, "invalid stat struct read");
+
+	ASSERT_EMPTYBUF();
+}
+
+static size_t
+do_read(int fid, uint64_t off, uint32_t count, void *data)
+{
+	uint32_t r;
+
+	tread(fid, off, count);
+	do_send();
+	recv_msg();
+	expect2(Rread, iota_tag);
+
+	r = np_read32(buf);
+	assert(r == EVBUFFER_LENGTH(buf));
+	assert(r <= count);
+	evbuffer_remove(buf, data, r);
+
+	ASSERT_EMPTYBUF();
+
+	return r;
+}
+
+static void
+draw_progress(const char *pre, const struct progress *p)
+{
+	struct winsize ws;
+	int i, l, w;
+	double perc;
+
+	if (ioctl(0, TIOCGWINSZ, &ws) == -1)
+		return;
+
+	w = ws.ws_col;
+
+	if (pre == NULL || ((l = printf("\r%s ", pre)) == -1 || l >= w))
+		return;
+
+	perc = 100.0 * p->done / p->max;
+	w -= l + 2 + 5; /* 2 for |, 5 for percentage + \n */
+	if (w < 0) {
+		printf("%4d%%\n", (int)perc);
+		return;
+	}
+
+	printf("|");
+
+	l = w * perc / 100.0;
+	for (i = 0; i < l; i++)
+		printf("*");
+	for (; i < w; i++)
+		printf(" ");
+	printf("|%4d%%", (int)perc);
+
+	fflush(stdout);
+}
+
+static int
+fetch_fid(int fid, const char *path)
+{
+	struct progress p = {0};
+	struct np_stat st;
+	size_t r;
+	int fd;
+	char buf[BUFSIZ];
+
+	do_stat(fid, &st);
+	do_open(fid, KOREAD);
+
+	if ((fd = open(path, O_WRONLY|O_CREAT|O_TRUNC, 0644)) == -1) {
+		warn("can't open %s", path);
+		return -1;
+	}
+
+	p.max = st.length;
+	for (;;) {
+		size_t siz, off;
+		ssize_t nw;
+
+		r = do_read(fid, p.done, sizeof(buf), buf);
+		if (r == 0)
+			break;
+
+		siz = sizeof(buf);
+		for (off = 0; off < siz; off += nw)
+			if ((nw = write(fd, buf + off, siz - off)) == 0 ||
+			    nw == -1)
+				err(1, "write");
+
+		p.done += r;
+		draw_progress(path, &p);
+	}
+
+	putchar('\n');
+
+	close(fd);
+	do_clunk(fid);
+	return 0;
+}
+
+static void
 do_tls_connect(const char *host, const char *port)
 {
 	int handshake;
@@ -546,6 +664,38 @@ cmd_bye(int argc, const char **argv)
 }
 
 static void
+cmd_get(int argc, const char **argv)
+{
+	const char *l;
+
+	if (argc != 1 && argc != 2) {
+		printf("usage: get remote-file [local-file]\n");
+		return;
+	}
+
+	if (argc == 2)
+		l = argv[1];
+	else if ((l = strrchr(argv[0], '/')) == NULL)
+		l = argv[1];
+
+	/* XXX: do_walk */
+	{
+		uint16_t nwqid;
+
+		twalk(PWDFID, 1, argv, 1);
+		do_send();
+		recv_msg();
+		expect2(Rwalk, iota_tag);
+
+		nwqid = np_read16(buf);
+		assert(nwqid == 1);
+		evbuffer_drain(buf, EVBUFFER_LENGTH(buf));
+	}
+
+	fetch_fid(1, l);
+}
+
+static void
 cmd_lcd(int argc, const char **argv)
 {
 	const char *dir;
@@ -672,6 +822,7 @@ excmd(int argc, const char **argv)
 	} cmds[] = {
 		{"bell",	cmd_bell},
 		{"bye",		cmd_bye},
+		{"get",		cmd_get},
 		{"lcd",		cmd_lcd},
 		{"lpwd",	cmd_lpwd},
 		{"ls",		cmd_ls},
