@@ -1,17 +1,17 @@
 include "lib.9ps"
 
-testing "if version works" dir "./../root" {
+testing "if version works" {
 	send(Tversion, notag, msize, np2000)
 	m = recv()
 	assert m.type == Rversion
 }
 
-testing "fails when sending a R-message" dir "./../root" {
+testing "fails when sending a R-message" {
 	send(Rversion, notag, msize, np2000)
 	should-fail recv() : "the connection should have been closed"
 }
 
-testing "multiple attach" dir "./../root" {
+testing "multiple attach" {
 	version(msize, np2000)
 
 	m = recv()
@@ -41,7 +41,7 @@ testing "multiple attach" dir "./../root" {
 	)
 }
 
-testing "don't close used qids" dir "./../root" {
+testing "don't close used qids" {
 	mount(0, "/")
 
 	walk(0, 2, "dir")

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Omar Polo <op@omarpolo.com>
+ * Copyright (c) 2021, 2022 Omar Polo <op@omarpolo.com>
  * Copyright (c) 2018 Florian Obser <florian@openbsd.org>
  * Copyright (c) 2004, 2005 Esben Norby <norby@openbsd.org>
  * Copyright (c) 2004 Ryan McBride <mcbride@openbsd.org>
@@ -88,7 +88,6 @@ typedef struct {
 
 %token	ASSERT
 %token	CONST
-%token	DIR
 %token	ERROR
 %token	INCLUDE
 %token	PROC
@@ -263,10 +262,10 @@ massert	: asserti nl | massert asserti nl ;
 asserti	: check			{ block_push(op_assert($1)); }
 	;
 
-test	: TESTING STRING DIR STRING {
+test	: TESTING STRING {
 		prepare_test();
 	} testopt '{' optnl block '}' {
-		test_done(shouldfail, $2, $4);
+		test_done(shouldfail, $2);
 		shouldfail = 0;
 	}
 	;
@@ -311,7 +310,6 @@ lookup(char *s)
 	static const struct keywords keywords[] = {
 		{"assert",	ASSERT},
 		{"const",	CONST},
-		{"dir",		DIR},
 		{"include",	INCLUDE},
 		{"proc",	PROC},
 		{"repeat",	REPEAT},
@@ -451,7 +449,6 @@ yylex(void)
 	switch (x = my_yylex()) {
 	case ASSERT: puts("assert"); break;
 	case CONST: puts("const"); break;
-	case DIR: puts("dir"); break;
 	case ERROR: puts("error"); break;
 	case INCLUDE: puts("include"); break;
 	case PROC: puts("proc"); break;

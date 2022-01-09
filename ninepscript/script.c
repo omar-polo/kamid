@@ -49,6 +49,8 @@
 #endif
 
 static const char	*argv0;
+static const char	*dir;
+static uid_t		 uid;
 
 static uint8_t		*lastmsg;
 
@@ -1279,14 +1281,13 @@ prepare_test(void)
 }
 
 void
-test_done(int shouldfail, char *name, char *dir)
+test_done(int shouldfail, char *name)
 {
 	struct test	*test;
 
 	test = xcalloc(1, sizeof(*test));
 	test->shouldfail = shouldfail;
 	test->name = name;
-	test->dir = dir;
 	test->body = finalize(&blocks, NULL);
 
 	if (TAILQ_EMPTY(&tests))
@@ -1590,18 +1591,14 @@ static void
 prepare_child_for_test(struct test *t)
 {
 	struct passwd	*pw;
-	struct stat	 sb;
 
-	if (stat(t->dir, &sb) == -1)
-		fatal("stat(\"%s\")", t->dir);
-
-	if ((pw = getpwuid(sb.st_uid)) == NULL)
-		fatal("getpwuid(%d)", sb.st_uid);
+	if ((pw = getpwuid(uid)) == NULL)
+		fatal("getpwuid(%d)", uid);
 
 	imsg_compose(&ibuf, IMSG_AUTH, 0, 0, -1,
 	    pw->pw_name, strlen(pw->pw_name)+1);
 	imsg_compose(&ibuf, IMSG_AUTH_DIR, 0, 0, -1,
-	    t->dir, strlen(t->dir)+1);
+	    dir, strlen(dir)+1);
 
 	if (imsg_flush(&ibuf) == -1)
 		fatal("imsg_flush");
@@ -1656,6 +1653,7 @@ run_test(struct test *t)
 int
 main(int argc, char **argv)
 {
+	struct stat	 sb;
 	struct test	*t;
 	int		 ch, i, r, passed = 0, failed = 0, skipped = 0;
 	int		 runclient = 0;
@@ -1679,7 +1677,7 @@ main(int argc, char **argv)
 	add_builtin_proc("send", builtin_send, 2, 1);
 	add_builtin_proc("recv", builtin_recv, 0, 0);
 
-	while ((ch = getopt(argc, argv, "nT:vx:")) != -1) {
+	while ((ch = getopt(argc, argv, "nT:r:vx:")) != -1) {
 		switch (ch) {
 		case 'n':
 			syntaxcheck = 1;
@@ -1687,6 +1685,9 @@ main(int argc, char **argv)
 		case 'T':
 			assert(*optarg == 'c');
                         runclient = 1;
+			break;
+		case 'r':
+			dir = optarg;
 			break;
 		case 'v':
 			debug = 1;
@@ -1705,6 +1706,13 @@ main(int argc, char **argv)
 
 	if (runclient)
 		client(1, debug);
+
+	if (dir == NULL)
+		fatal("missing root test dir");
+	
+	if (stat(dir, &sb) == -1)
+		fatal("stat(\"%s\")", dir);
+	uid = sb.st_uid;
 
 	if (pat == NULL)
 		pat = ".*";
