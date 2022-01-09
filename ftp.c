@@ -413,8 +413,8 @@ dup_fid(int fid, int nfid)
 	ASSERT_EMPTYBUF();
 }
 
-static size_t
-walk_path(int fid, int newfid, const char *path, size_t *rnw, struct qid *qids)
+static int
+walk_path(int fid, int newfid, const char *path, struct qid *qid)
 {
 	char *wnames[MAXWELEM], *p, *t;
 	size_t nwname, i;
@@ -434,8 +434,6 @@ walk_path(int fid, int newfid, const char *path, size_t *rnw, struct qid *qids)
 			nwname++;
 	}
 
-	*rnw = nwname;
-
 	twalk(fid, newfid, (const char **)wnames, nwname);
 	do_send();
 	recv_msg();
@@ -444,12 +442,13 @@ walk_path(int fid, int newfid, const char *path, size_t *rnw, struct qid *qids)
 	nwqid = np_read16(buf);
 	assert(nwqid <= nwname);
 
+	/* consume all qids */
 	for (i = 0; i < nwname; ++i)
-		np_read_qid(buf, &qids[i]);
+		np_read_qid(buf, qid);
 
 	free(p);
 
-	return nwqid;
+	return nwqid == nwname;
 }
 
 static void
@@ -705,16 +704,15 @@ cmd_bye(int argc, const char **argv)
 static void
 cmd_cd(int argc, const char **argv)
 {
-	struct qid qids[MAXWELEM];
-	size_t nwname, nwqid;
+	struct qid qid;
 
 	if (argc != 1) {
 		printf("usage: cd remote-path\n");
 		return;
 	}
 
-	nwqid = walk_path(PWDFID, PWDFID, argv[0], &nwname, qids);
-	if (nwqid != nwname)
+	if (walk_path(PWDFID, PWDFID, argv[0], &qid) == -1 ||
+	    !(qid.type & QTDIR))
 		printf("can't cd %s\n", argv[0]);
 }
 
