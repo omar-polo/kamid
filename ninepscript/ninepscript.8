@@ -12,7 +12,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: December 02 2021$
+.Dd $Mdocdate: January 09 2022$
 .Dt NINEPSCRIPT 8
 .Os
 .Sh NAME
@@ -21,6 +21,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl nv
+.Fl r Ar dir
 .Op Fl x Ar pattern
 .Ar
 .Sh DESCRIPTION
@@ -37,6 +38,10 @@ The options are as follows:
 .It Fl n
 don't run the test, check only the syntax of the provided
 .Ar files .
+.It Fl r Ar dir
+Use the specified
+.Ar
+as root for the tests.
 .It Fl v
 verbose logging, print more information during the tests execution.
 .It Fl x Ar pattern

@@ -1,6 +1,6 @@
 include "lib.9ps"
 
-testing "open + clunk works" dir "./../root" {
+testing "open + clunk works" {
 	mount(0, "/")
 	walk(0, 1, "dir", "subdir", "file")
 	expect(Rwalk)
@@ -14,7 +14,7 @@ testing "open + clunk works" dir "./../root" {
 	assert m.type == Rclunk
 }
 
-testing "can open directories" dir "./../root" {
+testing "can open directories" {
 	mount(0, "/")
 	walk(0, 1, "dir", "subdir")
 	expect(Rwalk)
@@ -28,7 +28,7 @@ testing "can open directories" dir "./../root" {
 	assert m.type == Rclunk
 }
 
-testing "can't open directories for writing" dir "./../root" {
+testing "can't open directories for writing" {
 	mount(0, "/")
 	walk(0, 1, "dir")
 	expect(Rwalk)

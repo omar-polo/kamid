@@ -12,7 +12,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: December 02 2021$
+.Dd $Mdocdate: January 09 2022$
 .Dt NINEPSCRIPT 5
 .Os
 .Sh NAME
@@ -143,16 +143,10 @@ are defined to the value passed by the caller.
 A routine may be called only within another routine body or inside a
 .Ic testing
 body.
-.It Ic testing Ar reason Ic dir Ar path Brq code ...
+.It Ic testing Ar reason Brq code ...
 Define a test case.
 .Ar reason
-is what the test block is about and
-.Ar path
-is the path to the root directory where the test will be executed.
-.Ar reason
-and
-.Ar path
-must be string literals.
+is what the test block is about and must be a string literal.
 .El
 .Pp
 Inside a
