@@ -8,7 +8,7 @@ MAN=		kamiftp.1
 
 CPPFLAGS=	-I${.CURDIR}/../lib -I${.CURDIR}
 
-LDADD+= -levent -lutil -ltls
+LDADD+= -levent -lutil -ltls -lreadline
 DPADD+= ${LIBEVENT} ${LIBUTIL} ${LIBTLS}
 
 .if ${KAMID_RELEASE} != Yes

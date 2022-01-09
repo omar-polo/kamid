@@ -35,10 +35,8 @@
 #include <unistd.h>
 #include <util.h>
 
-#if HAVE_LIBREADLINE
 #include <readline/readline.h>
 #include <readline/history.h>
-#endif
 
 #ifndef nitems
 #define nitems(_a)	(sizeof((_a)) / sizeof((_a)[0]))
@@ -90,7 +88,6 @@ int pwdfid;
 
 #define ASSERT_EMPTYBUF() assert(EVBUFFER_LENGTH(buf) == 0)
 
-#if HAVE_LIBREADLINE
 static char *
 read_line(const char *prompt)
 {
@@ -108,26 +105,6 @@ again:
 	add_history(line);
 	return line;
 }
-#else
-static char *
-read_line(const char *prompt)
-{
-	char *ch, *line = NULL;
-	size_t linesize = 0;
-	ssize_t linelen;
-
-	printf("%s", prompt);
-	fflush(stdout);
-
-	linelen = getline(&line, &linesize, stdin);
-	if (linelen == -1)
-		return NULL;
-
-	if ((ch = strchr(line, '\n')) != NULL)
-		*ch = '\0';
-	return line;
-}
-#endif
 
 static void
 tty_resized(int signo)
