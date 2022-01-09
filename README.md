@@ -6,29 +6,32 @@ server daemon for UNIX-like systems.
 
 ## Building
 
-kamid depends on libtls, libevent and yacc/GNU bison.  To build from a
-release tarball:
+NB: the -main branch targets only OpenBSD.  To build on other
+platforms, use the -portable branch.
 
-	$ ./configure
+	$ majo obj
 	$ make
-	# make install # eventually
+	$ make install
 
-to build from a git checkout:
+This will install the following commands:
 
-	$ ./bootstrap
-	$ ./configure
-	$ make
-
+ - kamid, the daemon
+ - kamictl, an utility to control the daemon
+ - kamiftp, an ftp(1)-like 9p client
+ - kamirepl, a low-level 9p client
+ - man pages (only installed if building sources from a kamid release
+   tarball)
 
 ## Usage
 
-In order to run, a `_kamid` user must exists.  The home directory of
-`_kamid` should be `/var/empty` or similar.  A configuration file is
-also needed.  kamid must be started with root privileges.
+In order to run, the `_kamid` user must exists, with `/var/empty` as
+home directory.  A valid configuration file `/etc/kamid.conf` is also
+needed.  kamid must be started with root privileges.
 
 A sample configuration file:
 
 ```
+# /etc/kamid.conf
 pki localhost cert "/etc/ssl/localhost.crt"
 pki localhost key  "/etc/ssl/private/localhost.key"
 
@@ -40,23 +43,20 @@ listen on localhost port 1337 tls pki localhost auth <users>
 
 ## Testing
 
-The regression suite needs to be run with root privileges, since it
-has to spawn a subprocess that needs to `chroot(2)` itself.  To run
-the tests, issue
+The regression suite uses doas(1) because it needs root privileges for
+some operatinos.  To run the test suite:
 
-	$ make ninepscript && sudo ./run-tests.sh
+	$ make regress
 
-The regression uses a custom DSL, `ninepscript`, to run the tests.
-See `regress/sample.9ps` for an example of the grammar.
+The regression are written with a custom DSL, called ninepscript.
 `contrib/9ps-mode.el` is the major mode for Emacs.
 
 There's another regression suite written in common lisp in
 `regress/lisp/9p-test`; it depends on other common lisp libraries
-available through quicklisp.  To run it execute
+available through quicklisp.  Make sure to have sbcl installed and the
+relevant lisp dependencies installed, then run
 
-	$ DOAS=sudo ./run-extra-tests.sh
-
-(leave `DOAS=sudo` out if you have doas installed and configured)
+	$ make HAVE_LISP=yes regress
 
 
 ## License
