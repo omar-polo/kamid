@@ -21,6 +21,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <netdb.h>
 #include <limits.h>
 #include <stdio.h>
@@ -57,6 +58,20 @@ struct evbuffer		*buf;
 struct evbuffer		*dirbuf;
 uint32_t		 msize;
 int			 bell;
+
+struct np_stat {
+	uint16_t	 type;
+	uint32_t	 dev;
+	struct qid	 qid;
+	uint32_t	 mode;
+	uint32_t	 atime;
+	uint32_t	 mtime;
+	uint64_t	 length;
+	char		*name;
+	char		*uid;
+	char		*gid;
+	char		*muid;
+};
 
 #define PWDFID		0
 
@@ -240,6 +255,32 @@ np_read_qid(struct evbuffer *buf, struct qid *qid)
 	qid->type = np_read8(buf);
 	qid->vers = np_read32(buf);
 	qid->path = np_read64(buf);
+}
+
+static int
+np_read_stat(struct evbuffer *buf, struct np_stat *st)
+{
+	uint16_t size;
+
+	memset(st, 0, sizeof(*st));
+
+	size = np_read16(buf);
+	if (size > EVBUFFER_LENGTH(buf))
+		return -1;
+
+	st->type = np_read16(buf);
+	st->dev = np_read32(buf);
+	np_read_qid(buf, &st->qid);
+	st->mode = np_read32(buf);
+	st->atime = np_read32(buf);
+	st->mtime = np_read32(buf);
+	st->length = np_read64(buf);
+	st->name = np_readstr(buf);
+	st->uid = np_readstr(buf);
+	st->gid = np_readstr(buf);
+	st->muid = np_readstr(buf);
+
+	return 0;
 }
 
 static void
@@ -542,6 +583,7 @@ cmd_lpwd(int argc, const char **argv)
 static void
 cmd_ls(int argc, const char **argv)
 {
+	struct np_stat st;
 	uint64_t off = 0;
 	uint32_t len;
 
@@ -572,34 +614,16 @@ cmd_ls(int argc, const char **argv)
 	}
 
 	while (EVBUFFER_LENGTH(dirbuf) != 0) {
-		struct qid	 qid;
-		uint64_t	 len;
-		uint16_t	 size;
-		char		*name;
+		if (np_read_stat(dirbuf, &st) == -1)
+			errx(1, "invalid stat struct read");
 
-		size = np_read16(dirbuf);
-		assert(size <= EVBUFFER_LENGTH(dirbuf));
+		printf("%s %"PRIu64" %s\n", pp_qid_type(st.qid.type),
+		    st.length, st.name);
 
-		np_read16(dirbuf); /* skip type */
-		np_read32(dirbuf); /* skip dev */
-
-		np_read_qid(dirbuf, &qid);
-		printf("%s ", pp_qid_type(qid.type));
-
-		np_read32(dirbuf); /* skip mode */
-		np_read32(dirbuf); /* skip atime */
-		np_read32(dirbuf); /* skip mtime */
-
-		len = np_read64(dirbuf);
-		printf("%llu ", (unsigned long long)len);
-
-		name = np_readstr(dirbuf);
-		printf("%s\n", name);
-		free(name);
-
-		free(np_readstr(dirbuf)); /* skip uid */
-		free(np_readstr(dirbuf)); /* skip gid */
-		free(np_readstr(dirbuf)); /* skip muid */
+		free(st.name);
+		free(st.uid);
+		free(st.gid);
+		free(st.muid);
 	}
 
 	do_clunk(1);
