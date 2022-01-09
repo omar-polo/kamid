@@ -413,6 +413,45 @@ dup_fid(int fid, int nfid)
 	ASSERT_EMPTYBUF();
 }
 
+static size_t
+walk_path(int fid, int newfid, const char *path, size_t *rnw, struct qid *qids)
+{
+	char *wnames[MAXWELEM], *p, *t;
+	size_t nwname, i;
+	uint16_t nwqid;
+
+	if ((p = strdup(path)) == NULL)
+		err(1, "strdup");
+	t = p;
+
+	/* strip initial ./ */
+	if (t[0] == '.' && t[1] == '/')
+		t += 2;
+
+	for (nwname = 0; nwname < nitems(wnames) &&
+	    (wnames[nwname] = strsep(&t, "/")) != NULL;) {
+		if (*wnames[nwname] != '\0')
+			nwname++;
+	}
+
+	*rnw = nwname;
+
+	twalk(fid, newfid, (const char **)wnames, nwname);
+	do_send();
+	recv_msg();
+	expect2(Rwalk, iota_tag);
+
+	nwqid = np_read16(buf);
+	assert(nwqid <= nwname);
+
+	for (i = 0; i < nwname; ++i)
+		np_read_qid(buf, &qids[i]);
+
+	free(p);
+
+	return nwqid;
+}
+
 static void
 do_stat(int fid, struct np_stat *st)
 {
@@ -664,6 +703,22 @@ cmd_bye(int argc, const char **argv)
 }
 
 static void
+cmd_cd(int argc, const char **argv)
+{
+	struct qid qids[MAXWELEM];
+	size_t nwname, nwqid;
+
+	if (argc != 1) {
+		printf("usage: cd remote-path\n");
+		return;
+	}
+
+	nwqid = walk_path(PWDFID, PWDFID, argv[0], &nwname, qids);
+	if (nwqid != nwname)
+		printf("can't cd %s\n", argv[0]);
+}
+
+static void
 cmd_get(int argc, const char **argv)
 {
 	const char *l;
@@ -822,6 +877,7 @@ excmd(int argc, const char **argv)
 	} cmds[] = {
 		{"bell",	cmd_bell},
 		{"bye",		cmd_bye},
+		{"cd",		cmd_cd},
 		{"get",		cmd_get},
 		{"lcd",		cmd_lcd},
 		{"lpwd",	cmd_lpwd},
