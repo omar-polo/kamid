@@ -23,14 +23,12 @@
 
 %{
 
-#include <sys/types.h>
-#include <sys/queue.h>
+#include "compat.h"
+
 #include <sys/stat.h>
 
 #include <ctype.h>
-#include <err.h>
 #include <errno.h>
-#include <event.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <stdarg.h>
@@ -39,7 +37,6 @@
 #include <string.h>
 #include <syslog.h>
 #include <unistd.h>
-#include <imsg.h>
 
 #include "log.h"
 #include "kamid.h"

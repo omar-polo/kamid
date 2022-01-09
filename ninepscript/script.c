@@ -14,16 +14,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <sys/queue.h>
+#include "compat.h"
+
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 
 #include <assert.h>
 #include <endian.h>
-#include <err.h>
 #include <errno.h>
-#include <event.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <poll.h>
@@ -1710,7 +1709,7 @@ main(int argc, char **argv)
 	if (pat == NULL)
 		pat = ".*";
 
-	if (regcomp(&reg, pat, REG_BASIC | REG_ICASE | REG_NOSUB) != 0)
+	if (regcomp(&reg, pat, REG_ICASE | REG_NOSUB) != 0)
 		fatalx("invalid regexp: %s", pat);
 
 	for (i = 0; i < argc; ++i)

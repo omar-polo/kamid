@@ -14,10 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "compat.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
-#include <sys/queue.h>
 #include <sys/uio.h>
 #include <sys/un.h>
 
@@ -25,12 +26,10 @@
 #include <net/if.h>
 
 #include <errno.h>
-#include <event.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <imsg.h>
 
 #include "control.h"
 #include "kamid.h"

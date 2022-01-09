@@ -14,8 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "compat.h"
+
 #include <endian.h>
-#include <event.h>
 #include <inttypes.h>
 #include <string.h>
 

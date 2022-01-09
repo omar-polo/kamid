@@ -14,6 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "compat.h"
+
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -21,9 +23,7 @@
 
 #include <assert.h>
 #include <endian.h>
-#include <err.h>
 #include <errno.h>
-#include <event.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <signal.h>
@@ -33,7 +33,6 @@
 #include <syslog.h>
 #include <tls.h>
 #include <unistd.h>
-#include <vis.h>
 
 #include "9pclib.h"
 #include "kami.h"

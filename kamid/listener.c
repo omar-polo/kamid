@@ -18,15 +18,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "compat.h"
+
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <sys/tree.h>
-#include <sys/queue.h>
 #include <sys/uio.h>
 
 #include <endian.h>
 #include <errno.h>
-#include <event.h>
 #include <inttypes.h>
 #include <pwd.h>
 #include <signal.h>
@@ -36,7 +35,6 @@
 #include <string.h>
 #include <syslog.h>
 #include <unistd.h>
-#include <imsg.h>
 
 #include "control.h"
 #include "kami.h"
