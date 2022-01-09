@@ -1710,7 +1710,7 @@ main(int argc, char **argv)
 	if (pat == NULL)
 		pat = ".*";
 
-	if (regcomp(&reg, pat, REG_BASIC | REG_ICASE | REG_NOSUB) != 0)
+	if (regcomp(&reg, pat, REG_ICASE | REG_NOSUB) != 0)
 		fatalx("invalid regexp: %s", pat);
 
 	for (i = 0; i < argc; ++i)
