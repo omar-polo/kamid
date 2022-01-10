@@ -131,6 +131,23 @@ AC_CHECK_LIB(util, imsg_init, [], [
 	AC_LIBOBJ(ohash)
 ])
 
+# Check for readline
+AS_CASE([$host_os],
+	[*openbsd*], [
+		AC_DEFINE([HAVE_READLINE], 1, [1 if readline found])
+		READLINE_CFLAGS=''
+		READLINE_LIBS='-lreadline'
+	], [
+		PKG_CHECK_MODULES([READLINE], [readline], [
+			AC_DEFINE([HAVE_READLINE], 0, [])
+		], [
+			AC_DEFINE([HAVE_READLINE], 0, [])
+		])
+	]
+)
+AC_SUBST(READLINE_CFLAGS)
+AC_SUBST(READLINE_LIBS)
+
 # Save our CFLAGS/CPPFLAGS/LDFLAGS for the Makefile and restore the old user
 # variables.
 AC_SUBST(AM_CPPFLAGS)

@@ -13,7 +13,10 @@ man1_MANS =	kamiftp.1
 
 LDADD =		$(LIBOBJS)
 
-AM_CPPFLAGS +=	-DKAMID_VERSION='"@VERSION@"'	\
+kamiftp_CFLAGS = @READLINE_CFLAGS@
+kamiftp_LDFLAGS= @READLINE_LIBS@
+
+AM_CPPFLAGS =	-DKAMID_VERSION='"@VERSION@"'	\
 		-I$(top_srcdir)/		\
 		-I$(top_srcdir)/compat		\
 		-I$(top_srcdir)/lib

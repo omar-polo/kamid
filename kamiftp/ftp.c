@@ -34,8 +34,10 @@
 #include <tls.h>
 #include <unistd.h>
 
+#ifdef HAVE_READLINE
 #include <readline/readline.h>
 #include <readline/history.h>
+#endif
 
 #ifndef nitems
 #define nitems(_a)	(sizeof((_a)) / sizeof((_a)[0]))
@@ -86,6 +88,33 @@ struct progress {
 int pwdfid;
 
 #define ASSERT_EMPTYBUF() assert(EVBUFFER_LENGTH(buf) == 0)
+
+#if !HAVE_READLINE
+char *
+readline(const char *prompt)
+{
+	char *ch, *line = NULL;
+	size_t linesize = 0;
+	ssize_t linelen;
+
+	printf("%s", prompt);
+	fflush(stdout);
+
+	linelen = getline(&line, &linesize, stdin);
+	if (linelen == -1)
+		return NULL;
+
+	if ((ch = strchr(line, '\n')) != NULL)
+		*ch = '\0';
+	return line;
+}
+
+void
+add_history(const char *line)
+{
+	return;
+}
+#endif
 
 static char *
 read_line(const char *prompt)
