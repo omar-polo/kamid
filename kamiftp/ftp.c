@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Omar Polo <op@omarpolo.com>
+ * Copyright (c) 2021, 2022 Omar Polo <op@omarpolo.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -143,8 +143,8 @@ tty_resized(int signo)
 static void __dead
 usage(int ret)
 {
-	fprintf(stderr, "usage: %s [-c] host[:port] [path]\n",
-	    getprogname());
+	fprintf(stderr, "usage: %s [-c] [-C cert] [-K key] "
+	    "host[:port] [path]\n", getprogname());
 	fprintf(stderr, "kamid suite version " KAMID_VERSION "\n");
 	exit(ret);
 }
