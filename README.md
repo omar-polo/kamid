@@ -6,21 +6,18 @@ server daemon for UNIX-like systems.
 
 ## Building
 
-NB: the -main branch targets only OpenBSD.  To build on other
-platforms, use the -portable branch.
+When building from a release tarball:
 
-	$ majo obj
+	$ ./configure
 	$ make
-	$ make install
+	# make install # eventually
 
-This will install the following commands:
+to build from a git checkout:
 
- - kamid, the daemon
- - kamictl, an utility to control the daemon
- - kamiftp, an ftp(1)-like 9p client
- - kamirepl, a low-level 9p client
- - man pages (only installed if building sources from a kamid release
-   tarball)
+	$ ./autogen.sh
+	$ ./configure
+	$ make
+
 
 ## Usage
 
@@ -43,20 +40,20 @@ listen on localhost port 1337 tls pki localhost auth <users>
 
 ## Testing
 
-The regression suite uses doas(1) because it needs root privileges for
-some operatinos.  To run the test suite:
+The regression suite uses sudo (or doas) because it needs root
+privileges for certain operations.  To run the test suite:
 
-	$ make regress
+	$ make test
 
-The regression are written with a custom DSL, called ninepscript.
+The regression are written using a custom DSL, ninepscript.
 `contrib/9ps-mode.el` is the major mode for Emacs.
 
 There's another regression suite written in common lisp in
-`regress/lisp/9p-test`; it depends on other common lisp libraries
-available through quicklisp.  Make sure to have sbcl installed and the
-relevant lisp dependencies installed, then run
+`regress/lisp/9p-test`; it depends on other lisp libraries available
+through quicklisp.  Make sure to have sbcl and the relevant lisp
+dependencies installed, then run
 
-	$ make HAVE_LISP=yes regress
+	$ make HAVE_LISP=yes test
 
 
 ## License
