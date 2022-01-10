@@ -1290,10 +1290,7 @@ test_done(int shouldfail, char *name)
 	test->name = name;
 	test->body = finalize(&blocks, NULL);
 
-	if (TAILQ_EMPTY(&tests))
-		TAILQ_INSERT_HEAD(&tests, test, entry);
-	else
-		TAILQ_INSERT_TAIL(&tests, test, entry);
+	TAILQ_INSERT_TAIL(&tests, test, entry);
 
 	ntests++;
 }
