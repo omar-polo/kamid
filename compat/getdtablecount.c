@@ -14,53 +14,13 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+/* XXX: on linux it's possible to glob("/proc/$pid/fd/ *") to know the
+ * dtablecount. */
+
 #include "compat.h"
 
-#include "log.h"
-#include "sandbox.h"
-
-#ifdef __OpenBSD__
-
-#include <unistd.h>
-
-void
-sandbox_main(void)
+int
+getdtablecount(void)
 {
-	return;
+	return 0;
 }
-
-void
-sandbox_listener(void)
-{
-	return;
-}
-
-void
-sandbox_client(void)
-{
-	return;
-}
-
-#else
-#warning "No sandbox available for this OS"
-
-void
-sandbox_main(void)
-{
-	log_warnx("No sandbox available for this os");
-	return;
-}
-
-void
-sandbox_listener(void)
-{
-	return;
-}
-
-void
-sandbox_client(void)
-{
-	return;
-}
-
-#endif

@@ -17,8 +17,6 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <imsg.h>
-
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 struct imsgev {

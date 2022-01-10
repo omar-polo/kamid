@@ -14,15 +14,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <sys/queue.h>
+#include "compat.h"
 
-#include <event.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ohash.h>
-#include <imsg.h>
 
 #include "utils.h"
 #include "kamid.h"

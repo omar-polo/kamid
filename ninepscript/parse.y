@@ -23,12 +23,10 @@
 
 %{
 
-#include <sys/queue.h>
+#include "compat.h"
 
 #include <ctype.h>
-#include <err.h>
 #include <errno.h>
-#include <event.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <limits.h>

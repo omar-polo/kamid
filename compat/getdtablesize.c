@@ -16,51 +16,10 @@
 
 #include "compat.h"
 
-#include "log.h"
-#include "sandbox.h"
-
-#ifdef __OpenBSD__
-
 #include <unistd.h>
 
-void
-sandbox_main(void)
+int
+getdtablesize(void)
 {
-	return;
+	return sysconf(_SC_OPEN_MAX);
 }
-
-void
-sandbox_listener(void)
-{
-	return;
-}
-
-void
-sandbox_client(void)
-{
-	return;
-}
-
-#else
-#warning "No sandbox available for this OS"
-
-void
-sandbox_main(void)
-{
-	log_warnx("No sandbox available for this os");
-	return;
-}
-
-void
-sandbox_listener(void)
-{
-	return;
-}
-
-void
-sandbox_client(void)
-{
-	return;
-}
-
-#endif

@@ -14,14 +14,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "compat.h"
+
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
 #include <assert.h>
-#include <err.h>
 #include <errno.h>
-#include <event.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <netdb.h>
@@ -33,7 +33,6 @@
 #include <syslog.h>
 #include <tls.h>
 #include <unistd.h>
-#include <util.h>
 
 #include <readline/readline.h>
 #include <readline/history.h>

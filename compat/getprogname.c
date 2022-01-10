@@ -16,51 +16,24 @@
 
 #include "compat.h"
 
-#include "log.h"
-#include "sandbox.h"
+#ifdef HAVE_PROGRAM_INVOCATION_SHORT_NAME
 
-#ifdef __OpenBSD__
+#include <errno.h>
 
-#include <unistd.h>
+extern char *program_invocation_short_name;
 
-void
-sandbox_main(void)
+const char *
+getprogname(void)
 {
-	return;
-}
-
-void
-sandbox_listener(void)
-{
-	return;
-}
-
-void
-sandbox_client(void)
-{
-	return;
+	return program_invocation_short_name;
 }
 
 #else
-#warning "No sandbox available for this OS"
 
-void
-sandbox_main(void)
+const char *
+getprogname(void)
 {
-	log_warnx("No sandbox available for this os");
-	return;
-}
-
-void
-sandbox_listener(void)
-{
-	return;
-}
-
-void
-sandbox_client(void)
-{
-	return;
+	return "kamid";
 }
 
 #endif
