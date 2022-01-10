@@ -85,7 +85,6 @@ ret=0
 set +e
 cd 9p-test/ && \
 	${SBCL} --noinform \
-		--disable-debugger \
 		--eval "(require 'asdf)" \
 		--eval "(push \"$(pwd)/\" asdf:*central-registry*)" \
 		--eval "(asdf:make \"9p-test\")" \
