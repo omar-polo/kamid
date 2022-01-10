@@ -139,7 +139,7 @@ AS_CASE([$host_os],
 		READLINE_LIBS='-lreadline'
 	], [
 		PKG_CHECK_MODULES([READLINE], [readline], [
-			AC_DEFINE([HAVE_READLINE], 0, [])
+			AC_DEFINE([HAVE_READLINE], 1, [])
 		], [
 			AC_DEFINE([HAVE_READLINE], 0, [])
 		])

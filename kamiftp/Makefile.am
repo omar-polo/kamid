@@ -11,10 +11,8 @@ kamiftp_SOURCES=ftp.c				\
 
 man1_MANS =	kamiftp.1
 
-LDADD =		$(LIBOBJS)
-
-kamiftp_CFLAGS = @READLINE_CFLAGS@
-kamiftp_LDFLAGS= @READLINE_LIBS@
+kamiftp_CFLAGS=	@READLINE_CFLAGS@
+kamiftp_LDADD=	@READLINE_LIBS@ $(LIBOBJS)
 
 AM_CPPFLAGS =	-DKAMID_VERSION='"@VERSION@"'	\
 		-I$(top_srcdir)/		\
