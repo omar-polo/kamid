@@ -57,17 +57,19 @@
 (defun exit-program (&optional (exit-code 0))
   (uiop:quit exit-code))
 
-(defun run-all-tests (&key (use-debugger t))
+(defun run-all-tests-with-debugger (&optional (use-debugger t))
   (setf *client-certificate* (uiop:getenv "REGRESS_CERT")
         *certificate-key*    (uiop:getenv "REGRESS_KEY")
         *host*               (uiop:getenv "REGRESS_HOSTNAME")
         *port*               (parse-integer (uiop:getenv "REGRESS_PORT")))
+  (clunit:run-suite 'all-suite :use-debugger use-debugger :report-progress t)
+  (exit-program 0))
+
+(defun run-all-tests (&key (use-debugger t))
   (handler-bind ((error (lambda (e)
                           (declare (ignore e))
                           (exit-program 1)))
                  (clunit::assertion-failed (lambda (e)
                           (declare (ignore e))
                           (exit-program 2))))
-      (progn
-        (clunit:run-suite 'all-suite :use-debugger use-debugger :report-progress t)
-        (exit-program 0))))
+    (run-all-tests-with-debugger use-debugger)))

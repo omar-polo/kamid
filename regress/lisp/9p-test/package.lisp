@@ -25,6 +25,7 @@
    :*port*
    :with-open-ssl-stream
    :all-suite
+   :run-all-tests-with-debugger
    :run-all-tests))
 
 (defpackage :kami-tests
