@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Omar Polo <op@omarpolo.com>
+ * Copyright (c) 2021, 2022 Omar Polo <op@omarpolo.com>
  * Copyright (c) 2018 Florian Obser <florian@openbsd.org>
  * Copyright (c) 2004, 2005 Claudio Jeker <claudio@openbsd.org>
  * Copyright (c) 2004 Esben Norby <norby@openbsd.org>
@@ -328,6 +328,9 @@ listener_dispatch_main(int fd, short event, void *d)
 			listener_receive_config(&imsg, &nconf, &pki);
 			break;
 		case IMSG_AUTH:
+			if (IMSG_DATA_SIZE(imsg) != sizeof(struct kd_auth_proc))
+				fatalx("mismatching size for IMSG_AUTH");
+
 			find.id = imsg.hdr.peerid;
 			client = SPLAY_FIND(clients_tree_id, &clients, &find);
 			if (client == NULL) {
@@ -347,17 +350,6 @@ listener_dispatch_main(int fd, short event, void *d)
 			    client->iev.events, client->iev.handler, client);
 			listener_imsg_compose_client(client, IMSG_AUTH,
 			    client->id, imsg.data, IMSG_DATA_SIZE(imsg));
-			break;
-		case IMSG_AUTH_DIR:
-			find.id = imsg.hdr.peerid;
-			client = SPLAY_FIND(clients_tree_id, &clients, &find);
-			if (client == NULL) {
-				log_info("got AUTH_DIR but client gone");
-				break;
-			}
-
-			listener_imsg_compose_client(client, IMSG_AUTH_DIR,
-			    0, imsg.data, IMSG_DATA_SIZE(imsg));
 
 			client->bev = bufferevent_new(client->fd,
 			    client_read, client_write, client_error,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Omar Polo <op@omarpolo.com>
+ * Copyright (c) 2021, 2022 Omar Polo <op@omarpolo.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -250,16 +250,11 @@ client_sig_handler(int sig, short event, void *d)
 	}
 }
 
-#define AUTH_NONE 0
-#define AUTH_USER 1
-#define AUTH_DONE 2
-
 static void
 client_dispatch_listener(int fd, short event, void *d)
 {
-	static int		 auth = AUTH_NONE;
-	static char		 username[64] = {0};
-	static char		 dir[PATH_MAX] = {0};
+	static int		 auth = 0;
+	struct kd_auth_proc	 rauth;
 	struct imsg		 imsg;
 	struct imsgev		*iev = d;
 	struct imsgbuf		*ibuf;
@@ -292,23 +287,19 @@ client_dispatch_listener(int fd, short event, void *d)
 			peerid = imsg.hdr.peerid;
 			if (auth)
 				fatalx("%s: IMSG_AUTH already done", __func__);
-			auth = AUTH_USER;
-			((char *)imsg.data)[IMSG_DATA_SIZE(imsg)-1] = '\0';
-			strlcpy(username, imsg.data, sizeof(username));
-			break;
-		case IMSG_AUTH_DIR:
-			if (auth != AUTH_USER)
-				fatalx("%s: IMSG_AUTH_DIR not after IMSG_AUTH",
-				    __func__);
-			auth = AUTH_DONE;
-			((char *)imsg.data)[IMSG_DATA_SIZE(imsg)-1] = '\0';
-			strlcpy(dir, imsg.data, sizeof(dir));
-			client_privdrop(username, dir);
-			memset(username, 0, sizeof(username));
-			memset(dir, 0, sizeof(username));
+			auth = 1;
+
+			if (IMSG_DATA_SIZE(imsg) != sizeof(rauth))
+				fatalx("mismatching size for IMSG_AUTH");
+			memcpy(&rauth, imsg.data, sizeof(rauth));
+			if (rauth.uname[sizeof(rauth.uname)-1] != '\0' ||
+			    rauth.dir[sizeof(rauth.dir)-1] != '\0')
+				fatalx("IMSG_AUTH strings not NUL-terminated");
+
+			client_privdrop(rauth.uname, rauth.dir);
+			explicit_bzero(&rauth, sizeof(rauth));
 			break;
 		case IMSG_BUF:
-			/* echo! */
 			if (!auth)
 				fatalx("%s: can't handle messages before"
 				    " doing the auth", __func__);

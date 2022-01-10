@@ -40,9 +40,8 @@ enum imsg_type {
 	IMSG_RECONF_PKI_KEY,
 	IMSG_RECONF_LISTEN,
 	IMSG_RECONF_END,
-	IMSG_AUTH,
-	IMSG_AUTH_DIR,
-	IMSG_AUTH_TLS,
+	IMSG_AUTH,		/* kd_auth_proc */
+	IMSG_AUTH_TLS,		/* kd_auth_req */
 	IMSG_CONN_GONE,
 	IMSG_BUF,
 	IMSG_MSIZE,
@@ -104,6 +103,11 @@ struct kd_conf {
 struct kd_auth_req {
 	uint32_t	listen_id;
 	char		hash[128+1];
+};
+
+struct kd_auth_proc {
+	char		uname[LOGIN_NAME_MAX];
+	char		dir[PATH_MAX];
 };
 
 /* kamid.c */

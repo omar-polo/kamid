@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Omar Polo <op@omarpolo.com>
+ * Copyright (c) 2021, 2022 Omar Polo <op@omarpolo.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1590,15 +1590,18 @@ spawn_client_proc(void)
 static void
 prepare_child_for_test(struct test *t)
 {
-	struct passwd	*pw;
+	struct passwd		*pw;
+	struct kd_auth_proc	 rauth;
 
 	if ((pw = getpwuid(uid)) == NULL)
 		fatal("getpwuid(%d)", uid);
 
+	memset(&rauth, 0, sizeof(rauth));
+	strlcpy(rauth.uname, pw->pw_name, sizeof(rauth.uname));
+	strlcpy(rauth.dir, dir, sizeof(rauth.dir));
+
 	imsg_compose(&ibuf, IMSG_AUTH, 0, 0, -1,
-	    pw->pw_name, strlen(pw->pw_name)+1);
-	imsg_compose(&ibuf, IMSG_AUTH_DIR, 0, 0, -1,
-	    dir, strlen(dir)+1);
+	    &rauth, sizeof(rauth));
 
 	if (imsg_flush(&ibuf) == -1)
 		fatal("imsg_flush");
@@ -1709,7 +1712,7 @@ main(int argc, char **argv)
 
 	if (dir == NULL)
 		fatal("missing root test dir");
-	
+
 	if (stat(dir, &sb) == -1)
 		fatal("stat(\"%s\")", dir);
 	uid = sb.st_uid;

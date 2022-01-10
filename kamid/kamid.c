@@ -296,6 +296,7 @@ do_auth_tls(struct imsg *imsg)
 	struct passwd *pw;
 	struct table *auth, *virt, *userdata;
 	struct kd_auth_req kauth;
+	struct kd_auth_proc rauth;
 	int p[2], free_home = 1;
 
 	if (sizeof(kauth) != IMSG_DATA_SIZE(*imsg))
@@ -355,6 +356,14 @@ do_auth_tls(struct imsg *imsg)
 		log_debug("matched home %s for local user %s",
 		    home, username);
 
+	memset(&rauth, 0, sizeof(rauth));
+	strlcpy(rauth.uname, local_user, sizeof(rauth.uname));
+	if (strlcpy(rauth.dir, home, sizeof(rauth.dir)) >= sizeof(rauth.dir)) {
+		log_warnx("home for %s is bigger than PATH_MAX: %s",
+		    username, home);
+		goto err;
+	}
+
 	if (socketpair(AF_UNIX, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK,
 	    PF_UNSPEC, p) == -1)
 		fatal("socketpair");
@@ -362,9 +371,7 @@ do_auth_tls(struct imsg *imsg)
 	start_child(PROC_CLIENTCONN, p[1], debug, verbose);
 
 	main_imsg_compose_listener(IMSG_AUTH, p[0], imsg->hdr.peerid,
-	    local_user, strlen(local_user)+1);
-	main_imsg_compose_listener(IMSG_AUTH_DIR, -1, imsg->hdr.peerid,
-	    home, strlen(home)+1);
+	    &rauth, sizeof(rauth));
 
 	free(username);
 	free(user);
