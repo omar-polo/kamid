@@ -27,13 +27,16 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <inttypes.h>
+#include <libgen.h>
 #include <limits.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
+#include <unistd.h>
 
 #include "log.h"
 #include "kami.h"
@@ -667,9 +670,27 @@ popfile(void)
 void
 loadfile(const char *path)
 {
-	int errors;
+	int pwdfd, errors;
+	char p[PATH_MAX], *dir;
 
-	file = pushfile(path);
+	/*
+	 * Ugly workaround: we really need a smarter `include', one that 
+	 * is able to resolve path relatively from the currently processed
+	 * file.  The workaround consist to save the current directory,
+	 * chdir(2) to the script dirname and then jump back by mean of
+	 * fchdir.
+	 */
+
+	if ((pwdfd = open(".", O_RDONLY|O_DIRECTORY)) == -1)
+		err(1, "can't open .");
+	strlcpy(p, path, sizeof(p));
+	dir = dirname(p);
+	if (chdir(dir) == -1)
+		err(1, "chdir %s", dir);
+
+	/* XXX: include the *basename* of the file after chdir */
+	strlcpy(p, path, sizeof(p));
+	file = pushfile(basename(p));
 	if (file == NULL)
 		err(1, "pushfile");
 	topfile = file;
@@ -677,6 +698,9 @@ loadfile(const char *path)
 	yyparse();
 	errors = file->errors;
 	popfile();
+
+	fchdir(pwdfd);
+	close(pwdfd);
 
 	if (errors)
 		errx(1, "can't load %s because of errors", path);
