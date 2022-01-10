@@ -4,6 +4,10 @@
 **/*.d
 **/*.o
 
+**/*.pem
+**/*.key
+**/*.conf
+
 **/parse.c
 **/parse.h
 
