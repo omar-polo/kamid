@@ -23,6 +23,7 @@
 
 #include "utils.h"
 #include "kamid.h"
+#include "table.h"
 
 static void	*hash_alloc(size_t, void *);
 static void	*hash_calloc(size_t, size_t, void *);

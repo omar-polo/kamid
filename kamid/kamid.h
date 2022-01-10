@@ -53,29 +53,7 @@ struct kd_options_conf {
 	/* ... */
 };
 
-enum table_type {
-	T_NONE		= 0,
-	T_HASH		= 0x01,
-};
-
-struct table {
-	char			 t_name[LINE_MAX];
-	enum table_type		 t_type;
-	char			 t_path[PATH_MAX];
-	void			*t_handle;
-	struct table_backend	*t_backend;
-};
-
-struct table_backend {
-	const char	*name;
-	int		(*open)(struct table *);
-	int		(*add)(struct table *, const char *, const char *);
-	int		(*lookup)(struct table *, const char *, char **);
-	void		(*close)(struct table *);
-};
-
-/* table_static.c */
-extern struct table_backend table_static;
+struct table;
 
 #define L_NONE	0x0
 #define L_TLS	0x1

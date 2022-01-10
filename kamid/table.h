@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Omar Polo <op@omarpolo.com>
+ * Copyright (c) 2021, 2022 Omar Polo <op@omarpolo.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,6 +16,30 @@
 
 #ifndef TABLE_H
 #define TABLE_H
+
+enum table_type {
+	T_NONE		= 0,
+	T_HASH		= 0x01,
+};
+
+struct table {
+	char			 t_name[LINE_MAX];
+	enum table_type		 t_type;
+	char			 t_path[PATH_MAX];
+	void			*t_handle;
+	struct table_backend	*t_backend;
+};
+
+struct table_backend {
+	const char	*name;
+	int		(*open)(struct table *);
+	int		(*add)(struct table *, const char *, const char *);
+	int		(*lookup)(struct table *, const char *, char **);
+	void		(*close)(struct table *);
+};
+
+/* table_static.c */
+extern struct table_backend table_static;
 
 int	 table_open(struct kd_conf *, const char *, const char *, const char *);
 int	 table_add(struct table *, const char *, const char *);
