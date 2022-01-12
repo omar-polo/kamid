@@ -631,7 +631,8 @@ fetch_fid(int fid, const char *path)
 {
 	int fd;
 
-	if ((fd = open(path, O_WRONLY|O_CREAT|O_TRUNC, 0644)) == -1) {
+	fd = open(path, O_WRONLY|O_CREAT|O_TRUNC|O_CLOEXEC, 0644);
+	if (fd == -1) {
 		warn("can't open %s", path);
 		return -1;
 	}
@@ -690,7 +691,7 @@ do_ctxt_connect(const char *host, const char *port)
 
 	sock = -1;
 	for (res = res0; res != NULL; res = res->ai_next) {
-		sock = socket(res->ai_family, res->ai_socktype,
+		sock = socket(res->ai_family, res->ai_socktype|SOCK_CLOEXEC,
 		    res->ai_protocol);
 		if (sock == -1) {
 			cause = "socket";
