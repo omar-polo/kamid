@@ -19,12 +19,14 @@
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <netdb.h>
+#include <libgen.h>
 #include <limits.h>
 #include <signal.h>
 #include <stdio.h>
@@ -132,6 +134,40 @@ again:
 
 	add_history(line);
 	return line;
+}
+
+static void
+spawn(const char *argv0, ...)
+{
+	pid_t pid;
+	size_t i;
+	int status;
+	const char *argv[16], *last;
+	va_list ap;
+
+	memset(argv, 0, sizeof(argv));
+
+	va_start(ap, argv0);
+	argv[0] = argv0;
+	for (i = 1; i < nitems(argv); ++i) {
+		last = va_arg(ap, const char *);
+		if (last == NULL)
+			break;
+		argv[i] = last;
+	}
+	va_end(ap);
+
+	assert(last == NULL);
+
+	switch (pid = fork()) {
+	case -1:
+		err(1, "fork");
+	case 0: /* child */
+		execvp(argv[0], (char *const *)argv);
+		err(1, "execvp");
+	default:
+		waitpid(pid, &status, 0);
+	}
 }
 
 static void
@@ -549,22 +585,16 @@ draw_progress(const char *pre, const struct progress *p)
 	fflush(stdout);
 }
 
-static int
-fetch_fid(int fid, const char *path)
+static void
+fetch_fid_in_fd(int fid, int fd, const char *name)
 {
 	struct progress p = {0};
 	struct np_stat st;
 	size_t r;
-	int fd;
 	char buf[BUFSIZ];
 
 	do_stat(fid, &st);
 	do_open(fid, KOREAD);
-
-	if ((fd = open(path, O_WRONLY|O_CREAT|O_TRUNC, 0644)) == -1) {
-		warn("can't open %s", path);
-		return -1;
-	}
 
 	p.max = st.length;
 	for (;;) {
@@ -582,7 +612,7 @@ fetch_fid(int fid, const char *path)
 				err(1, "write");
 
 		p.done += r;
-		draw_progress(path, &p);
+		draw_progress(name, &p);
 
 #if 0
 		/* throttle, for debugging purpose */
@@ -594,7 +624,19 @@ fetch_fid(int fid, const char *path)
 	}
 
 	putchar('\n');
+}
 
+static int
+fetch_fid(int fid, const char *path)
+{
+	int fd;
+
+	if ((fd = open(path, O_WRONLY|O_CREAT|O_TRUNC, 0644)) == -1) {
+		warn("can't open %s", path);
+		return -1;
+	}
+
+	fetch_fid_in_fd(fid, fd, path);
 	close(fd);
 	do_clunk(fid);
 	return 0;
@@ -883,6 +925,45 @@ cmd_ls(int argc, const char **argv)
 }
 
 static void
+cmd_page(int argc, const char **argv)
+{
+	struct qid qid;
+	int nfid, tmpfd;
+	char sfn[24], p[PATH_MAX], *name;
+
+	if (argc != 1) {
+		puts("usage: page file");
+		return;
+	}
+
+	nfid = pwdfid+1;
+	if (walk_path(pwdfid, nfid, *argv, &qid) == -1) {
+		printf("can't fetch %s\n", *argv);
+		return;
+	}
+
+	if (qid.type != 0) {
+		printf("can't page file type %s\n", pp_qid_type(qid.type));
+		do_clunk(nfid);
+		return;
+	}
+
+	strlcpy(sfn, "/tmp/kamiftp.XXXXXXXXXX", sizeof(sfn));
+	if ((tmpfd = mkstemp(sfn)) == -1) {
+		warn("mkstemp %s", sfn);
+		do_clunk(nfid);
+		return;
+	}
+
+	strlcpy(p, *argv, sizeof(p));
+	name = basename(p);
+	fetch_fid_in_fd(nfid, tmpfd, name);
+	close(tmpfd);
+	spawn("less", sfn, NULL);
+	unlink(sfn);
+}
+
+static void
 cmd_verbose(int argc, const char **argv)
 {
 	if (argc == 0) {
@@ -927,6 +1008,7 @@ excmd(int argc, const char **argv)
 		{"lcd",		cmd_lcd},
 		{"lpwd",	cmd_lpwd},
 		{"ls",		cmd_ls},
+		{"page",	cmd_page},
 		{"quit",	cmd_bye},
 		{"verbose",	cmd_verbose},
 	};
