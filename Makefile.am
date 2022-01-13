@@ -1,4 +1,4 @@
-SUBDIRS = kamictl kamid kamiftp kamirepl ninepscript
+SUBDIRS = kamictl kamid kamiftp kamirepl ninepscript regress
 
 EXTRA_DIST =	compat/imsg.h \
 		compat/ohash.h \

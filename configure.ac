@@ -165,6 +165,9 @@ AC_CONFIG_FILES([
 	kamiftp/Makefile
 	kamirepl/Makefile
 	ninepscript/Makefile
+	regress/Makefile
+	regress/lisp/Makefile
+	regress/ninepscript/Makefile
 ])
 
 AC_OUTPUT
