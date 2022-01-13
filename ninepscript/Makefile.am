@@ -14,8 +14,8 @@ ninepscript_SOURCES=parse.y			\
 		$(top_srcdir)/lib/utils.c	\
 		$(top_srcdir)/lib/utils.h
 
-man5_MANS =	ninepscript.5
-man8_MANS =	ninepscript.8
+dist_man5_MANS = ninepscript.5
+dist_man8_MANS = ninepscript.8
 
 LDADD =		$(LIBOBJS)
 

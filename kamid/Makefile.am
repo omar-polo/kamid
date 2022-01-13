@@ -20,9 +20,9 @@ kamid_SOURCES =	client.c			\
 		$(top_srcdir)/lib/utils.c	\
 		$(top_srcdir)/lib/utils.h
 
-man5_MANS =	kamid.conf.5
-man7_MANS =	9p.7
-man8_MANS =	kamid.8
+dist_man5_MANS = kamid.conf.5
+dist_man7_MANS = 9p.7
+dist_man8_MANS = kamid.8
 
 LDADD =		$(LIBOBJS)
 

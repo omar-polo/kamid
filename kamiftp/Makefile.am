@@ -9,7 +9,7 @@ kamiftp_SOURCES=ftp.c				\
 		$(top_srcdir)/lib/utils.c	\
 		$(top_srcdir)/lib/utils.h
 
-man1_MANS =	kamiftp.1
+dist_man1_MANS = kamiftp.1
 
 kamiftp_CFLAGS=	@READLINE_CFLAGS@
 kamiftp_LDADD=	@READLINE_LIBS@ $(LIBOBJS)

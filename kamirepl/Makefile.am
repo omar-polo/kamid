@@ -9,7 +9,7 @@ kamirepl_SOURCES=kamirepl.c			\
 		$(top_srcdir)/lib/utils.c	\
 		$(top_srcdir)/lib/utils.h
 
-man1_MANS =	kamirepl.1
+dist_man1_MANS = kamirepl.1
 
 LDADD =		$(LIBOBJS)
 

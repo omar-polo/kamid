@@ -9,7 +9,7 @@ kamictl_SOURCES=ctl_parser.c			\
 		$(top_srcdir)/lib/sandbox.c	\
 		$(top_srcdir)/lib/sandbox.h
 
-man8_MANS =	kamictl.8
+dist_man8_MANS = kamictl.8
 
 LDADD =		$(LIBOBJS)
 
