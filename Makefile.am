@@ -1,5 +1,11 @@
 SUBDIRS = kamictl kamid kamiftp kamirepl ninepscript
 
+EXTRA_DIST =	compat/imsg.h \
+		compat/ohash.h \
+		compat/queue.h \
+		compat/tree.h \
+		compat/vis.h
+
 AM_CPPFLAGS += -DKAMID_VERSION='"@VERSION"' \
 	-I$(top_srcdir)/lib \
 	-I$(top_srcdir)/compat
