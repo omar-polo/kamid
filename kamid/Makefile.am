@@ -4,7 +4,6 @@ kamid_SOURCES =	client.c			\
 		client.h			\
 		control.c			\
 		control.h			\
-		kami.h				\
 		kamid.c				\
 		kamid.h				\
 		listener.c			\
@@ -13,6 +12,7 @@ kamid_SOURCES =	client.c			\
 		table.c				\
 		table.h				\
 		table_static.c			\
+		$(top_srcdir)/lib/kami.h	\
 		$(top_srcdir)/lib/log.c		\
 		$(top_srcdir)/lib/log.h		\
 		$(top_srcdir)/lib/sandbox.c	\
