@@ -60,8 +60,57 @@ Without arguments toggle the current state.
 Terminate the session.
 Synomym of
 .Ic quit .
+.It Ic cd Ar remote-path
+Change the working directory on the remote machine to
+.Ar remote-path .
+.It Ic edit Ar remote-path
+Download
+.Ar remote-path
+and open it with the preferred editor
+.Po
+.Ev VISUAL
+or
+.Ev EDITOR
+with
+.Xr ed 1
+as fallback
+.Pc
+then attempt to re-upload it.
+.It Ic get Ar remote-file Op Ar local-file
+Fetch
+.Ar remote-file
+and save it locally as
+.Ar local-file .
+If
+.Ar local-file
+is not given, use the file name from
+.Ar remote-file .
+.It Ic lcd Op Ar local-directory
+Change the local current working directory to
+.Ar local-directory
+or the
+.Ev HOME
+if not given.
+.It Ic lpwd
+Print the local working directory.
 .It Ic ls
-List the file in the current directory
+List the file in the remote current working directory.
+.It Ic page Ar remote-file
+Download
+.Ar remote-file
+and open it with the
+.Ev PAGER
+.Pq Xr less 1 by default .
+.It Ic put Ar local-file Op Ar remote-file
+Upload
+.Ar local-file
+to
+.Ar remote-file .
+If
+.Ar remote-file
+is not given,
+use the file name from
+.Ar local-file .
 .It Ic quit
 Terminate the session.
 Synomym of
@@ -69,6 +118,25 @@ Synomym of
 .It Ic verbose Oo Cm on | off Oc
 Print verbose information.
 Without arguments toggle the current state.
+.El
+.Sh ENVIRONMENT
+The following environment variables are inspected:
+.Bl -tag -width Ds
+.It Ev HOME
+The user login directory.
+.It Ev PAGER
+The pager to use, 
+.Xr less 1
+by default.
+.It Ev VISUAL, Ev EDITOR
+The program used to edit files.
+.Ev VISUAL
+is inspected first,
+.Ev EDITOR
+as a fallback.
+If both are undefined,
+.Xr ed 1
+is given some love.
 .El
 .Sh SEE ALSO
 .Xr 9p 7 ,
