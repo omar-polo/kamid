@@ -821,7 +821,7 @@ cmd_get(int argc, const char **argv)
 	else if ((l = strrchr(argv[0], '/')) != NULL)
 		l++; /* skip / */
 	else
-		l = argv[1];
+		l = argv[0];
 
 	nfid = pwdfid+1;
 	if (walk_path(pwdfid, nfid, argv[0], &qid) == -1) {
