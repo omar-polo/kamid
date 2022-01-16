@@ -384,8 +384,9 @@ err:
 	free(user);
 	if (free_home)
 		free(home);
+	memset(&rauth, 0, sizeof(rauth));
 	main_imsg_compose_listener(IMSG_AUTH, -1, imsg->hdr.peerid,
-	    NULL, 0);
+	    &rauth, sizeof(rauth));
 }
 
 void
