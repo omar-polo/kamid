@@ -1268,7 +1268,8 @@ cmd_ls(int argc, const char **argv)
 		printf("%s", pp_perm(st.mode >> 6));
 		printf("%s", pp_perm(st.mode >> 3));
 		printf("%s", pp_perm(st.mode));
-		printf(" %8s %s\n", fmt, st.name);
+		printf(" %8s %s%s\n", fmt, st.name, 
+		    st.qid.type & QTDIR ? "/" : "");
 
 		free(st.name);
 		free(st.uid);
