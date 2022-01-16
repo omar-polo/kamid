@@ -742,6 +742,71 @@ send_fid(int fid, const char *fnam, int fd, const char *name)
 	do_clunk(fid);
 }
 
+static int
+woc_file(int fd, const char *prompt, const char *path)
+{
+	struct qid qid;
+	const char *n = NULL;
+	char *errstr;
+	int nfid, miss;
+
+	nfid = pwdfid+1;
+	errstr = walk_path(pwdfid, nfid, path, &miss, &qid);
+	if (errstr != NULL && miss > 1) {
+		printf("%s: %s\n", path, errstr);
+		free(errstr);
+		return -1;
+	}
+
+	if (errstr != NULL || miss == 1) {
+		char p[PATH_MAX], *dn;
+
+		/*
+		 * If it's only one component missing (the file name), walk
+		 * to the parent directory and try to create the file.
+		 */
+
+		if (strlcpy(p, path, sizeof(p)) >= sizeof(p)) {
+			printf("path too long: %s\n", path);
+			return -1;
+		}
+		dn = dirname(p);
+
+		if (!strcmp(dn, ".")) {
+			errstr = dup_fid(pwdfid, nfid);
+			miss = 0;
+		} else
+			errstr = walk_path(pwdfid, nfid, dn, &miss, &qid);
+
+		if (errstr != NULL) {
+			printf("%s: %s\n", dn, errstr);
+			free(errstr);
+			return -1;
+		}
+
+		if (miss != 0) {
+			printf("%s: not a directory\n", dn);
+			return -1;
+		}
+
+		if ((n = strrchr(path, '/')) != NULL)
+			n++;
+		else
+			n = path;
+	}
+
+	free(errstr);
+
+	if (miss > 1) {
+		printf("can't create %s: missing %d path component(s)\n",
+		    path, miss);
+		return -1;
+	}
+
+	send_fid(nfid, n, fd, prompt);
+	return 0;
+}
+
 static void
 do_tls_connect(const char *host, const char *port)
 {
@@ -926,6 +991,69 @@ cmd_cd(int argc, const char **argv)
 }
 
 static void
+cmd_edit(int argc, const char **argv)
+{
+	struct qid qid;
+	int nfid, tmpfd, miss;
+	char sfn[TMPFSTRLEN], p[PATH_MAX], *name, *errstr;
+	const char *ed;
+
+	if (argc != 1) {
+		puts("usage: edit file");
+		return;
+	}
+
+	if ((ed = getenv("VISUAL")) == NULL &&
+	    (ed = getenv("EDITOR")) == NULL)
+		ed = "ed";
+
+	nfid = pwdfid+1;
+	errstr = walk_path(pwdfid, nfid, *argv, &miss, &qid);
+	if (errstr != NULL) {
+		printf("%s: %s\n", *argv, errstr);
+		free(errstr);
+		return;
+	}
+
+	if (miss != 0 || qid.type != 0) {
+		printf("%s: not a file\n", *argv);
+		if (miss == 0)
+			do_clunk(nfid);
+		return;
+	}
+
+	if ((tmpfd = tmp_file(sfn)) == -1) {
+		do_clunk(nfid);
+		return;
+	}
+
+	strlcpy(p, *argv, sizeof(p));
+	name = basename(p);
+
+	fetch_fid(nfid, tmpfd, name);
+	close(tmpfd);
+
+	spawn(ed, sfn, NULL);
+
+	/*
+	 * Re-open the file because it's not guaranteed that the
+	 * file descriptor tmpfd is still associated with the file
+	 * pointed by sfn: it's not uncommon for editor to write
+	 * a backup file and then rename(2) it to the file name.
+	 */
+	if ((tmpfd = open(sfn, O_RDONLY)) == -1) {
+		warn("can't open %s", sfn);
+		goto end;
+	}
+
+	woc_file(tmpfd, *argv, name);
+	close(tmpfd);
+
+end:
+	unlink(sfn);
+}
+
+static void
 cmd_get(int argc, const char **argv)
 {
 	struct qid qid;
@@ -1104,9 +1232,8 @@ static void
 cmd_put(int argc, const char **argv)
 {
 	struct qid qid;
-	const char *l, *n = NULL;
-	char *errstr;
-	int nfid, fd, miss;
+	const char *l;
+	int fd;
 
 	if (argc != 1 && argc != 2) {
 		printf("usage: put local-file [remote-file]\n");
@@ -1120,65 +1247,12 @@ cmd_put(int argc, const char **argv)
 	else
 		l = argv[0];
 
-	nfid = pwdfid+1;
-	errstr = walk_path(pwdfid, nfid, l, &miss, &qid);
-	if (errstr != NULL && miss > 1) {
-		printf("%s: %s\n", l, errstr);
-		free(errstr);
-		return;
-	}
-
-	if (errstr != NULL || miss == 1) {
-		char p[PATH_MAX], *dn;
-
-		/*
-		 * If it's only one component missing (the file name), walk
-		 * to the parent directory and try to create the file.
-		 */
-
-		if (strlcpy(p, l, sizeof(p)) >= sizeof(p)) {
-			printf("path too long: %s\n", l);
-			return;
-		}
-		dn = dirname(p);
-
-		if (!strcmp(dn, ".")) {
-			errstr = dup_fid(pwdfid, nfid);
-			miss = 0;
-		} else
-			errstr = walk_path(pwdfid, nfid, dn, &miss, &qid);
-
-		if (errstr != NULL) {
-			printf("%s: %s\n", dn, errstr);
-			free(errstr);
-			return;
-		}
-
-		if (miss != 0) {
-			printf("%s: not a directory\n", dn);
-			return;
-		}
-
-		if ((n = strrchr(l, '/')) != NULL)
-			n++;
-		else
-			n = l;
-	}
-
-	free(errstr);
-
-	if (miss > 1) {
-		printf("can't create %s: missing %d path component(s)\n",
-		    l, miss);
-		return;
-	}
-
 	if ((fd = open(argv[0], O_RDONLY)) == -1) {
 		warn("%s", argv[0]);
 		return;
 	}
 
-	send_fid(nfid, n, fd, argv[0]);
+	woc_file(fd, argv[0], l);
 	close(fd);
 }
 
@@ -1223,6 +1297,7 @@ excmd(int argc, const char **argv)
 		{"bell",	cmd_bell},
 		{"bye",		cmd_bye},
 		{"cd",		cmd_cd},
+		{"edit",	cmd_edit},
 		{"get",		cmd_get},
 		{"lcd",		cmd_lcd},
 		{"lpwd",	cmd_lpwd},
