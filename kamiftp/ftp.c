@@ -982,7 +982,8 @@ cmd_cd(int argc, const char **argv)
 
 	if (miss != 0 || !(qid.type & QTDIR)) {
 		printf("%s: not a directory\n", argv[0]);
-		do_clunk(nfid);
+		if (miss == 0)
+			do_clunk(nfid);
 		return;
 	}
 
@@ -1083,7 +1084,8 @@ cmd_get(int argc, const char **argv)
 
 	if (miss != 0 || qid.type != 0) {
 		printf("%s: not a file\n", argv[0]);
-		do_clunk(nfid);
+		if (miss == 0)
+			do_clunk(nfid);
 		return;
 	}
 
@@ -1211,7 +1213,8 @@ cmd_page(int argc, const char **argv)
 
 	if (miss != 0 || qid.type != 0) {
 		printf("%s: not a file\n", *argv);
-		do_clunk(nfid);
+		if (miss == 0)
+			do_clunk(nfid);
 		return;
 	}
 
