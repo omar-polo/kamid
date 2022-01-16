@@ -1364,7 +1364,13 @@ serialize_stat(const char *fname, struct stat *sb, struct evbuffer *evb)
 
 	np_write32(evb, sb->st_atim.tv_sec);	/*	atime[4]	*/
 	np_write32(evb, sb->st_mtim.tv_sec);	/*	mtime[4]	*/
-	np_write64(evb, sb->st_size);		/*	length[8]	*/
+
+	/* special case: directories have size 0 */
+	if (qid.type & QTDIR)
+		np_write64(evb, 0);
+	else
+		np_write64(evb, sb->st_size);	/*	length[8]	*/
+
 	np_string(evb, namlen, fname);		/*	name[s]		*/
 	np_string(evb, uidlen, uid);		/*	uid[s]		*/
 	np_string(evb, gidlen, gid);		/*	gid[s]		*/
