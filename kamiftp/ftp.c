@@ -524,7 +524,7 @@ walk_path(int fid, int newfid, const char *path, int *missing,
 	assert(nwqid <= nwname);
 
 	/* consume all qids */
-	for (i = 0; i < nwname; ++i)
+	for (i = 0; i < nwqid; ++i)
 		np_read_qid(buf, qid);
 
 	free(p);
