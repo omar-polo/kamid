@@ -941,6 +941,32 @@ tmp_file(char sfn[TMPFSTRLEN])
 	return tmpfd;
 }
 
+static inline const char *
+pp_perm(uint8_t x)
+{
+	switch (x & 0x7) {
+	case 0x0:
+		return "---";
+	case 0x1:
+		return "--x";
+	case 0x2:
+		return "-w-";
+	case 0x3:
+		return "-wx";
+	case 0x4:
+		return "r--";
+	case 0x5:
+		return "r-x";
+	case 0x6:
+		return "rw-";
+	case 0x7:
+		return "rwx";
+	default:
+		/* unreachable, just for the compiler' happiness */
+		return "???";
+	}
+}
+
 static void
 cmd_bell(int argc, const char **argv)
 {
@@ -1235,7 +1261,14 @@ cmd_ls(int argc, const char **argv)
 		if (fmt_scaled(st.length, fmt) == -1)
 			strlcpy(fmt, "xxx", sizeof(fmt));
 
-		printf("%4s %8s %s\n", pp_qid_type(st.qid.type), fmt, st.name);
+		if (st.qid.type & QTDIR)
+			printf("d");
+		else
+			printf("-");
+		printf("%s", pp_perm(st.mode >> 6));
+		printf("%s", pp_perm(st.mode >> 3));
+		printf("%s", pp_perm(st.mode));
+		printf(" %8s %s\n", fmt, st.name);
 
 		free(st.name);
 		free(st.uid);
