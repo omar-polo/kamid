@@ -1219,14 +1219,19 @@ static void
 cmd_ls(int argc, const char **argv)
 {
 	struct np_stat st;
+	time_t now, mtime;
+	struct tm *tm;
 	uint64_t off = 0;
 	uint32_t len;
-	char fmt[FMT_SCALED_STRSIZE], *errstr;
+	const char *timfmt;
+	char fmt[FMT_SCALED_STRSIZE], tim[13], *errstr;
 
 	if (argc != 0) {
 		printf("ls don't take arguments (yet)\n");
 		return;
 	}
+
+	now = time(NULL);
 
 	if ((errstr = dup_fid(pwdfid, 1)) != NULL) {
 		printf(".: %s\n", errstr);
@@ -1261,6 +1266,17 @@ cmd_ls(int argc, const char **argv)
 		if (fmt_scaled(st.length, fmt) == -1)
 			strlcpy(fmt, "xxx", sizeof(fmt));
 
+		mtime = st.mtime;
+
+		if (now > mtime && (now - mtime) < 365/2 * 24 * 12 * 60)
+			timfmt = "%b %e %R";
+		else
+			timfmt = "%b %e  %Y";
+
+		if ((tm = localtime(&mtime)) == NULL ||
+		    strftime(tim, sizeof(tim), timfmt, tm) == 0)
+			strlcpy(tim, "unknown", sizeof(tim));
+
 		if (st.qid.type & QTDIR)
 			printf("d");
 		else
@@ -1268,7 +1284,7 @@ cmd_ls(int argc, const char **argv)
 		printf("%s", pp_perm(st.mode >> 6));
 		printf("%s", pp_perm(st.mode >> 3));
 		printf("%s", pp_perm(st.mode));
-		printf(" %8s %s%s\n", fmt, st.name, 
+		printf(" %8s %12s %s%s\n", fmt, tim, st.name, 
 		    st.qid.type & QTDIR ? "/" : "");
 
 		free(st.name);
