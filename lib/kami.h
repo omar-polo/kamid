@@ -35,6 +35,20 @@ struct qid {
 	uint8_t			 type;
 };
 
+struct np_stat {
+	uint16_t	 type;
+	uint32_t	 dev;
+	struct qid	 qid;
+	uint32_t	 mode;
+	uint32_t	 atime;
+	uint32_t	 mtime;
+	uint64_t	 length;
+	char		*name;
+	char		*uid;
+	char		*gid;
+	char		*muid;
+};
+
 /* useful constants */
 #define HEADERSIZE	(4 + 1 + 2)
 #define	VERSION9P	"9P2000"

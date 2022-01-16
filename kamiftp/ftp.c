@@ -73,20 +73,6 @@ int			 tty_p;
 int			 tty_width;
 int			 xdump;
 
-struct np_stat {
-	uint16_t	 type;
-	uint32_t	 dev;
-	struct qid	 qid;
-	uint32_t	 mode;
-	uint32_t	 atime;
-	uint32_t	 mtime;
-	uint64_t	 length;
-	char		*name;
-	char		*uid;
-	char		*gid;
-	char		*muid;
-};
-
 struct progress {
 	uint64_t	max;
 	uint64_t	done;
