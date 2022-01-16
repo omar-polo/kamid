@@ -227,7 +227,8 @@
   (assert-eq   :directory
       (stat-entry-type (example-stat "/")))
   (assert-eq   :file
-      (stat-entry-type (example-stat *remote-test-path*))))
+      (stat-entry-type (example-stat *remote-test-path*)))
+  (assert-equality #'= 0 (stat-size (example-stat "/"))))
 
 (defun example-path-exists (path &optional (root "/"))
   (with-open-ssl-stream (stream
