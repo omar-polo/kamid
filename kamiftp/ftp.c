@@ -71,6 +71,7 @@ int			 bell;
 volatile sig_atomic_t	 resized;
 int			 tty_p;
 int			 tty_width;
+int			 xdump;
 
 struct np_stat {
 	uint16_t	 type;
@@ -196,6 +197,10 @@ do_send(void)
 	size_t		 nbytes;
 	ssize_t		 r;
 
+	if (xdump)
+		hexdump("outgoing message", EVBUFFER_DATA(evb), 
+		    EVBUFFER_LENGTH(evb));
+
 	while (EVBUFFER_LENGTH(evb) != 0) {
 		buf = EVBUFFER_DATA(evb);
 		nbytes = EVBUFFER_LENGTH(evb);
@@ -258,6 +263,10 @@ recv_msg(void)
 		len -= l;
 		evbuffer_add(buf, tmp, l);
 	}
+
+	if (xdump)
+		hexdump("incoming packet", EVBUFFER_DATA(buf),
+		    EVBUFFER_LENGTH(buf));
 }
 
 static uint64_t
@@ -619,6 +628,9 @@ draw_progress(const char *pre, const struct progress *p)
 	struct winsize ws;
 	int i, l, w;
 	double perc;
+
+	if (xdump)
+		return;
 
 	perc = 100.0 * p->done / p->max;
 	if (!tty_p) {
@@ -1107,6 +1119,37 @@ cmd_get(int argc, const char **argv)
 }
 
 static void
+cmd_hexdump(int argc, const char **argv)
+{
+	if (argc == 0) {
+		xdump = !xdump;
+		if (xdump)
+			puts("hexdump mode enabled");
+		else
+			puts("hexdump mode disabled");
+		return;
+	}
+
+	if (argc > 1)
+		goto usage;
+
+	if (!strcmp(*argv, "on")) {
+		xdump = 1;
+		puts("hexdump mode enabled");
+		return;
+	}
+
+	if (!strcmp(*argv, "off")) {
+		xdump = 0;
+		puts("hexdump mode disabled");
+		return;
+	}
+
+usage:
+	puts("usage: hexdump [on | off]");
+}
+
+static void
 cmd_lcd(int argc, const char **argv)
 {
 	const char *dir;
@@ -1318,6 +1361,7 @@ excmd(int argc, const char **argv)
 		{"cd",		cmd_cd},
 		{"edit",	cmd_edit},
 		{"get",		cmd_get},
+		{"hexdump",	cmd_hexdump},
 		{"lcd",		cmd_lcd},
 		{"lpwd",	cmd_lpwd},
 		{"ls",		cmd_ls},
