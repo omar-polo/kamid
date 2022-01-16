@@ -51,6 +51,9 @@
 #include "utils.h"
 #include "log.h"
 
+#define TMPFSTR		"/tmp/kamiftp.XXXXXXXXXX"
+#define TMPFSTRLEN	sizeof(TMPFSTR)
+
 /* flags */
 int		 tls;
 const char	*crtpath;
@@ -840,6 +843,20 @@ do_connect(const char *connspec, const char *path)
 	free(host);
 }
 
+static int
+tmp_file(char sfn[TMPFSTRLEN])
+{
+	int tmpfd;
+
+	strlcpy(sfn, TMPFSTR, TMPFSTRLEN);
+	if ((tmpfd = mkstemp(sfn)) == -1) {
+		warn("mkstemp %s", sfn);
+		return -1;
+	}
+
+	return tmpfd;
+}
+
 static void
 cmd_bell(int argc, const char **argv)
 {
@@ -1049,7 +1066,7 @@ cmd_page(int argc, const char **argv)
 {
 	struct qid qid;
 	int nfid, tmpfd, miss;
-	char sfn[24], p[PATH_MAX], *name, *errstr;
+	char sfn[TMPFSTRLEN], p[PATH_MAX], *name, *errstr;
 
 	if (argc != 1) {
 		puts("usage: page file");
@@ -1070,9 +1087,7 @@ cmd_page(int argc, const char **argv)
 		return;
 	}
 
-	strlcpy(sfn, "/tmp/kamiftp.XXXXXXXXXX", sizeof(sfn));
-	if ((tmpfd = mkstemp(sfn)) == -1) {
-		warn("mkstemp %s", sfn);
+	if ((tmpfd = tmp_file(sfn)) == -1) {
 		do_clunk(nfid);
 		return;
 	}
