@@ -381,6 +381,27 @@ expect2(uint8_t type, uint16_t tag)
 	errx(1, "expected tag 0x%x, got 0x%x", tag, t);
 }
 
+static char *
+check(uint8_t type, uint16_t tag)
+{
+	uint16_t rtag;
+	uint8_t rtype;
+
+	rtype = np_read8(buf);
+	rtag = np_read16(buf);
+	if (rtype == type) {
+		if (rtag != tag)
+			errx(1, "expected tag 0x%x, got 0x%x", tag, rtag);
+		return NULL;
+	}
+
+	if (rtype == Rerror)
+		return np_readstr(buf);
+
+	errx(1, "expected %s, got msg type %s",
+	    pp_msg_type(type), pp_msg_type(rtype));
+}
+
 static void
 do_version(void)
 {
@@ -469,10 +490,11 @@ dup_fid(int fid, int nfid)
 	ASSERT_EMPTYBUF();
 }
 
-static int
-walk_path(int fid, int newfid, const char *path, struct qid *qid)
+static char *
+walk_path(int fid, int newfid, const char *path, int *missing,
+    struct qid *qid)
 {
-	char *wnames[MAXWELEM], *p, *t;
+	char *wnames[MAXWELEM], *p, *t, *errstr;
 	size_t nwname, i;
 	uint16_t nwqid;
 
@@ -493,7 +515,10 @@ walk_path(int fid, int newfid, const char *path, struct qid *qid)
 	twalk(fid, newfid, (const char **)wnames, nwname);
 	do_send();
 	recv_msg();
-	expect2(Rwalk, iota_tag);
+
+	*missing = nwname;
+	if ((errstr = check(Rwalk, iota_tag)) != NULL)
+		return errstr;
 
 	nwqid = np_read16(buf);
 	assert(nwqid <= nwname);
@@ -504,7 +529,8 @@ walk_path(int fid, int newfid, const char *path, struct qid *qid)
 
 	free(p);
 
-	return nwqid == nwname;
+	*missing = nwname - nwqid;
+	return NULL;
 }
 
 static void
@@ -770,7 +796,8 @@ static void
 cmd_cd(int argc, const char **argv)
 {
 	struct qid qid;
-	int nfid;
+	int nfid, miss;
+	char *errstr;
 
 	if (argc != 1) {
 		printf("usage: cd remote-path\n");
@@ -778,14 +805,21 @@ cmd_cd(int argc, const char **argv)
 	}
 
 	nfid = pwdfid+1;
-	if (walk_path(pwdfid, nfid, argv[0], &qid) == -1 ||
-	    !(qid.type & QTDIR)) {
-		printf("can't cd %s\n", argv[0]);
-		do_clunk(nfid);
-	} else {
-		do_clunk(pwdfid);
-		pwdfid = nfid;
+	errstr = walk_path(pwdfid, nfid, argv[0], &miss, &qid);
+	if (errstr != NULL) {
+		printf("%s: %s\n", argv[0], errstr);
+		free(errstr);
+		return;
 	}
+
+	if (miss != 0 || !(qid.type & QTDIR)) {
+		printf("%s: not a directory\n", argv[0]);
+		do_clunk(nfid);
+		return;
+	}
+
+	do_clunk(pwdfid);
+	pwdfid = nfid;
 }
 
 static void
@@ -793,8 +827,8 @@ cmd_get(int argc, const char **argv)
 {
 	struct qid qid;
 	const char *l;
-	int nfid;
-	int fd;
+	char *errstr;
+	int nfid, fd, miss;
 
 	if (argc != 1 && argc != 2) {
 		printf("usage: get remote-file [local-file]\n");
@@ -809,13 +843,15 @@ cmd_get(int argc, const char **argv)
 		l = argv[0];
 
 	nfid = pwdfid+1;
-	if (walk_path(pwdfid, nfid, argv[0], &qid) == -1) {
-		printf("can't fetch %s\n", argv[0]);
+	errstr = walk_path(pwdfid, nfid, argv[0], &miss, &qid);
+	if (errstr != NULL) {
+		printf("%s: %s\n", argv[0], errstr);
+		free(errstr);
 		return;
 	}
 
-	if (qid.type != 0) {
-		printf("can't fetch %s\n", argv[0]);
+	if (miss != 0 || qid.type != 0) {
+		printf("%s: not a file\n", argv[0]);
 		do_clunk(nfid);
 		return;
 	}
@@ -921,8 +957,8 @@ static void
 cmd_page(int argc, const char **argv)
 {
 	struct qid qid;
-	int nfid, tmpfd;
-	char sfn[24], p[PATH_MAX], *name;
+	int nfid, tmpfd, miss;
+	char sfn[24], p[PATH_MAX], *name, *errstr;
 
 	if (argc != 1) {
 		puts("usage: page file");
@@ -930,13 +966,15 @@ cmd_page(int argc, const char **argv)
 	}
 
 	nfid = pwdfid+1;
-	if (walk_path(pwdfid, nfid, *argv, &qid) == -1) {
-		printf("can't fetch %s\n", *argv);
+	errstr = walk_path(pwdfid, nfid, *argv, &miss, &qid);
+	if (errstr != NULL) {
+		printf("%s: %s\n", *argv, errstr);
+		free(errstr);
 		return;
 	}
 
-	if (qid.type != 0) {
-		printf("can't page file type %s\n", pp_qid_type(qid.type));
+	if (miss != 0 || qid.type != 0) {
+		printf("%s: not a file\n", *argv);
 		do_clunk(nfid);
 		return;
 	}
