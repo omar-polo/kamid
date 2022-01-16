@@ -586,7 +586,7 @@ draw_progress(const char *pre, const struct progress *p)
 }
 
 static void
-fetch_fid_in_fd(int fid, int fd, const char *name)
+fetch_fid(int fid, int fd, const char *name)
 {
 	struct progress p = {0};
 	struct np_stat st;
@@ -624,23 +624,8 @@ fetch_fid_in_fd(int fid, int fd, const char *name)
 	}
 
 	putchar('\n');
-}
 
-static int
-fetch_fid(int fid, const char *path)
-{
-	int fd;
-
-	fd = open(path, O_WRONLY|O_CREAT|O_TRUNC|O_CLOEXEC, 0644);
-	if (fd == -1) {
-		warn("can't open %s", path);
-		return -1;
-	}
-
-	fetch_fid_in_fd(fid, fd, path);
-	close(fd);
 	do_clunk(fid);
-	return 0;
 }
 
 static void
@@ -810,6 +795,7 @@ cmd_get(int argc, const char **argv)
 	struct qid qid;
 	const char *l;
 	int nfid;
+	int fd;
 
 	if (argc != 1 && argc != 2) {
 		printf("usage: get remote-file [local-file]\n");
@@ -835,7 +821,14 @@ cmd_get(int argc, const char **argv)
 		return;
 	}
 
-	fetch_fid(nfid, l);
+	if ((fd = open(l, O_WRONLY|O_CREAT|O_TRUNC|O_CLOEXEC, 0644)) == -1) {
+		warn("can't open %s", l);
+		do_clunk(nfid);
+		return;
+	}
+
+	fetch_fid(nfid, fd, l);
+	close(fd);
 }
 
 static void
@@ -958,7 +951,7 @@ cmd_page(int argc, const char **argv)
 
 	strlcpy(p, *argv, sizeof(p));
 	name = basename(p);
-	fetch_fid_in_fd(nfid, tmpfd, name);
+	fetch_fid(nfid, tmpfd, name);
 	close(tmpfd);
 	spawn("less", sfn, NULL);
 	unlink(sfn);
