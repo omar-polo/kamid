@@ -598,16 +598,15 @@ fetch_fid(int fid, int fd, const char *name)
 
 	p.max = st.length;
 	for (;;) {
-		size_t siz, off;
+		size_t off;
 		ssize_t nw;
 
 		r = do_read(fid, p.done, sizeof(buf), buf);
 		if (r == 0)
 			break;
 
-		siz = sizeof(buf);
-		for (off = 0; off < siz; off += nw)
-			if ((nw = write(fd, buf + off, siz - off)) == 0 ||
+		for (off = 0; off < r; off += nw)
+			if ((nw = write(fd, buf + off, r - off)) == 0 ||
 			    nw == -1)
 				err(1, "write");
 
