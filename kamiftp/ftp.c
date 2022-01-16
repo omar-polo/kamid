@@ -1204,11 +1204,15 @@ cmd_page(int argc, const char **argv)
 	struct qid qid;
 	int nfid, tmpfd, miss;
 	char sfn[TMPFSTRLEN], p[PATH_MAX], *name, *errstr;
+	const char *pager;
 
 	if (argc != 1) {
 		puts("usage: page file");
 		return;
 	}
+
+	if ((pager = getenv("PAGER")) == NULL)
+		pager = "less";
 
 	nfid = pwdfid+1;
 	errstr = walk_path(pwdfid, nfid, *argv, &miss, &qid);
@@ -1234,7 +1238,7 @@ cmd_page(int argc, const char **argv)
 	name = basename(p);
 	fetch_fid(nfid, tmpfd, name);
 	close(tmpfd);
-	spawn("less", sfn, NULL);
+	spawn(pager, sfn, NULL);
 	unlink(sfn);
 }
 
