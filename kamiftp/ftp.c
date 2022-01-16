@@ -919,6 +919,13 @@ tmp_file(char sfn[TMPFSTRLEN])
 		return -1;
 	}
 
+	/* set the close-on-exec flag */
+	if (fcntl(tmpfd, F_SETFD, FD_CLOEXEC) == -1) {
+		warn("fcntl");
+		close(tmpfd);
+		return -1;
+	}
+
 	return tmpfd;
 }
 
