@@ -474,20 +474,25 @@ do_clunk(uint32_t fid)
 	ASSERT_EMPTYBUF();
 }
 
-static void
+static char *
 dup_fid(int fid, int nfid)
 {
 	uint16_t nwqid;
+	char *errstr;
 
 	twalk(fid, nfid, NULL, 0);
 	do_send();
 	recv_msg();
-	expect2(Rwalk, iota_tag);
+
+	if ((errstr = check(Rwalk, iota_tag)) != NULL)
+		return errstr;
 
 	nwqid = np_read16(buf);
 	assert(nwqid == 0);
 
 	ASSERT_EMPTYBUF();
+
+	return NULL;
 }
 
 static char *
@@ -907,14 +912,19 @@ cmd_ls(int argc, const char **argv)
 	struct np_stat st;
 	uint64_t off = 0;
 	uint32_t len;
-	char fmt[FMT_SCALED_STRSIZE];
+	char fmt[FMT_SCALED_STRSIZE], *errstr;
 
 	if (argc != 0) {
 		printf("ls don't take arguments (yet)\n");
 		return;
 	}
 
-	dup_fid(pwdfid, 1);
+	if ((errstr = dup_fid(pwdfid, 1)) != NULL) {
+		printf(".: %s\n", errstr);
+		free(errstr);
+		return;
+	}
+
 	do_open(1, KOREAD);
 
 	evbuffer_drain(dirbuf, EVBUFFER_LENGTH(dirbuf));
