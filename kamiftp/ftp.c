@@ -19,6 +19,7 @@
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 
 #include <assert.h>
@@ -463,6 +464,25 @@ do_open(uint32_t fid, uint8_t mode)
 	return iounit;
 }
 
+static uint32_t
+do_create(uint32_t fid, const char *name, uint32_t perm, uint8_t mode)
+{
+	struct qid qid;
+	uint32_t iounit;
+
+	tcreate(fid, name, perm, mode);
+	do_send();
+	recv_msg();
+	expect2(Rcreate, iota_tag);
+
+	np_read_qid(buf, &qid);
+	iounit = np_read32(buf);
+
+	ASSERT_EMPTYBUF();
+
+	return iounit;
+}
+
 static void
 do_clunk(uint32_t fid)
 {
@@ -572,6 +592,24 @@ do_read(int fid, uint64_t off, uint32_t count, void *data)
 	return r;
 }
 
+static size_t
+do_write(int fid, uint64_t off, uint32_t count, void *data)
+{
+	uint32_t r;
+
+	twrite(fid, off, data, count);
+	do_send();
+	recv_msg();
+	expect2(Rwrite, iota_tag);
+
+	r = np_read32(buf);
+	assert(r <= count);
+
+	ASSERT_EMPTYBUF();
+
+	return r;
+}
+
 static void
 draw_progress(const char *pre, const struct progress *p)
 {
@@ -655,6 +693,49 @@ fetch_fid(int fid, int fd, const char *name)
 
 	putchar('\n');
 
+	do_clunk(fid);
+}
+
+static void
+send_fid(int fid, const char *fnam, int fd, const char *name)
+{
+	struct progress p = {0};
+	struct stat sb;
+	ssize_t r;
+	size_t w;
+	char buf[BUFSIZ];
+
+	if (fstat(fd, &sb) == -1)
+		err(1, "fstat");
+
+	if (fnam != NULL)
+		do_create(fid, fnam, 0644, KOWRITE);
+	else
+		do_open(fid, KOWRITE);
+
+	p.max = sb.st_size;
+	for (;;) {
+		r = read(fd, buf, sizeof(buf));
+		if (r == 0)
+			break;
+		if (r == -1)
+			err(1, "read");
+
+		w = do_write(fid, p.done, r, buf);
+		p.done += w;
+
+		draw_progress(name, &p);
+
+#if 0
+		/* throttle, for debugging purpose */
+		{
+			struct timespec ts = { 0, 500000000 };
+			nanosleep(&ts, NULL);
+		}
+#endif
+	}
+
+	putchar('\n');
 	do_clunk(fid);
 }
 
@@ -1005,6 +1086,88 @@ cmd_page(int argc, const char **argv)
 }
 
 static void
+cmd_put(int argc, const char **argv)
+{
+	struct qid qid;
+	const char *l, *n = NULL;
+	char *errstr;
+	int nfid, fd, miss;
+
+	if (argc != 1 && argc != 2) {
+		printf("usage: put local-file [remote-file]\n");
+		return;
+	}
+
+	if (argc == 2)
+		l = argv[1];
+	else if ((l = strrchr(argv[0], '/')) != NULL)
+		l++; /* skip / */
+	else
+		l = argv[0];
+
+	nfid = pwdfid+1;
+	errstr = walk_path(pwdfid, nfid, l, &miss, &qid);
+	if (errstr != NULL && miss > 1) {
+		printf("%s: %s\n", l, errstr);
+		free(errstr);
+		return;
+	}
+
+	if (errstr != NULL || miss == 1) {
+		char p[PATH_MAX], *dn;
+
+		/*
+		 * If it's only one component missing (the file name), walk
+		 * to the parent directory and try to create the file.
+		 */
+
+		if (strlcpy(p, l, sizeof(p)) >= sizeof(p)) {
+			printf("path too long: %s\n", l);
+			return;
+		}
+		dn = dirname(p);
+
+		if (!strcmp(dn, ".")) {
+			errstr = dup_fid(pwdfid, nfid);
+			miss = 0;
+		} else
+			errstr = walk_path(pwdfid, nfid, dn, &miss, &qid);
+
+		if (errstr != NULL) {
+			printf("%s: %s\n", dn, errstr);
+			free(errstr);
+			return;
+		}
+
+		if (miss != 0) {
+			printf("%s: not a directory\n", dn);
+			return;
+		}
+
+		if ((n = strrchr(l, '/')) != NULL)
+			n++;
+		else
+			n = l;
+	}
+
+	free(errstr);
+
+	if (miss > 1) {
+		printf("can't create %s: missing %d path component(s)\n",
+		    l, miss);
+		return;
+	}
+
+	if ((fd = open(argv[0], O_RDONLY)) == -1) {
+		warn("%s", argv[0]);
+		return;
+	}
+
+	send_fid(nfid, n, fd, argv[0]);
+	close(fd);
+}
+
+static void
 cmd_verbose(int argc, const char **argv)
 {
 	if (argc == 0) {
@@ -1050,6 +1213,7 @@ excmd(int argc, const char **argv)
 		{"lpwd",	cmd_lpwd},
 		{"ls",		cmd_ls},
 		{"page",	cmd_page},
+		{"put",		cmd_put},
 		{"quit",	cmd_bye},
 		{"verbose",	cmd_verbose},
 	};
