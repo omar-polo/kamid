@@ -1112,7 +1112,7 @@ cmd_lcd(int argc, const char **argv)
 	const char *dir;
 
 	if (argc > 1) {
-		printf("lcd takes only one argument\n");
+		printf("usage: lcd [local-directory]\n");
 		return;
 	}
 
@@ -1132,6 +1132,11 @@ static void
 cmd_lpwd(int argc, const char **argv)
 {
 	char path[PATH_MAX];
+
+	if (argc != 0) {
+		printf("usage: lpwd\n");
+		return;
+	}
 
 	if (getcwd(path, sizeof(path)) == NULL) {
 		printf("lpwd: %s\n", strerror(errno));
