@@ -70,7 +70,7 @@ STAILQ_HEAD(fidhead, fid) fids;
 struct fid {
 	uint32_t		 fid;
 
-	char			 fpath[PATH_MAX];
+	char			 fname[PATH_MAX];
 
 	/*
 	 * the flags passed to open(2).  O_CLOEXEC means ORCLOSE, that
@@ -452,7 +452,7 @@ new_fid(struct dir *dir, uint32_t fid, const char *path, struct qid *qid)
 	f->fid = fid;
 	f->fd = -1;
 
-	strlcpy(f->fpath, path, sizeof(f->fpath));
+	strlcpy(f->fname, path, sizeof(f->fname));
 
 	memcpy(&f->qid, qid, sizeof(f->qid));
 
@@ -493,7 +493,7 @@ free_fid(struct fid *f)
 
 		/* try to honour ORCLOSE if requested */
 		if (f->iomode & O_CLOEXEC)
-			unlinkat(f->dir->fd, f->fpath, 0);
+			unlinkat(f->dir->fd, f->fname, 0);
 	}
 
 	dir_decref(f->dir);
@@ -1082,7 +1082,7 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		 * newfid?
 		 */
 		if (nf == NULL &&
-		    (nf = new_fid(f->dir, newfid, f->fpath, &f->qid)) == NULL)
+		    (nf = new_fid(f->dir, newfid, f->fname, &f->qid)) == NULL)
 			fatal("new_fid duplication");
 
 		np_walk(hdr->tag, 0, NULL);
@@ -1238,7 +1238,7 @@ topen(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 
-	path = f->fpath;
+	path = f->fname;
 	if (f->qid.type & QTDIR)
 		path = ".";
 
@@ -1566,7 +1566,7 @@ tstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	else if (f->qid.type & QTDIR)
 		r = fstat(f->dir->fd, &sb);
 	else
-		r = fstatat(f->dir->fd, f->fpath, &sb, 0);
+		r = fstatat(f->dir->fd, f->fname, &sb, 0);
 
 	if (r == -1) {
 		np_errno(hdr->tag);
@@ -1574,7 +1574,7 @@ tstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 
-	serialize_stat(f->fpath, &sb, evb);
+	serialize_stat(f->fname, &sb, evb);
 	np_stat(hdr->tag, EVBUFFER_LENGTH(evb), EVBUFFER_DATA(evb));
 	evbuffer_free(evb);
 }
@@ -1622,7 +1622,7 @@ twstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		if (f->fd != -1)
 			r = fchmod(f->fd, m);
 		else
-			r = fchmodat(f->dir->fd, f->fpath, m, 0);
+			r = fchmodat(f->dir->fd, f->fname, m, 0);
 
 		if (r == -1) {
 			np_errno(hdr->tag);
@@ -1647,7 +1647,7 @@ twstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		if (f->fd != -1)
 			r = futimens(f->fd, times);
 		else
-			r = utimensat(f->dir->fd, f->fpath, times, 0);
+			r = utimensat(f->dir->fd, f->fname, times, 0);
 
 		if (r == -1) {
 			np_errno(hdr->tag);
@@ -1698,7 +1698,7 @@ twstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 			return;
 		}
 
-		r = renameat(f->dir->fd, f->fpath, f->dir->fd, st.name);
+		r = renameat(f->dir->fd, f->fname, f->dir->fd, st.name);
 		if (r == -1) {
 			np_errno(hdr->tag);
 			return;
@@ -1710,7 +1710,7 @@ twstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 			newname++; /* skip / */
 		else
 			newname = st.name;
-		strlcpy(f->fpath, newname, sizeof(f->fpath));
+		strlcpy(f->fname, newname, sizeof(f->fname));
 
 		if (strchr(st.name, '/') != NULL) {
 			struct dir *dir;
@@ -1766,10 +1766,10 @@ tremove(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 
 	if (f->qid.type & QTDIR) { /* directory */
 		strlcpy(dirpath, "../", sizeof(dirpath));
-		strlcat(dirpath, f->fpath, sizeof(dirpath));
+		strlcat(dirpath, f->fname, sizeof(dirpath));
 		r = unlinkat(f->dir->fd, dirpath, AT_REMOVEDIR);
 	} else /* file */
-		r = unlinkat(f->dir->fd, f->fpath, 0);
+		r = unlinkat(f->dir->fd, f->fname, 0);
 
 	if (r == -1)
 		np_errno(hdr->tag);
