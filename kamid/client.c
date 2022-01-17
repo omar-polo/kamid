@@ -24,9 +24,12 @@
 #include <endian.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
+#include <libgen.h>
 #include <pwd.h>
 #include <signal.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
@@ -138,6 +141,7 @@ static void		np_create(uint16_t, struct qid *, uint32_t);
 static void		np_read(uint16_t, uint32_t, void *);
 static void		np_write(uint16_t, uint32_t);
 static void		np_stat(uint16_t, uint32_t, void *);
+static void		np_wstat(uint16_t);
 static void		np_remove(uint16_t);
 static void		np_error(uint16_t, const char *);
 static void		np_errno(uint16_t);
@@ -156,12 +160,17 @@ static int	np_read64(const char *, const char *, uint64_t *,
 static int	np_readstr(const char *, const char *, char *, size_t,
 		    const uint8_t **, size_t *);
 
+static int	np_readst(const char *, const char *, struct np_stat *,
+		    char *, size_t, const uint8_t **, size_t *);
+
 #define NPREAD8(f, dst, src, len)  np_read8(__func__, f, dst, src, len)
 #define NPREAD16(f, dst, src, len) np_read16(__func__, f, dst, src, len)
 #define NPREAD32(f, dst, src, len) np_read32(__func__, f, dst, src, len)
 #define NPREAD64(f, dst, src, len) np_read64(__func__, f, dst, src, len)
 
 #define NPREADSTR(f, b, bl, src, len) np_readstr(__func__, f, b, bl, src, len)
+
+#define NPREADST(f, dst, n, nl, src, len) np_readst(__func__, f, dst, n, nl, src, len)
 
 static void	tversion(struct np_msg_header *, const uint8_t *, size_t);
 static void	tattach(struct np_msg_header *, const uint8_t *, size_t);
@@ -173,6 +182,7 @@ static void	tcreate(struct np_msg_header *, const uint8_t *, size_t);
 static void	tread(struct np_msg_header *, const uint8_t *, size_t);
 static void	twrite(struct np_msg_header *, const uint8_t *, size_t);
 static void	tstat(struct np_msg_header *, const uint8_t *, size_t);
+static void	twstat(struct np_msg_header *, const uint8_t *, size_t);
 static void	tremove(struct np_msg_header *, const uint8_t *, size_t);
 static void	handle_message(struct imsg *, size_t);
 
@@ -707,6 +717,13 @@ np_stat(uint16_t tag, uint32_t count, void *data)
 }
 
 static void
+np_wstat(uint16_t tag)
+{
+	np_header(0, Rwstat, tag);
+	do_send();
+}
+
+static void
 np_remove(uint16_t tag)
 {
 	np_header(0, Rremove, tag);
@@ -838,6 +855,31 @@ np_readstr(const char *t, const char *f, char *res, size_t reslen,
 	*len -= sl;
 
 	return 0;
+}
+
+static int
+np_readst(const char *t, const char *f, struct np_stat *st,
+    char *name, size_t namelen, const uint8_t **src, size_t *len)
+{
+	memset(st, 0, sizeof(*st));
+
+	if (!np_read16(t, "stat.type", &st->type, src, len) ||
+	    !np_read32(t, "stat.dev", &st->dev, src, len) ||
+	    !np_read64(t, "stat.qid.path", &st->qid.path, src, len) ||
+	    !np_read32(t, "stat.qid.vers", &st->qid.vers, src, len) ||
+	    !np_read8(t, "stat.qid.type", &st->qid.type, src, len) ||
+	    !np_read32(t, "stat.mode", &st->mode, src, len) ||
+	    !np_read32(t, "stat.atime", &st->atime, src, len) ||
+	    !np_read32(t, "stat.mtime", &st->mtime, src, len) ||
+	    !np_read64(t, "stat.length", &st->length, src, len))
+		return READSTRERR;
+
+	/*
+	 * ignore everything but the name, we don't support
+	 * changing those fields anyway
+	 */
+	st->name = name;
+	return np_readstr(t, "stat.name", name, namelen, src, len);
 }
 
 static void
@@ -1538,6 +1580,171 @@ tstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 }
 
 static void
+twstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
+{
+	struct timespec	 times[2];
+	struct np_stat	 st;
+	struct fid	*f;
+	int		 r;
+	uint32_t	 fid;
+	char		 name[PATH_MAX];
+
+	/* fid[4] stat[n] */
+	if (!NPREAD32("fid", &fid, &data, &len))
+		goto err;
+
+	switch (NPREADST("stat", &st, name, sizeof(name), &data, &len)) {
+	case READSTRERR:
+		goto err;
+	case READSTRTRUNC:
+		log_warnx("wstat new name would overflow");
+		np_error(hdr->tag, "new name too long");
+		return;
+	}
+
+	if ((f = fid_by_id(fid)) == NULL) {
+		np_error(hdr->tag, "invalid fid");
+		return;
+	}
+
+	/*
+	 * 9P wants these edits to be done in an atomic fashion,
+	 * something that I don't think it's possible on UNIX without
+	 * some special kernel help.  Changing atime or mtime,
+	 * permissions, or rename the file are different syscalls.
+	 *
+	 * Also, silently ignore stuff we can't/don't want to modify.
+	 */
+
+	/* change the permissions */
+	if (st.mode != (uint32_t)-1) {
+		mode_t m = st.mode & 0x7F; /* silently truncate higer bits */
+		if (f->fd != -1)
+			r = fchmod(f->fd, m);
+		else
+			r = fchmodat(f->dir->fd, f->fpath, m, 0);
+
+		if (r == -1) {
+			np_errno(hdr->tag);
+			return;
+		}
+	}
+
+	/* change the atime/mtime of the fid, opened or not */
+	if (st.atime != (uint32_t)-1 || st.mtime != (uint32_t)-1) {
+		times[0].tv_nsec = UTIME_OMIT;
+		times[1].tv_nsec = UTIME_OMIT;
+
+		if (st.atime != (uint32_t)-1) {
+			times[0].tv_sec = st.atime;
+			times[0].tv_nsec = 0;
+		}
+		if (st.mtime != (uint32_t)-1) {
+			times[1].tv_sec = st.mtime;
+			times[1].tv_nsec = 0;
+		}
+
+		if (f->fd != -1)
+			r = futimens(f->fd, times);
+		else
+			r = utimensat(f->dir->fd, f->fpath, times, 0);
+
+		if (r == -1) {
+			np_errno(hdr->tag);
+			return;
+		}
+	}
+
+	/* truncate */
+	if (st.length != (uint64_t)-1) {
+		if (f->fd == -1) {
+			np_error(hdr->tag, "can't truncate a non-opened fid");
+			return;
+		}
+
+		if (f->qid.type & QTDIR && st.length != 0) {
+			np_error(hdr->tag, "can't truncate directories");
+			return;
+		}
+
+		if (TYPE_OVERFLOW(off_t, st.length)) {
+			log_warnx("truncate request overflows off_t: %"PRIu64,
+			    st.length);
+			np_error(hdr->tag, "length overflows");
+			return;
+		}
+
+		if (!(f->qid.type & QTDIR) &&
+		    ftruncate(f->fd, st.length) == -1) {
+			np_errno(hdr->tag);
+			return;
+		}
+	}
+
+	/* rename (change the name entry) */
+	if (*st.name != '\0') {
+		struct stat sb;
+		const char *newname;
+
+		/*
+		 * XXX: 9P requires that we disallow changing the name
+		 * to that of an existing file.  We can't do that
+		 * atomically (rename is happy about stealing names)
+		 * so this is just a best effort.
+		 */
+		if (fstatat(f->dir->fd, st.name, &sb, 0) == -1 &&
+		    errno != ENOENT) {
+			np_error(hdr->tag, "target file exists");
+			return;
+		}
+
+		r = renameat(f->dir->fd, f->fpath, f->dir->fd, st.name);
+		if (r == -1) {
+			np_errno(hdr->tag);
+			return;
+		}
+
+		/* fix the fid so it points to the new file */
+
+		if ((newname = strchr(st.name, '/')) != NULL)
+			newname++; /* skip / */
+		else
+			newname = st.name;
+		strlcpy(f->fpath, newname, sizeof(f->fpath));
+
+		if (strchr(st.name, '/') != NULL) {
+			struct dir *dir;
+			char *dname;
+			int fd;
+
+			dname = dirname(st.name);
+			fd = openat(f->dir->fd, dname, O_RDONLY|O_DIRECTORY);
+			if (fd == -1) {
+				np_errno(hdr->tag);
+				free_fid(f);
+				return;
+			}
+
+			if ((dir = new_dir(fd)) == NULL) {
+				np_errno(hdr->tag);
+				free_fid(f);
+				return;
+			}
+
+			dir_decref(f->dir);
+			f->dir = dir_incref(dir);
+		}
+	}
+
+	np_wstat(hdr->tag);
+	return;
+
+err:
+	client_send_listener(IMSG_CLOSE, NULL, 0);
+	client_shutdown();
+}
+
+static void
 tremove(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 {
 	struct fid	*f;
@@ -1589,6 +1796,7 @@ handle_message(struct imsg *imsg, size_t len)
 		{Tread,		tread},
 		{Twrite,	twrite},
 		{Tstat,		tstat},
+		{Twstat,	twstat},
 		{Tremove,	tremove},
 	};
 	struct np_msg_header	 hdr;
