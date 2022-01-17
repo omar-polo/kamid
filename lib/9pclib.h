@@ -48,6 +48,7 @@ void		 tcreate(uint32_t, const char *, uint32_t, uint8_t);
 void		 tread(uint32_t, uint64_t, uint32_t);
 void		 twrite(uint32_t, uint64_t, const void *, uint32_t);
 void		 tstat(uint32_t);
+void		 twstat(uint32_t, const struct np_stat *);
 void		 tremove(uint32_t);
 
 #endif

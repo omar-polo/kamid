@@ -20,10 +20,11 @@
 #include <inttypes.h>
 #include <string.h>
 
-#include "9pclib.h"
 #include "kami.h"
 #include "log.h"
 #include "utils.h"
+
+#include "9pclib.h"
 
 uint16_t iota_tag;
 
@@ -67,7 +68,10 @@ write_str(uint16_t len, const char *str)
 void
 write_str_auto(const char *str)
 {
-	write_str(strlen(str), str);
+	if (str == NULL)
+		write_16(0);
+	else
+		write_str(strlen(str), str);
 }
 
 void
@@ -241,6 +245,42 @@ tstat(uint32_t fid)
 	/* fid[4] */
 	write_hdr_auto(sizeof(fid), Tstat);
 	write_fid(fid);
+}
+
+void
+twstat(uint32_t fid, const struct np_stat *st)
+{
+	uint32_t	len;
+
+	/* fid[4] stat[n] */
+	len = sizeof(fid) + NPSTATSIZ(0, 0, 0, 0);
+	if (st->name != NULL)
+		len += strlen(st->name);
+	if (st->uid != NULL)
+		len += strlen(st->uid);
+	if (st->gid != NULL)
+		len += strlen(st->gid);
+	if (st->muid != NULL)
+		len += strlen(st->muid);
+
+	write_hdr_auto(len, Twstat);
+	write_fid(fid);
+	write_16(st->type);
+	write_32(st->dev);
+
+	write_64(st->qid.path);
+	write_32(st->qid.vers);
+	write_8(st->qid.type);
+
+	write_32(st->mode);
+	write_32(st->atime);
+	write_32(st->mtime);
+	write_64(st->length);
+
+	write_str_auto(st->name);
+	write_str_auto(st->uid);
+	write_str_auto(st->gid);
+	write_str_auto(st->muid);
 }
 
 void
