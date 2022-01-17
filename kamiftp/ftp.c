@@ -1247,6 +1247,7 @@ cmd_ls(int argc, const char **argv)
 	struct tm *tm;
 	uint64_t off = 0;
 	uint32_t len;
+	int nfid;
 	const char *timfmt;
 	char fmt[FMT_SCALED_STRSIZE], tim[13], *errstr;
 
@@ -1257,18 +1258,19 @@ cmd_ls(int argc, const char **argv)
 
 	now = time(NULL);
 
-	if ((errstr = dup_fid(pwdfid, 1)) != NULL) {
+	nfid = nextfid();
+	if ((errstr = dup_fid(pwdfid, nfid)) != NULL) {
 		printf(".: %s\n", errstr);
 		free(errstr);
 		return;
 	}
 
-	do_open(1, KOREAD);
+	do_open(nfid, KOREAD);
 
 	evbuffer_drain(dirbuf, EVBUFFER_LENGTH(dirbuf));
 
 	for (;;) {
-		tread(1, off, BUFSIZ);
+		tread(nfid, off, BUFSIZ);
 		do_send();
 		recv_msg();
 		expect2(Rread, iota_tag);
@@ -1317,7 +1319,7 @@ cmd_ls(int argc, const char **argv)
 		free(st.muid);
 	}
 
-	do_clunk(1);
+	do_clunk(nfid);
 }
 
 static void
