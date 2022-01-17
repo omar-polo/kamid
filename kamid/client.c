@@ -70,7 +70,7 @@ STAILQ_HEAD(fidhead, fid) fids;
 struct fid {
 	uint32_t		 fid;
 
-	char			 fname[PATH_MAX];
+	char			 fname[NAME_MAX];
 
 	/*
 	 * the flags passed to open(2).  O_CLOEXEC means ORCLOSE, that
