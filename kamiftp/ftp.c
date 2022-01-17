@@ -184,7 +184,7 @@ do_send(void)
 	ssize_t		 r;
 
 	if (xdump)
-		hexdump("outgoing message", EVBUFFER_DATA(evb), 
+		hexdump("outgoing message", EVBUFFER_DATA(evb),
 		    EVBUFFER_LENGTH(evb));
 
 	while (EVBUFFER_LENGTH(evb) != 0) {
@@ -1270,7 +1270,7 @@ cmd_ls(int argc, const char **argv)
 		printf("%s", pp_perm(st.mode >> 6));
 		printf("%s", pp_perm(st.mode >> 3));
 		printf("%s", pp_perm(st.mode));
-		printf(" %8s %12s %s%s\n", fmt, tim, st.name, 
+		printf(" %8s %12s %s%s\n", fmt, tim, st.name,
 		    st.qid.type & QTDIR ? "/" : "");
 
 		free(st.name);
