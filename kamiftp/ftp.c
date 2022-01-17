@@ -46,10 +46,10 @@
 #define nitems(_a)	(sizeof((_a)) / sizeof((_a)[0]))
 #endif
 
-#include "9pclib.h"
 #include "kami.h"
 #include "utils.h"
 #include "log.h"
+#include "9pclib.h"
 
 #define TMPFSTR		"/tmp/kamiftp.XXXXXXXXXX"
 #define TMPFSTRLEN	sizeof(TMPFSTR)
@@ -570,6 +570,23 @@ do_stat(int fid, struct np_stat *st)
 	ASSERT_EMPTYBUF();
 }
 
+static char *
+do_wstat(int fid, const struct np_stat *st)
+{
+	char *errstr;
+
+	twstat(fid, st);
+	do_send();
+	recv_msg();
+
+	if ((errstr = check(Rwstat, iota_tag)) != NULL)
+		return errstr;
+
+	ASSERT_EMPTYBUF();
+
+	return NULL;
+}
+
 static size_t
 do_read(int fid, uint64_t off, uint32_t count, void *data)
 {
@@ -951,6 +968,16 @@ pp_perm(uint8_t x)
 		/* unreachable, just for the compiler' happiness */
 		return "???";
 	}
+}
+
+static inline void
+prepare_wstat(struct np_stat *st)
+{
+	memset(st, 0xFF, sizeof(*st));
+	st->name = NULL;
+	st->uid = NULL;
+	st->gid = NULL;
+	st->muid = NULL;
 }
 
 static void
@@ -1355,6 +1382,42 @@ cmd_put(int argc, const char **argv)
 }
 
 static void
+cmd_rename(int argc, const char **argv)
+{
+	struct np_stat st;
+	struct qid qid;
+	char *errstr;
+	int nfid, miss;
+
+	if (argc != 2) {
+		puts("usage: rename remote-file new-remote-name");
+		return;
+	}
+
+	nfid = pwdfid+1;
+	errstr = walk_path(pwdfid, nfid, argv[0], &miss, &qid);
+	if (errstr != NULL) {
+		printf("%s: %s\n", argv[0], errstr);
+		free(errstr);
+		return;
+	}
+
+	if (miss != 0) {
+		printf("%s: not such file or directory\n", argv[0]);
+		return;
+	}
+
+	prepare_wstat(&st);
+	st.name = (char *)argv[1];
+	if ((errstr = do_wstat(nfid, &st)) != NULL) {
+		printf("rename: %s\n", errstr);
+		free(errstr);
+	}
+
+	do_clunk(nfid);
+}
+
+static void
 cmd_verbose(int argc, const char **argv)
 {
 	if (argc == 0) {
@@ -1404,6 +1467,7 @@ excmd(int argc, const char **argv)
 		{"page",	cmd_page},
 		{"put",		cmd_put},
 		{"quit",	cmd_bye},
+		{"rename",	cmd_rename},
 		{"verbose",	cmd_verbose},
 	};
 	size_t i;
