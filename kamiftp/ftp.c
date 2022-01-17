@@ -176,6 +176,17 @@ usage(int ret)
 	exit(ret);
 }
 
+static int
+nextfid(void)
+{
+	uint32_t i;
+
+	for (i = 0; ; ++i) {
+		if (i != pwdfid)
+			return i;
+	}
+}
+
 static void
 do_send(void)
 {
@@ -765,7 +776,7 @@ woc_file(int fd, const char *prompt, const char *path)
 	char *errstr;
 	int nfid, miss;
 
-	nfid = pwdfid+1;
+	nfid = nextfid();
 	errstr = walk_path(pwdfid, nfid, path, &miss, &qid);
 	if (errstr != NULL && miss > 1) {
 		printf("%s: %s\n", path, errstr);
@@ -1030,7 +1041,7 @@ cmd_cd(int argc, const char **argv)
 		return;
 	}
 
-	nfid = pwdfid+1;
+	nfid = nextfid();
 	errstr = walk_path(pwdfid, nfid, argv[0], &miss, &qid);
 	if (errstr != NULL) {
 		printf("%s: %s\n", argv[0], errstr);
@@ -1066,7 +1077,7 @@ cmd_edit(int argc, const char **argv)
 	    (ed = getenv("EDITOR")) == NULL)
 		ed = "ed";
 
-	nfid = pwdfid+1;
+	nfid = nextfid();
 	errstr = walk_path(pwdfid, nfid, *argv, &miss, &qid);
 	if (errstr != NULL) {
 		printf("%s: %s\n", *argv, errstr);
@@ -1132,7 +1143,7 @@ cmd_get(int argc, const char **argv)
 	else
 		l = argv[0];
 
-	nfid = pwdfid+1;
+	nfid = nextfid();
 	errstr = walk_path(pwdfid, nfid, argv[0], &miss, &qid);
 	if (errstr != NULL) {
 		printf("%s: %s\n", argv[0], errstr);
@@ -1325,7 +1336,7 @@ cmd_page(int argc, const char **argv)
 	if ((pager = getenv("PAGER")) == NULL)
 		pager = "less";
 
-	nfid = pwdfid+1;
+	nfid = nextfid();
 	errstr = walk_path(pwdfid, nfid, *argv, &miss, &qid);
 	if (errstr != NULL) {
 		printf("%s: %s\n", *argv, errstr);
@@ -1394,7 +1405,7 @@ cmd_rename(int argc, const char **argv)
 		return;
 	}
 
-	nfid = pwdfid+1;
+	nfid = nextfid();
 	errstr = walk_path(pwdfid, nfid, argv[0], &miss, &qid);
 	if (errstr != NULL) {
 		printf("%s: %s\n", argv[0], errstr);
