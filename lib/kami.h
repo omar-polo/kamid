@@ -36,6 +36,7 @@ struct qid {
 };
 
 struct np_stat {
+	uint16_t	 size;
 	uint16_t	 type;
 	uint32_t	 dev;
 	struct qid	 qid;
