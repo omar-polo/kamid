@@ -571,3 +571,22 @@
                                    (concatenate 'string
                                                 *remote-test-path-huge*
                                                 "-renamed"))))
+
+(defun example-truncate-file (path &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (root-fid        (mount stream root)))
+      (truncate-file stream root-fid path :new-size 128)
+      (stat-size (path-info stream root-fid path)))))
+
+(deftest test-truncate-file ((kami-suite) (test-move-file))
+  (assert-equality #'=
+      128
+      (example-truncate-file (concatenate 'string
+                                          *remote-test-path-huge*
+                                          "-renamed"))))
