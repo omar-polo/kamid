@@ -1616,8 +1616,14 @@ twstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 
+	/*
+	 * We skip the reading of some fields voluntarily because we
+	 * don't support chown, so len will always be > 0!
+	 */
+#ifdef notyet
 	if (len != 0)
 		goto err;
+#endif
 
 	if ((f = fid_by_id(fid)) == NULL) {
 		np_error(hdr->tag, "invalid fid");
