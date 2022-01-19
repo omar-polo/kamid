@@ -251,20 +251,25 @@ void
 twstat(uint32_t fid, const struct np_stat *st)
 {
 	uint32_t	len;
+	uint16_t	stlen;
 
 	/* fid[4] stat[n] */
-	len = sizeof(fid) + NPSTATSIZ(0, 0, 0, 0);
+
+	stlen = NPSTATSIZ(0, 0, 0, 0);
 	if (st->name != NULL)
-		len += strlen(st->name);
+		stlen += strlen(st->name);
 	if (st->uid != NULL)
-		len += strlen(st->uid);
+		stlen += strlen(st->uid);
 	if (st->gid != NULL)
-		len += strlen(st->gid);
+		stlen += strlen(st->gid);
 	if (st->muid != NULL)
-		len += strlen(st->muid);
+		stlen += strlen(st->muid);
+
+	len = sizeof(fid) + sizeof(stlen) + stlen;
 
 	write_hdr_auto(len, Twstat);
 	write_fid(fid);
+	write_16(stlen);
 	write_16(st->type);
 	write_32(st->dev);
 
