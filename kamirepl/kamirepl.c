@@ -34,10 +34,10 @@
 #include <tls.h>
 #include <unistd.h>
 
-#include "9pclib.h"
 #include "kami.h"
 #include "log.h"
 #include "utils.h"
+#include "9pclib.h"
 
 #define DEBUG_PACKETS 0
 
