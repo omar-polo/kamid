@@ -902,6 +902,9 @@ tversion(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		goto mismatch;
 	}
 
+	if (len != 0)
+		goto err;
+
 	if ((dot = strchr(version, '.')) != NULL)
 		*dot = '\0';
 
@@ -959,6 +962,9 @@ tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 
+	if (len != 0)
+		goto err;
+
 	if (fid_by_id(fid) != NULL || afid != NOFID) {
 		np_error(hdr->tag, "invalid fid or afid");
 		return;
@@ -997,7 +1003,8 @@ tclunk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	uint32_t	 fid;
 
 	/* fid[4] */
-	if (!NPREAD32("fid", &fid, &data, &len)) {
+	if (!NPREAD32("fid", &fid, &data, &len) ||
+	    len != 0) {
 		client_send_listener(IMSG_CLOSE, NULL, 0);
 		client_shutdown();
 		return;
@@ -1135,6 +1142,9 @@ twalk(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		oldfd = fd;
 	}
 
+	if (len != 0)
+		goto err;
+
 	/*
 	 * If fd is -1 we've reached a file, otherwise we've just
 	 * reached another directory.  We must pay attention to what
@@ -1222,7 +1232,8 @@ topen(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 
 	/* fid[4] mode[1] */
 	if (!NPREAD32("fid", &fid, &data, &len) ||
-	    !NPREAD8("mode", &mode, &data, &len)) {
+	    !NPREAD8("mode", &mode, &data, &len) ||
+	    len != 0) {
 		client_send_listener(IMSG_CLOSE, NULL, 0);
 		client_shutdown();
 		return;
@@ -1293,7 +1304,8 @@ tcreate(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 	if (!NPREAD32("perm", &perm, &data, &len) ||
-	    !NPREAD8("mode", &mode, &data, &len))
+	    !NPREAD8("mode", &mode, &data, &len) ||
+	    len != 0)
 		goto err;
 
 	if (!strcmp(name, ".") || !strcmp(name, "..") ||
@@ -1432,7 +1444,8 @@ tread(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	/* fid[4] offset[8] count[4] */
 	if (!NPREAD32("fid", &fid, &data, &len) ||
 	    !NPREAD64("offset", &off, &data, &len) ||
-	    !NPREAD32("count", &count, &data, &len)) {
+	    !NPREAD32("count", &count, &data, &len) ||
+	    len != 0) {
 		client_send_listener(IMSG_CLOSE, NULL, 0);
 		client_shutdown();
 		return;
@@ -1541,7 +1554,8 @@ tstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	uint32_t	 fid;
 
 	/* fid[4] */
-	if (!NPREAD32("fid", &fid, &data, &len)) {
+	if (!NPREAD32("fid", &fid, &data, &len) ||
+	    len != 0) {
 		client_send_listener(IMSG_CLOSE, NULL, 0);
 		client_shutdown();
 		return;
@@ -1601,6 +1615,9 @@ twstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		np_error(hdr->tag, "new name too long");
 		return;
 	}
+
+	if (len != 0)
+		goto err;
 
 	if ((f = fid_by_id(fid)) == NULL) {
 		np_error(hdr->tag, "invalid fid");
@@ -1753,7 +1770,8 @@ tremove(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	char		 dirpath[PATH_MAX + 3];
 
 	/* fid[4] */
-	if (!NPREAD32("fid", &fid, &data, &len)) {
+	if (!NPREAD32("fid", &fid, &data, &len) ||
+	    len != 0) {
 		client_send_listener(IMSG_CLOSE, NULL, 0);
 		client_shutdown();
 		return;
