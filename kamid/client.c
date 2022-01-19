@@ -1697,7 +1697,7 @@ twstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 			return;
 		}
 
-		if (!(f->qid.type & QTDIR) &&
+		if (f->qid.type == 0 &&
 		    ftruncate(f->fd, st.length) == -1) {
 			np_errno(hdr->tag);
 			return;
