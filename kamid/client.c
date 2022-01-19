@@ -763,7 +763,7 @@ np_read8(const char *t, const char *f, uint8_t *dst, const uint8_t **src,
 	if (*len < sizeof(*dst)) {
 		log_warnx("%s: wanted %zu bytes for the %s field but only "
 		    "%zu are available.", t, sizeof(*dst), f, *len);
-		return -1;
+		return 0;
 	}
 
 	memcpy(dst, *src, sizeof(*dst));
@@ -780,7 +780,7 @@ np_read16(const char *t, const char *f, uint16_t *dst, const uint8_t **src,
 	if (*len < sizeof(*dst)) {
 		log_warnx("%s: wanted %zu bytes for the %s field but only "
 		    "%zu are available.", t, sizeof(*dst), f, *len);
-		return -1;
+		return 0;
 	}
 
 	memcpy(dst, *src, sizeof(*dst));
@@ -798,7 +798,7 @@ np_read32(const char *t, const char *f, uint32_t *dst, const uint8_t **src,
 	if (*len < sizeof(*dst)) {
 		log_warnx("%s: wanted %zu bytes for the %s field but only "
 		    "%zu are available.", t, sizeof(*dst), f, *len);
-		return -1;
+		return 0;
 	}
 
 	memcpy(dst, *src, sizeof(*dst));
@@ -816,7 +816,7 @@ np_read64(const char *t, const char *f, uint64_t *dst, const uint8_t **src,
 	if (*len < sizeof(*dst)) {
 		log_warnx("%s: wanted %zu bytes for the %s field but only "
 		    "%zu are available.", t, sizeof(*dst), f, *len);
-		return -1;
+		return 0;
 	}
 
 	memcpy(dst, *src, sizeof(*dst));
