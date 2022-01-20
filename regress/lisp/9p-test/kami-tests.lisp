@@ -566,11 +566,13 @@
       (move-file stream root-fid from to)
       (path-exists-p stream root-fid from))))
 
+(defun renamed-filename ()
+  (concatenate 'string *remote-test-path-huge* "-renamed"))
+
 (deftest test-move-file ((kami-suite) (test-copy-file))
-  (assert-false (example-move-file *remote-test-path-huge*
-                                   (concatenate 'string
-                                                *remote-test-path-huge*
-                                                "-renamed"))))
+  (assert-false (example-move-file *remote-test-path-huge* (renamed-filename))))
+
+(alexandria:define-constant +truncate-size+ 128 :test #'=)
 
 (defun example-truncate-file (path &optional (root "/"))
   (with-open-ssl-stream (stream
@@ -581,12 +583,10 @@
                          *certificate-key*)
     (let* ((*messages-sent* ())
            (root-fid        (mount stream root)))
-      (truncate-file stream root-fid path :new-size 128)
+      (truncate-file stream root-fid path :new-size +truncate-size+)
       (stat-size (path-info stream root-fid path)))))
 
 (deftest test-truncate-file ((kami-suite) (test-move-file))
   (assert-equality #'=
-      128
-      (example-truncate-file (concatenate 'string
-                                          *remote-test-path-huge*
-                                          "-renamed"))))
+      +truncate-size+
+      (example-truncate-file (renamed-filename))))
