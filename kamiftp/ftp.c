@@ -551,8 +551,10 @@ walk_path(int fid, int newfid, const char *path, int *missing,
 	recv_msg();
 
 	*missing = nwname;
-	if ((errstr = check(Rwalk, iota_tag)) != NULL)
+	if ((errstr = check(Rwalk, iota_tag)) != NULL) {
+		free(p);
 		return errstr;
+	}
 
 	nwqid = np_read16(buf);
 	assert(nwqid <= nwname);
