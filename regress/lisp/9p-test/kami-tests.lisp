@@ -590,3 +590,47 @@
   (assert-equality #'=
       +truncate-size+
       (example-truncate-file (renamed-filename))))
+
+(alexandria:define-constant +new-atime+   (encode-universal-time 0 0 10 22 10 1990) :test #'=)
+
+(alexandria:define-constant +new-atime-2+ (encode-universal-time 0 0 10 22 10 1999) :test #'=)
+
+(alexandria:define-constant +new-mtime+   (encode-universal-time 0 0 11 23 11 1991) :test #'=)
+
+(defun example-change-access-time-file (path time &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (root-fid        (mount stream root)))
+      (change-access-time stream root-fid path time)
+      (let ((info (path-info stream root-fid path)))
+        (stat-atime info)))))
+
+(defun example-change-modify-time-file (path atime mtime &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (root-fid        (mount stream root)))
+      (change-modify-time stream root-fid path mtime)
+      (change-access-time stream root-fid path atime)
+      (let ((info (path-info stream root-fid path)))
+        (values (stat-atime info)
+                (stat-mtime info))))))
+
+(deftest test-change-access-time ((kami-suite) (test-move-file))
+  (assert-equality #'=
+      +new-atime+
+      (example-change-access-time-file (renamed-filename) +new-atime+))
+  (let ((expected-times (list +new-atime-2+ +new-mtime+)))
+    (assert-equalp expected-times
+        (multiple-value-list (example-change-modify-time-file (renamed-filename)
+                                                              +new-atime-2+
+                                                              +new-mtime+)))))
