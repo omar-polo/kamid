@@ -728,7 +728,7 @@ fetch_fid(int fid, int fd, const char *name)
 }
 
 static void
-send_fid(int fid, const char *fnam, int fd, const char *name)
+send_fid(int fid, const char *fnam, int open_flags, int fd, const char *name)
 {
 	struct progress p = {0};
 	struct stat sb;
@@ -742,7 +742,7 @@ send_fid(int fid, const char *fnam, int fd, const char *name)
 	if (fnam != NULL)
 		do_create(fid, fnam, 0644, KOWRITE);
 	else
-		do_open(fid, KOWRITE);
+		do_open(fid, open_flags | KOWRITE);
 
 	p.max = sb.st_size;
 	for (;;) {
@@ -831,7 +831,7 @@ woc_file(int fd, const char *prompt, const char *path)
 		return -1;
 	}
 
-	send_fid(nfid, n, fd, prompt);
+	send_fid(nfid, n, KOTRUNC, fd, prompt);
 	return 0;
 }
 
