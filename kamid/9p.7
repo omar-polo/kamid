@@ -363,6 +363,26 @@ field is always present, even in the
 call.
 While it may be considered redundant, it's kept to simplify the
 parsing of the stat entries in a directory.
+.It Ic wstat
+change file attributes
+.Bd -literal
+fid[4] stat[n]
+.Aq empty response
+.Ed
+.Pp
+The
+.Sq stat
+structure is the same described in
+.Ic stat .
+.Pp
+The
+.Sq stat
+structure sent reflect what changes the client wishes to make to the
+given fid.
+To leave some fields as unchanged, use empty string or the maximum
+allowed value for integral fields.
+For example, to avoid changing the permission of the fid use
+0xFFFFFFFF, or (uint32_t)-1.
 .It Ic remove
 Remove a file
 .Bd -literal
