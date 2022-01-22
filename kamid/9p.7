@@ -152,6 +152,7 @@ flag.
 .It Ic error
 Return an error string.
 .Bd -literal
+.Aq no request
 ename[s]
 .Ed
 .Pp
@@ -255,10 +256,24 @@ qid[13] iounit[4]
 .Ar mode
 determines the type of I/O:
 .Bl -tag -width Ds -offset indent -compact
-.It 0 Dv OREAD
-.It 1 Dv OWRITE
-.It 2 Dv ORDWD
-.It 3 Dv OEXEC
+.It 0x00 Pq Dv OREAD
+Open the file for reading.
+.It 0x01 Pq Dv OWRITE
+Open the file for writing.
+.It 0x02 Pq Dv ORDWD
+Open the file for both reading and writing.
+.It 0x03 Pq Dv OEXEC
+Open for exec.
+.El
+.Pp
+Additionally, the following flags can be or'ed to
+.Ar mode :
+.Bl -tag -width Ds -offset indent -compact
+.It 0x10 Pq Dv OTRUNC
+Truncate the file before opening
+.It 0x40 Pq Dv ORCLOSE
+Remove the file upon
+.Ic clunk .
 .El
 .Pp
 The returned
@@ -330,7 +345,7 @@ The returned
 is the amount of data actually written and may differ from the one in
 the request.
 .It Ic stat
-get file status
+Get file status
 .Bd -literal
 fid[4]
 stat[n]
@@ -375,11 +390,18 @@ call.
 While it may be considered redundant, it's kept to simplify the
 parsing of the stat entries in a directory.
 .It Ic wstat
-change file attributes
+Change file attributes
 .Bd -literal
 fid[4] stat[n]
 .Aq empty response
 .Ed
+.Pp
+.Ar fid
+must have been prepared for writing with a previous
+.Ic open
+or
+.Ic create
+call.
 .Pp
 The
 .Ar stat
