@@ -273,9 +273,9 @@ twstat(uint32_t fid, const struct np_stat *st)
 	write_16(st->type);
 	write_32(st->dev);
 
-	write_64(st->qid.path);
-	write_32(st->qid.vers);
 	write_8(st->qid.type);
+	write_32(st->qid.vers);
+	write_64(st->qid.path);
 
 	write_32(st->mode);
 	write_32(st->atime);

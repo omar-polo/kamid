@@ -29,6 +29,10 @@ struct np_msg_header {
 	uint16_t	tag;
 };
 
+/*
+ * The qid represents the server unique identification for the file.
+ * NOTE: the struct fields don't reflect the layout on the wire!
+ */
 struct qid {
 	uint64_t		 path;
 	uint32_t		 vers;
