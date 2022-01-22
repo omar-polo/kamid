@@ -355,6 +355,14 @@ group name
 .It muid[s]
 name of the user who last modified the file.
 .El
+.Pp
+Note that the
+.Sq size
+field is always present, even in the
+.Ic wstat
+call.
+While it may be considered redundant, it's kept to simplify the
+parsing of the stat entries in a directory.
 .It Ic remove
 Remove a file
 .Bd -literal
