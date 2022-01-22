@@ -90,33 +90,33 @@ enum {
 	Treaddir =	40,	/* .L */
 	Rreaddir,
 
-	Tversion =	100,
+	Tversion =	100, /* 0x64 */
 	Rversion,
-	Tauth =		102,
+	Tauth =		102, /* 0x66 */
 	Rauth,
-	Tattach =	104,
+	Tattach =	104, /* 0x68  */
 	Rattach,
 	Terror =	106,	/* illegal */
 	Rerror,
-	Tflush =	108,
+	Tflush =	108, /* 0x6c */
 	Rflush,
-	Twalk =		110,
+	Twalk =		110, /* 0x6e */
 	Rwalk,
-	Topen =		112,
+	Topen =		112, /* 0x70 */
 	Ropen,
-	Tcreate =	114,
+	Tcreate =	114, /* 0x72 */
 	Rcreate,
-	Tread =		116,
+	Tread =		116, /* 0x74 */
 	Rread,
-	Twrite =	118,
+	Twrite =	118, /* 0x76 */
 	Rwrite,
-	Tclunk =	120,
+	Tclunk =	120, /* 0x78 */
 	Rclunk,
-	Tremove =	122,
+	Tremove =	122, /* 0x7a */
 	Rremove,
-	Tstat =		124,
+	Tstat =		124, /* 0x7c */
 	Rstat,
-	Twstat =	126,
+	Twstat =	126, /* 0x7e */
 	Rwstat,
 	Tmax,
 
