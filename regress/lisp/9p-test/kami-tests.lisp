@@ -597,6 +597,8 @@
 
 (alexandria:define-constant +new-mtime+   (encode-universal-time 0 0 11 23 11 1991) :test #'=)
 
+(alexandria:define-constant +new-mtime-2+ (encode-universal-time 0 0 11 23 11 2001) :test #'=)
+
 (defun example-change-access-time-file (path time &optional (root "/"))
   (with-open-ssl-stream (stream
                          socket
@@ -610,7 +612,7 @@
       (let ((info (path-info stream root-fid path)))
         (stat-atime info)))))
 
-(defun example-change-modify-time-file (path atime mtime &optional (root "/"))
+(defun example-change-modify-time-file (path time &optional (root "/"))
   (with-open-ssl-stream (stream
                          socket
                          *host*
@@ -619,8 +621,20 @@
                          *certificate-key*)
     (let* ((*messages-sent* ())
            (root-fid        (mount stream root)))
-      (change-modify-time stream root-fid path mtime)
-      (change-access-time stream root-fid path atime)
+      (change-modify-time stream root-fid path time)
+      (let ((info (path-info stream root-fid path)))
+        (stat-mtime info)))))
+
+(defun example-change-times-file (path atime mtime &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (root-fid        (mount stream root)))
+      (change-time-values stream root-fid path atime mtime)
       (let ((info (path-info stream root-fid path)))
         (values (stat-atime info)
                 (stat-mtime info))))))
@@ -629,8 +643,11 @@
   (assert-equality #'=
       +new-atime+
       (example-change-access-time-file (renamed-filename) +new-atime+))
-  (let ((expected-times (list +new-atime-2+ +new-mtime+)))
+  (assert-equality #'=
+      +new-mtime+
+      (example-change-modify-time-file (renamed-filename) +new-mtime+))
+  (let ((expected-times (list +new-atime-2+ +new-mtime-2+)))
     (assert-equalp expected-times
-        (multiple-value-list (example-change-modify-time-file (renamed-filename)
-                                                              +new-atime-2+
-                                                              +new-mtime+)))))
+        (multiple-value-list (example-change-times-file (renamed-filename)
+                                                        +new-atime-2+
+                                                        +new-mtime-2+)))))
