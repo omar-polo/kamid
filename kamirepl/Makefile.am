@@ -1,4 +1,4 @@
-bin_PROGRAMS =	kamirepl
+noinst_PROGRAMS =	kamirepl
 
 kamirepl_SOURCES=kamirepl.c			\
 		$(top_srcdir)/lib/9pclib.c	\
@@ -9,7 +9,7 @@ kamirepl_SOURCES=kamirepl.c			\
 		$(top_srcdir)/lib/utils.c	\
 		$(top_srcdir)/lib/utils.h
 
-dist_man1_MANS = kamirepl.1
+noinst_man1_MANS = kamirepl.1
 
 LDADD =		$(LIBOBJS)
 
