@@ -561,7 +561,9 @@ main_shutdown(void)
 	int	status;
 
 	/* close pipes. */
-        config_clear(main_conf);
+	msgbuf_clear(&iev_listener->ibuf.w);
+	close(iev_listener->ibuf.fd);
+	free(iev_listener);
 
 	log_debug("waiting for children to terminate");
 	do {
@@ -574,8 +576,6 @@ main_shutdown(void)
 			    (pid == listener_pid) ? "logger" : "clientconn",
 			    WTERMSIG(status));
 	} while (pid != -1 || (pid == -1 && errno == EINTR));
-
-	free(iev_listener);
 
 	log_info("terminating");
 	exit(0);
