@@ -74,6 +74,10 @@ code, kbd {
   color: #9d109d;
 }
 
+ul.link-list {
+  list-style: disclosure-closed;
+}
+
 img {
   display: block;
   margin: 0 auto;
