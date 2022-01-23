@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env perl
 #
 # Copyright (c) 2022 Omar Polo <op@omarpolo.com>
 #
@@ -21,21 +21,26 @@
 # Use `--' before the first file if it may contain an = in its name.
 # If no files are given, read and substitute from standard input.
 
-args=''
+use v5.10;
+use strict;
+use warnings;
 
-for arg; do
-	if [ "$arg" = '--' ]; then
-		break
-	fi
+my @args = ();
 
-	key="$(printf '%s\n' $arg | cut -s -d '=' -f1)"
-	if [ -z "$key" ]; then
-		break
-	fi
-	val="$(printf '%s\n' $arg | cut -d '=' -f 2-)"
-	shift
+while (1) {
+	$_ = shift;
+	last if !$_;
 
-	args="$args -e s/$key/$val/g "
-done
+	if ($_ eq '--') {
+		last;
+	} elsif ($_ !~ m/=/) {
+		unshift @ARGV, $_;
+		last;
+	}
 
-exec sed $args "$@"
+	my ($match, $repl) = m/^([^\s]*)=(.*)$/;
+	push @args, "-e", "s/$match/$repl/g";
+}
+
+# OK, shelling out to sed is a bit lame...
+exec "sed", @args, @ARGV;
