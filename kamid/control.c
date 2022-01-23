@@ -33,7 +33,6 @@
 
 #include "control.h"
 #include "kamid.h"
-#include "listener.h"
 #include "log.h"
 #include "utils.h"
 
@@ -253,17 +252,16 @@ control_dispatch_imsg(int fd, short event, void *bula)
 
 		switch (imsg.hdr.type) {
 		case IMSG_CTL_RELOAD:
-			listener_imsg_compose_main(imsg.hdr.type, 0, NULL, 0);
+			if (main_reload() == -1)
+				log_warnx("configuration reload failed");
 			break;
 		case IMSG_CTL_LOG_VERBOSE:
 			if (IMSG_DATA_SIZE(imsg) != sizeof(verbose))
 				break;
 
 			/* Forward to all other processes. */
-			listener_imsg_compose_main(imsg.hdr.type, imsg.hdr.pid,
-			    imsg.data, IMSG_DATA_SIZE(imsg));
-
-			/* XXX: send to every client? */
+			main_imsg_compose_listener(imsg.hdr.type, -1,
+			    imsg.hdr.pid, imsg.data, IMSG_DATA_SIZE(imsg));
 
 			memcpy(&verbose, imsg.data, sizeof(verbose));
 			log_setverbose(verbose);

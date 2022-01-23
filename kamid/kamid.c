@@ -213,9 +213,8 @@ main(int argc, char **argv)
 
 	if ((control_fd = control_init(csock)) == -1)
 		fatalx("control socket setup failed");
+	control_listen(control_fd);
 
-	main_imsg_compose_listener(IMSG_CONTROLFD, control_fd, 0,
-	    NULL, 0);
 	main_imsg_send_config(main_conf);
 
 	sandbox_main();

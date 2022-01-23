@@ -311,14 +311,6 @@ listener_dispatch_main(int fd, short event, void *d)
 			break;
 
 		switch (imsg.hdr.type) {
-		case IMSG_CONTROLFD:
-			if ((fd = imsg.fd) == -1)
-				fatalx("%s: expected to receive imsg "
-				    "control fd but didn't receive any",
-				    __func__);
-			/* Listen on control socket. */
-			control_listen(fd);
-			break;
 		case IMSG_RECONF_CONF:
 		case IMSG_RECONF_PKI:
 		case IMSG_RECONF_PKI_CERT:

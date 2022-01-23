@@ -112,6 +112,7 @@ struct kd_auth_proc {
 
 /* kamid.c */
 extern int verbose;
+int	main_reload(void);
 int	main_imsg_compose_listener(int, int, uint32_t, const void *, uint16_t);
 void	merge_config(struct kd_conf *, struct kd_conf *);
 
