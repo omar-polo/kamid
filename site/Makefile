@@ -13,7 +13,7 @@ TITLE_tutorial.gmi =	tutorial
 SUBST_GEM =	./subst MANEXT=txt  EXT=gmi
 SUBST_WWW =	./subst MANEXT=html EXT=html
 
-.PHONY: all dirs manpages server-www serve-gemini upload clean
+.PHONY: all dirs manpages server-www serve-gemini upload clean titles
 
 all: dirs manpages pages
 	cp style.css www/
@@ -33,6 +33,7 @@ pages:
 	${SUBST_GEM} $p > gemini/$p
 
 	${SUBST_WWW} TITLE=${TITLE_${p}:Q} header.html > www/${p:.gmi=.html}
+	${MAKE} titles | ./menu.pl "${p:.gmi=.html}" >> www/${p:.gmi=.html}
 	${SUBST_WWW} $p | ./gem2html >> www/${p:.gmi=.html}
 	cat footer.html >> www/${p:.gmi=.html}
 .endfor
@@ -49,3 +50,8 @@ upload:
 
 clean:
 	rm -rf gemini www
+
+titles:
+.for p in ${PAGES}
+	@printf "%s %s\n" "${p:.gmi=.html}" ${TITLE_${p}:Q}
+.endfor
