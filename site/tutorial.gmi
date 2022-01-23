@@ -1,3 +1,66 @@
 # setup guide
 
-TODO
+## 1. create a dedicated user
+
+kamid needs a dedicated ‘_kamid’ user to run.  How to create an user depends on your operating system; on OpenBSD is:
+
+```
+# useradd -c kamid -d /var/empty -s /sbin/nologin _kamid
+```
+
+or on some GNU/linux systems:
+
+```
+# useradd --system --no-create-home -s /bin/nologin -c kamid _kamid
+```
+
+Ideally the ‘_kamid’ user shouldn’t have a login shell and have an empty home.
+
+
+## 2. create a configuration file
+
+kamid looks for its configuration in ‘/etc/kamid.conf’ by default, but you can use the ‘-f’ flag to specify a different file.  At the moment, kamid supports only 9p over TLS, so you need a TLS certificate too.  A bare minimum configuration is:
+
+```
+pki localhost cert "/etc/ssl/localhost.crt"
+pki localhost key "/etc/ssl/private/localhost.key"
+
+table users { "SHA256:..." => "op" }
+
+listen on localhost port 1337 tls pki localhost auth <users>
+```
+
+"SHA256:..." is the hash of the client certificate for the user "op" and is used for authentication.  The configuration is quite flexible, and allows to create “virtual users” and map those to custom home directories too.
+
+To check the configuration for syntax errors, execute:
+
+```
+$ kamid -n
+```
+
+
+## 3. run the daemon
+
+With all the previous steps done, running the daemon is as easy as:
+
+```
+# kamid
+```
+
+use ‘-d’ to keep kamid in the foreground (i.e. not daemonize) and ‘-v’ to increase the verbosity.
+
+Congratulations!  Your kamid instance is up and running.
+
+
+## 4. connecting to the server
+
+There are quite a few clients for 9p, even if not all may support 9p over TLS.  As part of kamid there is a small ftp(1)-like client called ‘kamiftp’:
+
+```
+$ kamiftp -c -C client.pem -K client.key localhost
+```
+
+Check out kamiftp(1) for usage.  Alternatively, try tinmop!  It’s a ncurses application that supports a plethora of protocols: it’s a gemini browser, a pleroma client and also 9p-over-TLS capable!
+
+=> kamiftp.1.MANEXT			kamiftp(1)
+=> https://notabug.org/cage/tinmop.git	tinmop
