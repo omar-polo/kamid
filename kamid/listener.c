@@ -311,6 +311,16 @@ listener_dispatch_main(int fd, short event, void *d)
 			break;
 
 		switch (imsg.hdr.type) {
+		case IMSG_CTL_LOG_VERBOSE:
+			if (IMSG_DATA_SIZE(imsg) != sizeof(verbose))
+				fatalx("wrong size for IMSG_CTL_LOG_VERBOSE");
+			memcpy(&verbose, imsg.data, sizeof(verbose));
+			log_setverbose(verbose);
+			SPLAY_FOREACH(client, clients_tree_id, &clients)
+				listener_imsg_compose_client(client,
+				    imsg.hdr.type, 0,
+				    &verbose, sizeof(verbose));
+			break;
 		case IMSG_RECONF_CONF:
 		case IMSG_RECONF_PKI:
 		case IMSG_RECONF_PKI_CERT:

@@ -293,6 +293,13 @@ client_dispatch_listener(int fd, short event, void *d)
 			break;
 
 		switch (imsg.hdr.type) {
+		case IMSG_CTL_LOG_VERBOSE:
+			if (IMSG_DATA_SIZE(imsg) != sizeof(verbose))
+				fatalx("%s: IMSG_CTL_LOG_VERBOSE wrong size",
+				    __func__);
+			memcpy(&verbose, imsg.data, sizeof(verbose));
+			log_setverbose(verbose);
+			break;
 		case IMSG_AUTH:
 			peerid = imsg.hdr.peerid;
 			if (auth)
