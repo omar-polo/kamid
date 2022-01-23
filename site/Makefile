@@ -7,7 +7,7 @@ MANPAGES =	../kamictl/kamictl.8	\
 PAGES =		index.gmi install.gmi tutorial.gmi
 
 TITLE_index.gmi =	home
-TITLE_install.gmi =	install-guide
+TITLE_install.gmi =	install guide
 TITLE_tutorial.gmi =	tutorial
 
 SUBST_GEM =	./subst MANEXT=txt  EXT=gmi
