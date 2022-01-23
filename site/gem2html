@@ -75,8 +75,8 @@ while (<>) {
 
 sub san {
 	s/&/\&amp;/g;
-	s/</\\&lt;/g;
-	s/>/\\&gt;/g;
+	s/</\&lt;/g;
+	s/>/\&gt;/g;
 	return $_;
 }
 
