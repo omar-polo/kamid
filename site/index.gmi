@@ -21,4 +21,4 @@ kamid is a FREE, easy-to-use and portable implementation of a 9p file server dae
 
 => https://man.cat-v.org/plan_9/5/intro		plan9 intro(5)
 => https://9p.cat-v.org/			9p page on cat-v.org
-=> https://9p.cat-v.org/documentation/rfc/	9p "RFC" (not exactly but)
+=> https://9p.cat-v.org/documentation/rfc/	9p "RFC" (not exactly, but...)
