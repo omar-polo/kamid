@@ -5,7 +5,7 @@ kamid is a FREE, easy-to-use and portable implementation of a 9p file server dae
 => https://git.omarpolo.com/kamid	git repository
 => https://github.com/omar-polo/kamid	GitHub mirror
 
-=> install.EXT		Install guide
+=> install.EXT		Installation guide
 => tutorial.EXT		Tutorial
 
 ## Kamid documentation

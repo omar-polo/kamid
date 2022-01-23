@@ -1,4 +1,4 @@
-# kamid installation guide
+# installation guide
 
 kamid has a short number of dependency, namely:
 
