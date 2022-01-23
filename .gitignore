@@ -30,3 +30,6 @@ kamid/kamid
 kamiftp/kamiftp
 kamirepl/kamirepl
 ninepscript/ninepscript
+
+site/*.[1-9].html
+site/*.[1-9].txt
