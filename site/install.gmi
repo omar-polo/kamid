@@ -1,0 +1,25 @@
+# kamid installation guide
+
+kamid has a short number of dependency, namely:
+
+* libtls
+* libevent
+
+kamid uses the GNU autotools as build tool; assuming you have fetched either the release tarball or cloned locally the git repository, to build execute:
+
+```
+$ ./autogen.sh	# not needed when using the tarball
+$ ./configure
+$ make
+# make install	# eventually
+```
+
+This should install a few programs:
+
+* kamid - the daemon itself
+* kamictl - a comman-line utility to manage the daemon
+* kamiftp - an ftp(1)-like 9p client
+
+and the relative manpages.
+
+=> tutorial.EXT		To set it up, proceed to the tutorial.

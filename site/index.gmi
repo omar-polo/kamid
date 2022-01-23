@@ -1,10 +1,22 @@
 # kamid
 
-kamid is a FREE, easy-to-use and portable implementation of a 9p file server daemon for UNIX-like systems.
+kamid is a FREE, easy-to-use and portable implementation of a 9p file server daemon for UNIX-like systems.  It has a strong focus on security and correctness but also tries to be an harbinger of novelty, like for 9p-over-TLS.
 
-### Documentation
+=> https://git.omarpolo.com/kamid	git repository
+=> https://github.com/omar-polo/kamid	GitHub mirror
+
+=> install.EXT		Install guide
+=> tutorial.EXT		Tutorial
+
+## Kamid documentation
 
 => 9p.7.MANEXT		9p.7: protocol documentation
-=> kamictl.8.MANEXT	kamictl.8: command line utility to manage the daemon
-=> kamid.8.MANEXT	kamid.8: daemon documentation
-=> kamiftp.1.MANEXT	kamiftp.1: ftp(1)-like command line utility
+=> kamictl.8.MANEXT	kamictl.8: command line utility to manage kamid
+=> kamid.8.MANEXT	kamid.8: 9p daemon documentation
+=> kamiftp.1.MANEXT	kamiftp.1: ftp(1)-like command line utility for 9p
+
+## Other useful links
+
+=> https://man.cat-v.org/plan_9/5/intro		plan9 intro(5)
+=> https://9p.cat-v.org/			9p page on cat-v.org
+=> https://9p.cat-v.org/documentation/rfc/	9p "RFC" (not exactly but)
