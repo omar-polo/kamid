@@ -4,7 +4,7 @@ kamid is a FREE, easy-to-use and portable implementation of a 9p file server dae
 
 ### Documentation
 
-=> 9p.7.html		9p.7: protocol documentation
-=> kamictl.8.html	kamictl.8: command line utility to manage the daemon
-=> kamid.8.html		kamid.8: daemon documentation
-=> kamiftp.1.html	kamiftp.1: ftp(1)-like command line utility
+=> 9p.7.MANEXT		9p.7: protocol documentation
+=> kamictl.8.MANEXT	kamictl.8: command line utility to manage the daemon
+=> kamid.8.MANEXT	kamid.8: daemon documentation
+=> kamiftp.1.MANEXT	kamiftp.1: ftp(1)-like command line utility
