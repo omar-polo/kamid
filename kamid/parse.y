@@ -893,7 +893,48 @@ symget(const char *nam)
 void
 clear_config(struct kd_conf *xconf)
 {
-	/* free stuff? */
+	struct kd_pki_conf	*p;
+	struct kd_tables_conf	*t;
+	struct kd_listen_conf	*l;
+
+	if (xconf == NULL)
+		return;
+
+	while (!STAILQ_EMPTY(&xconf->pki_head)) {
+		p = STAILQ_FIRST(&xconf->pki_head);
+		STAILQ_REMOVE_HEAD(&xconf->pki_head, entry);
+
+		if (p->cert != NULL)
+			tls_unload_file(p->cert, p->certlen);
+		if (p->key != NULL)
+			tls_unload_file(p->key, p->keylen);
+		if (p->tlsconf != NULL)
+			tls_config_free(p->tlsconf);
+		free(p);
+	}
+
+	while (!STAILQ_EMPTY(&xconf->table_head)) {
+		t = STAILQ_FIRST(&xconf->table_head);
+		STAILQ_REMOVE_HEAD(&xconf->table_head, entry);
+
+		table_close(t->table);
+		free(t->table);
+		free(t);
+	}
+
+	while (!STAILQ_EMPTY(&xconf->listen_head)) {
+		l = STAILQ_FIRST(&xconf->listen_head);
+		STAILQ_REMOVE_HEAD(&xconf->listen_head, entry);
+
+		if (l->ctx != NULL)
+			tls_free(l->ctx);
+		if (l->fd != -1) {
+			event_del(&l->ev);
+			close(l->fd);
+		}
+
+		free(l);
+	}
 
 	free(xconf);
 }
