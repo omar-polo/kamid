@@ -197,10 +197,6 @@ listener_receive_config(struct imsg *imsg, struct kd_conf **nconf,
 			fatalx("%s: IMSG_RECONF_CONF already in "
 			    "progress", __func__);
 
-		if (listener_conf != NULL)
-			fatalx("%s: don't know how reload the "
-			    "configuration yet", __func__);
-
 		if (IMSG_DATA_SIZE(*imsg) != sizeof(struct kd_conf))
 			fatalx("%s: IMSG_RECONF_CONF wrong length: %lu",
 			    __func__, IMSG_DATA_SIZE(*imsg));
