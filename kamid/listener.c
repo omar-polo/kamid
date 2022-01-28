@@ -544,6 +544,22 @@ apply_config(struct kd_conf *conf)
 {
 	struct kd_pki_conf *pki;
 	struct kd_listen_conf *listen;
+	struct client *c;
+
+	/* drop any pre-auth inflight connections */
+	SPLAY_FOREACH(c, clients_tree_id, &clients) {
+		/*
+		 * c->event is set only during the handshake and the teardown
+		 * of the connection; c->bev is set only after auth.  Checking
+		 * for both ensures we drop only incoming connection in the
+		 * pre-auth state.
+		 */
+		if (event_pending(&c->event, EV_READ|EV_WRITE, NULL) &&
+		    c->bev == NULL) {
+			log_warn("closing in-flight connection due to reload");
+			close_conn(c);
+		}
+	}
 
 	/* swap the now config with the current one */
 	clear_config(listener_conf);
