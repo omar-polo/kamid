@@ -257,7 +257,6 @@ listener_receive_config(struct imsg *imsg, struct kd_conf **nconf,
 		if (*nconf == NULL)
 			fatalx("%s: IMSG_RECONF_END without "
 			    "IMSG_RECONF_CONF", __func__);
-		/* merge_config(listener_conf, nconf); */
 		apply_config(*nconf);
 		*nconf = NULL;
 		break;
@@ -547,6 +546,8 @@ apply_config(struct kd_conf *conf)
 	struct kd_pki_conf *pki;
 	struct kd_listen_conf *listen;
 
+	/* swap the now config with the current one */
+	clear_config(listener_conf);
 	listener_conf = conf;
 
 	/* prepare the various tls_config */
