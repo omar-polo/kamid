@@ -121,5 +121,6 @@ void		 config_clear(struct kd_conf *);
 /* parse.y */
 struct kd_conf	*parse_config(const char *);
 int		 cmdline_symset(char *);
+void		 clear_config(struct kd_conf *);
 
 #endif
