@@ -532,6 +532,9 @@ config_new_empty(void)
 		fatal(NULL);
 
 	/* set default values */
+	STAILQ_INIT(&xconf->pki_head);
+	STAILQ_INIT(&xconf->table_head);
+	STAILQ_INIT(&xconf->listen_head);
 
 	return xconf;
 }
