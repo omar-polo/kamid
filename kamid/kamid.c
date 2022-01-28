@@ -449,7 +449,9 @@ main_reload(void)
 	if (main_imsg_send_config(xconf) == -1)
 		return -1;
 
-	merge_config(main_conf, xconf);
+	/* replace old configuration with the new one */
+	clear_config(main_conf);
+	main_conf = xconf;
 
 	return 0;
 }
@@ -521,14 +523,6 @@ main_imsg_send_config(struct kd_conf *xconf)
 #undef SEND
 }
 
-void
-merge_config(struct kd_conf *conf, struct kd_conf *xconf)
-{
-	/* do stuff... */
-
-	free(xconf);
-}
-
 struct kd_conf *
 config_new_empty(void)
 {
@@ -540,18 +534,6 @@ config_new_empty(void)
 	/* set default values */
 
 	return xconf;
-}
-
-void
-config_clear(struct kd_conf *conf)
-{
-	struct kd_conf *xconf;
-
-	/* Merge current config with an empty one. */
-	xconf = config_new_empty();
-	merge_config(conf, xconf);
-
-	free(conf);
 }
 
 __dead void
