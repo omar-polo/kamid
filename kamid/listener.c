@@ -176,7 +176,7 @@ listener_shutdown(void)
 	msgbuf_clear(&iev_main->ibuf.w);
 	close(iev_main->ibuf.fd);
 
-	config_clear(listener_conf);
+	clear_config(listener_conf);
 
 	free(iev_main);
 
