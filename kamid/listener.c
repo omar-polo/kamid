@@ -878,6 +878,8 @@ close_conn(struct client *c)
 {
 	log_debug("closing connection");
 
+	SPLAY_REMOVE(clients_tree_id, &clients, c);
+
 	if (c->iev.ibuf.fd != -1) {
 		listener_imsg_compose_client(c, IMSG_CONN_GONE, 0, NULL, 0);
 		imsg_flush(&c->iev.ibuf);
