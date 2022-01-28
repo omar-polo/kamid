@@ -124,7 +124,6 @@ table_static_close(struct table *t)
 	     kp != NULL;
 	     kp = ohash_next(t->t_handle, &i)) {
 		ohash_remove(t->t_handle, i);
-		free(kp->key);
 		free(kp->val);
 		free(kp);
 	}
