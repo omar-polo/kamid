@@ -55,6 +55,7 @@ SPLAY_HEAD(clients_tree_id, client) clients;
 struct client {
 	uint32_t		 id;
 	uint32_t		 lid;
+	uint32_t		 lflags;
 	uint32_t		 msize;
 	int			 fd;
 	struct tls		*ctx;
@@ -365,8 +366,7 @@ listener_dispatch_main(int fd, short event, void *d)
 			evbuffer_unfreeze(client->bev->output, 1);
 #endif
 
-			listen = listen_by_id(client->lid);
-			if (listen->flags & L_TLS) {
+			if (client->lflags & L_TLS) {
 				event_set(&client->bev->ev_read, client->fd,
 				    EV_READ, client_tls_readcb, client->bev);
 				event_set(&client->bev->ev_write, client->fd,
@@ -628,6 +628,7 @@ handle_accept(int fd, short ev, void *data)
 	c = xcalloc(1, sizeof(*c));
 	c->msize = MSIZE9P;
 	c->lid = listen->id;
+	c->lflags = listen->flags;
 	c->iev.ibuf.fd = -1;
 
 	if (tls_accept_socket(listen->ctx, &c->ctx, s) == -1) {
