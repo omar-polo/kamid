@@ -597,32 +597,10 @@ yield_w(struct client *c, void (*fn)(int, short, void *))
 	event_add(&c->event, NULL);
 }
 
-static inline uint32_t
-random_id(void)
-{
-#if HAVE_ARC4RANDOM
-# define RANDID() arc4random()
-#else
-	/* not as pretty as a random id */
-	static uint32_t counter = 0;
-# define RANDID() counter++
-#endif
-
-	struct client find, *res;
-
-	for (;;) {
-		find.id = RANDID();
-		res = SPLAY_FIND(clients_tree_id, &clients, &find);
-		if (res == NULL)
-			return find.id;
-	}
-
-#undef RANDID
-}
-
 static void
 handle_accept(int fd, short ev, void *data)
 {
+	static uint32_t counter;
 	struct kd_listen_conf *listen = data;
 	struct client *c;
 	int s;
@@ -646,7 +624,7 @@ handle_accept(int fd, short ev, void *data)
 	}
 
 	c->fd = s;
-	c->id = random_id();
+	c->id = counter++;
 
 	SPLAY_INSERT(clients_tree_id, &clients, c);
 

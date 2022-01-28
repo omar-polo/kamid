@@ -53,11 +53,6 @@ if test x"$with_libbsd" != x"no"; then
   ])
 fi
 
-# Checks for library functions.
-AC_SEARCH_LIBS([arc4random], [],
-	[AC_DEFINE([HAVE_ARC4RANDOM], 1, [arc4random])],
-	[AC_DEFINE([HAVE_ARC4RANDOM], 0, [arc4random])])
-
 AC_REPLACE_FUNCS([
 	asprintf	\
 	err		\
