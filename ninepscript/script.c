@@ -48,6 +48,8 @@
 #define INFTIM -1
 #endif
 
+int			 verbose;
+
 static const char	*argv0;
 static const char	*dir;
 static uid_t		 uid;
