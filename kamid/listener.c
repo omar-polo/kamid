@@ -207,9 +207,9 @@ listener_receive_config(struct imsg *imsg, struct kd_conf **nconf,
 		if ((*nconf = malloc(sizeof(**nconf))) == NULL)
 			fatal(NULL);
 		memcpy(*nconf, imsg->data, sizeof(**nconf));
-		memset(&(*nconf)->pki_head, 0, sizeof((*nconf)->pki_head));
-		memset(&(*nconf)->table_head, 0, sizeof((*nconf)->table_head));
-		memset(&(*nconf)->listen_head, 0, sizeof((*nconf)->listen_head));
+		STAILQ_INIT(&(*nconf)->pki_head);
+		STAILQ_INIT(&(*nconf)->table_head);
+		STAILQ_INIT(&(*nconf)->listen_head);
 		break;
 	case IMSG_RECONF_PKI:
 		if (*nconf == NULL)
