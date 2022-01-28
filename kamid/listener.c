@@ -57,7 +57,6 @@ struct client {
 	uint32_t		 lid;
 	uint32_t		 msize;
 	int			 fd;
-	int			 done;
 	struct tls		*ctx;
 	struct event		 event;
 	struct imsgev		 iev;
@@ -746,7 +745,6 @@ client_error(struct bufferevent *bev, short err, void *d)
 
 	if (err & (EVBUFFER_READ|EVBUFFER_WRITE)) {
 		bufferevent_disable(bev, EV_READ|EV_WRITE);
-		client->done = 1;
 
 		buf = EVBUFFER_OUTPUT(client->bev);
 		if (EVBUFFER_LENGTH(buf) != 0) {
