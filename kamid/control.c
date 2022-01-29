@@ -283,7 +283,7 @@ control_dispatch_imsg(int fd, short event, void *bula)
 
 			/* Forward to all other processes. */
 			main_imsg_compose_listener(imsg.hdr.type, -1,
-			    imsg.hdr.pid, imsg.data, IMSG_DATA_SIZE(imsg));
+			    0, imsg.data, IMSG_DATA_SIZE(imsg));
 
 			memcpy(&verbose, imsg.data, sizeof(verbose));
 			log_setverbose(verbose);
