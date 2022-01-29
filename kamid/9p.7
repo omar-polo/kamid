@@ -417,11 +417,17 @@ allowed value for integral fields.
 For example, to avoid changing the permission of the fid use
 0xFFFFFFFF, or (uint32_t)-1.
 .It Ic remove
-Remove a file
+Remove and clunk fid
 .Bd -literal
 fid[4]
 .Aq empty response
 .Ed
+.Pp
+After a
+.Ic remove
+call, even if an error is returned, the
+.Ar fid
+is closed.
 .El
 .\" .Sh 9P2000.L EXTENSIONS
 .\" .Xr kamid 8
