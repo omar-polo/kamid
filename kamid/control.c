@@ -239,7 +239,6 @@ control_dispatch_imsg(int fd, short event, void *bula)
 	struct ctl_conn	*c;
 	struct imsg	 imsg;
 	ssize_t		 n;
-	int		 verbose;
 
 	if ((c = control_connbyfd(fd)) == NULL) {
 		log_warnx("%s: fd %d: not found", __func__, fd);
