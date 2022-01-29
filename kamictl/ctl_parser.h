@@ -23,6 +23,7 @@ enum actions {
 	LOG_VERBOSE,
 	LOG_BRIEF,
 	RELOAD,
+	DEBUG,
 };
 
 struct parse_result {

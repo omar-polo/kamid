@@ -21,6 +21,8 @@
 #include <sys/uio.h>
 #include <sys/un.h>
 
+#include <errno.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -116,26 +118,55 @@ main(int argc, char **argv)
 		puts("reload request sent.");
 		done = 1;
 		break;
+	case DEBUG:
+		imsg_compose(ibuf, IMSG_CTL_DEBUG, 0, getpid(), -1, NULL, 0);
+		break;
 	default:
 		usage();
 	}
 
-	imsg_flush(ibuf);
+	if (imsg_flush(ibuf) == -1)
+		err(1, "imsg_flush");
 
-	/*
-	 * Later we may add commands which requires a response.
-	 */
 	while (!done) {
-		if ((n = imsg_get(ibuf, &imsg)) == -1)
-			errx(1, "imsg_get error");
+		if ((n = imsg_read(ibuf)) == -1 && errno != EAGAIN)
+			errx(1, "write error");
 		if (n == 0)
-			break;
+			errx(0, "pipe closed");
 
-		switch (res->action) {
-		default:
-			break;
+		while (!done) {
+			if ((n = imsg_get(ibuf, &imsg)) == -1)
+				errx(1, "imsg_get error");
+			if (n == 0)
+				break;
+
+			switch (res->action) {
+			case DEBUG: {
+				struct kd_debug_info d;
+
+				if (imsg.hdr.type == IMSG_CTL_DEBUG_END) {
+					done = 1;
+					break;
+				}
+
+				if (imsg.hdr.type != IMSG_CTL_DEBUG_BACK ||
+				    IMSG_DATA_SIZE(imsg) != sizeof(d))
+					errx(1, "got invalid reply (%d)",
+					    imsg.hdr.type);
+
+				memcpy(&d, imsg.data, sizeof(d));
+				if (d.path[sizeof(d.path)-1] != '\0')
+					errx(1, "got invalid reply");
+
+				printf("%"PRIu32"\t%"PRIu32"\t%s\n",
+				    d.client_id, d.fid, d.path);
+				break;
+			}
+			default:
+				break;
+			}
+			imsg_free(&imsg);
 		}
-		imsg_free(&imsg);
 	}
 	close(ctl_sock);
 	free(ibuf);
