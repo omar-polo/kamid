@@ -471,7 +471,7 @@ listener_dispatch_client(int fd, short event, void *d)
 			find.id = imsg.hdr.peerid;
 			client = SPLAY_FIND(clients_tree_id, &clients, &find);
 			if (client == NULL) {
-				log_info("got IMSG_BUF but client (%d) gone",
+				log_info("got IMSG_BUF but client %d gone",
 				    imsg.hdr.peerid);
 				break;
 			}
