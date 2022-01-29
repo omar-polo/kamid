@@ -143,6 +143,28 @@ AS_CASE([$host_os],
 AC_SUBST(READLINE_CFLAGS)
 AC_SUBST(READLINE_LIBS)
 
+# check compiler flags
+AC_DEFUN([CC_ADD_CHECK_FLAGS], [
+	AC_MSG_CHECKING([if $CC supports $1 flag])
+	old_AM_CFLAGS="$AM_CFLAGS"
+	AM_CFLAGS="$AM_CFLAGS $1"
+	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [])],
+		AC_MSG_RESULT(yes), [
+			AC_MSG_RESULT(no)
+			AM_CFLAGS="$old_AM_CFLAGS"
+		])
+])
+CC_ADD_CHECK_FLAGS([-Wall])
+CC_ADD_CHECK_FLAGS([-Wextra])
+CC_ADD_CHECK_FLAGS([-Wmissing-declarations])
+CC_ADD_CHECK_FLAGS([-Wmissing-prototypes])
+CC_ADD_CHECK_FLAGS([-Wstrict-prototypes])
+CC_ADD_CHECK_FLAGS([-Wwrite-strings])
+CC_ADD_CHECK_FLAGS([-Wno-unused-parameter])
+CC_ADD_CHECK_FLAGS([-Wpointer-arith])
+CC_ADD_CHECK_FLAGS([-Wsign-compare])
+CC_ADD_CHECK_FLAGS([-Wcast-align])
+
 # Save our CFLAGS/CPPFLAGS/LDFLAGS for the Makefile and restore the old user
 # variables.
 AC_SUBST(AM_CPPFLAGS)
