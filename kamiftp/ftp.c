@@ -1380,6 +1380,57 @@ cmd_page(int argc, const char **argv)
 }
 
 static void
+cmd_pipe(int argc, const char **argv)
+{
+	struct qid qid;
+	pid_t pid;
+	int nfid, tmpfd, miss, status;
+	int filedes[2]; /* read end, write end */
+	char *errstr;
+
+	if (argc < 2) {
+		puts("usage: pipe remote-file cmd [args...]");
+		return;
+	}
+
+	nfid = nextfid();
+	errstr = walk_path(pwdfid, nfid, *argv, &miss, &qid);
+	if (errstr != NULL) {
+		printf("%s: %s\n", *argv, errstr);
+		free(errstr);
+		return;
+	}
+
+	if (miss != 0 || qid.type != 0) {
+		printf("%s: not a file\n", *argv);
+		if (miss == 0)
+			do_clunk(nfid);
+		return;
+	}
+
+	if (pipe(filedes) == -1)
+		err(1, "pipe");
+
+	switch (pid = vfork()) {
+	case -1:
+		err(1, "vfork");
+	case 0:
+		close(filedes[1]);
+		if (dup2(filedes[0], 0) == -1)
+			err(1, "dup2");
+		execvp(argv[1], (char *const *)argv + 1);
+		err(1, "execvp");
+	}
+
+	close(filedes[0]);
+	if (fetch_fid(nfid, filedes[1], *argv) == -1)
+		warnx("failed to fetch all the file");
+	close(filedes[1]);
+
+	waitpid(pid, &status, 0);
+}
+
+static void
 cmd_put(int argc, const char **argv)
 {
 	struct qid qid;
@@ -1491,6 +1542,7 @@ excmd(int argc, const char **argv)
 		{"lpwd",	cmd_lpwd},
 		{"ls",		cmd_ls},
 		{"page",	cmd_page},
+		{"pipe",	cmd_pipe},
 		{"put",		cmd_put},
 		{"quit",	cmd_bye},
 		{"rename",	cmd_rename},
@@ -1540,6 +1592,7 @@ main(int argc, char **argv)
 	if (argc == 0)
 		usage(1);
 
+	signal(SIGPIPE, SIG_IGN);
 	if (isatty(1)) {
 		tty_p = 1;
 		resized = 1;

@@ -104,6 +104,13 @@ Download
 and open it with the
 .Ev PAGER
 .Pq Xr less 1 by default .
+.It Ic pipe Ar remote-file Ar cmd Op Ar args...
+Fetch
+.Ar remote-file
+and pass it as standard input for
+.Ar cmd
+(with optional
+.Ar args Ns ).
 .It Ic put Ar local-file Op Ar remote-file
 Upload
 .Ar local-file
