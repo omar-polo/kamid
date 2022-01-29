@@ -463,7 +463,6 @@ listener_dispatch_client(int fd, short event, void *d)
 		switch (imsg.hdr.type) {
 		case IMSG_CTL_DEBUG_BACK:
 		case IMSG_CTL_DEBUG_END:
-			log_warnx("relaying back to main debug_back/end");
 			listener_imsg_compose_main(imsg.hdr.type,
 			    imsg.hdr.peerid, imsg.data, IMSG_DATA_SIZE(imsg));
 			break;
