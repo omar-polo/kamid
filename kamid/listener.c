@@ -259,18 +259,6 @@ listener_receive_config(struct imsg *imsg, struct kd_conf **nconf,
 	}
 }
 
-static inline struct kd_listen_conf *
-listen_by_id(uint32_t id)
-{
-	struct kd_listen_conf *l;
-
-	STAILQ_FOREACH(l, &listener_conf->listen_head, entry) {
-		if (l->id == id)
-			return l;
-	}
-	return NULL;
-}
-
 void
 listener_dispatch_main(int fd, short event, void *d)
 {
