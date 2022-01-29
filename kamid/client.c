@@ -401,7 +401,7 @@ client_send_listenerp(int type, uint32_t peerid, const void *data, uint16_t len)
 static int
 client_send_listener(int type, const void *data, uint16_t len)
 {
-	return client_send_listenerp(type, 0, data, len);
+	return client_send_listenerp(type, peerid, data, len);
 }
 
 /* set qid fields from sb */
