@@ -30,7 +30,6 @@ enum token_type {
 	KEYWORD,
 };
 
-
 struct token {
 	enum token_type		 type;
 	const char		*keyword;
