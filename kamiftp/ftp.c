@@ -685,12 +685,13 @@ draw_progress(const char *pre, const struct progress *p)
 	fflush(stdout);
 }
 
-static void
+static int
 fetch_fid(int fid, int fd, const char *name)
 {
 	struct progress p = {0};
 	struct np_stat st;
 	size_t r;
+	int ret = 0;
 	char buf[BUFSIZ];
 
 	do_stat(fid, &st);
@@ -707,8 +708,10 @@ fetch_fid(int fid, int fd, const char *name)
 
 		for (off = 0; off < r; off += nw)
 			if ((nw = write(fd, buf + off, r - off)) == 0 ||
-			    nw == -1)
-				err(1, "write");
+			    nw == -1) {
+				ret = -1;
+				goto end;
+			}
 
 		p.done += r;
 		draw_progress(name, &p);
@@ -722,9 +725,11 @@ fetch_fid(int fid, int fd, const char *name)
 #endif
 	}
 
+end:
 	putchar('\n');
 
 	do_clunk(fid);
+	return ret;
 }
 
 static void
@@ -1102,7 +1107,10 @@ cmd_edit(int argc, const char **argv)
 	strlcpy(p, *argv, sizeof(p));
 	name = basename(p);
 
-	fetch_fid(nfid, tmpfd, name);
+	if (fetch_fid(nfid, tmpfd, name)) {
+		warn("failed fetch or can't write %s", sfn);
+		goto end;
+	}
 	close(tmpfd);
 
 	spawn(ed, sfn, NULL);
@@ -1166,7 +1174,8 @@ cmd_get(int argc, const char **argv)
 		return;
 	}
 
-	fetch_fid(nfid, fd, l);
+	if (fetch_fid(nfid, fd, l) == -1)
+		warn("write %s", l);
 	close(fd);
 }
 
@@ -1328,7 +1337,7 @@ static void
 cmd_page(int argc, const char **argv)
 {
 	struct qid qid;
-	int nfid, tmpfd, miss;
+	int nfid, tmpfd, miss, r;
 	char sfn[TMPFSTRLEN], p[PATH_MAX], *name, *errstr;
 	const char *pager;
 
@@ -1362,9 +1371,11 @@ cmd_page(int argc, const char **argv)
 
 	strlcpy(p, *argv, sizeof(p));
 	name = basename(p);
-	fetch_fid(nfid, tmpfd, name);
+	if ((r = fetch_fid(nfid, tmpfd, name)) == -1)
+		warn("write %s", sfn);
 	close(tmpfd);
-	spawn(pager, sfn, NULL);
+	if (r != -1)
+		spawn(pager, sfn, NULL);
 	unlink(sfn);
 }
 
