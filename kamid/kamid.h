@@ -32,6 +32,9 @@ enum imsg_type {
 	IMSG_NONE,
 	IMSG_CTL_LOG_VERBOSE,
 	IMSG_CTL_RELOAD,
+	IMSG_CTL_DEBUG,
+	IMSG_CTL_DEBUG_BACK,	/* kd_debug_info */
+	IMSG_CTL_DEBUG_END,
 	IMSG_STARTUP,
 	IMSG_RECONF_CONF,
 	IMSG_RECONF_PKI,
@@ -107,6 +110,12 @@ struct kd_auth_req {
 struct kd_auth_proc {
 	char		uname[LOGIN_NAME_MAX];
 	char		dir[PATH_MAX];
+};
+
+struct kd_debug_info {
+	uint32_t	client_id;
+	uint32_t	fid;
+	char		path[NAME_MAX];
 };
 
 /* kamid.c */

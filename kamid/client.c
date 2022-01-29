@@ -108,6 +108,7 @@ static void		client_sig_handler(int, short, void *);
 static void		client_dispatch_listener(int, short, void *);
 static void		client_privdrop(const char *, const char *);
 
+static int		client_send_listenerp(int, uint32_t, const void *, uint16_t);
 static int		client_send_listener(int, const void *, uint16_t);
 
 static void		 qid_update_from_sb(struct qid *, struct stat *);
@@ -265,6 +266,8 @@ client_dispatch_listener(int fd, short event, void *d)
 {
 	static int		 auth = 0;
 	struct kd_auth_proc	 rauth;
+	struct kd_debug_info	 debug;
+	struct fid		*f;
 	struct imsg		 imsg;
 	struct imsgev		*iev = d;
 	struct imsgbuf		*ibuf;
@@ -299,6 +302,18 @@ client_dispatch_listener(int fd, short event, void *d)
 				    __func__);
 			memcpy(&verbose, imsg.data, sizeof(verbose));
 			log_setverbose(verbose);
+			break;
+		case IMSG_CTL_DEBUG:
+			STAILQ_FOREACH(f, &fids, entries) {
+				memset(&debug, 0, sizeof(debug));
+				debug.fid = f->fid;
+				strlcpy(debug.path, f->fname,
+				    sizeof(debug.path));
+				client_send_listenerp(IMSG_CTL_DEBUG_BACK,
+				    imsg.hdr.peerid, &debug, sizeof(debug));
+			}
+			client_send_listenerp(IMSG_CTL_DEBUG_END,
+			    imsg.hdr.peerid, NULL, 0);
 			break;
 		case IMSG_AUTH:
 			peerid = imsg.hdr.peerid;
@@ -372,7 +387,7 @@ client_privdrop(const char *username, const char *dir)
 }
 
 static int
-client_send_listener(int type, const void *data, uint16_t len)
+client_send_listenerp(int type, uint32_t peerid, const void *data, uint16_t len)
 {
 	int ret;
 
@@ -381,6 +396,12 @@ client_send_listener(int type, const void *data, uint16_t len)
 		imsg_event_add(iev_listener);
 
 	return ret;
+}
+
+static int
+client_send_listener(int type, const void *data, uint16_t len)
+{
+	return client_send_listenerp(type, 0, data, len);
 }
 
 /* set qid fields from sb */

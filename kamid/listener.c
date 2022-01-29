@@ -316,6 +316,15 @@ listener_dispatch_main(int fd, short event, void *d)
 				    imsg.hdr.type, 0,
 				    &verbose, sizeof(verbose));
 			break;
+		case IMSG_CTL_DEBUG:
+			if (SPLAY_EMPTY(&clients))
+				listener_imsg_compose_main(IMSG_CTL_DEBUG_END,
+				    imsg.hdr.peerid, NULL, 0);
+			SPLAY_FOREACH(client, clients_tree_id, &clients)
+				listener_imsg_compose_client(client,
+				    imsg.hdr.type, imsg.hdr.peerid,
+				    imsg.data, IMSG_DATA_SIZE(imsg));
+			break;
 		case IMSG_RECONF_CONF:
 		case IMSG_RECONF_PKI:
 		case IMSG_RECONF_PKI_CERT:
@@ -452,6 +461,13 @@ listener_dispatch_client(int fd, short event, void *d)
 			break;
 
 		switch (imsg.hdr.type) {
+		case IMSG_CTL_DEBUG_BACK:
+		case IMSG_CTL_DEBUG_END:
+			log_warnx("relaying back to main debug_back/end");
+			listener_imsg_compose_main(imsg.hdr.type,
+			    imsg.hdr.peerid, imsg.data, IMSG_DATA_SIZE(imsg));
+			break;
+
 		case IMSG_BUF:
 			find.id = imsg.hdr.peerid;
 			client = SPLAY_FIND(clients_tree_id, &clients, &find);

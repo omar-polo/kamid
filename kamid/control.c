@@ -38,6 +38,8 @@
 
 #define	CONTROL_BACKLOG	5
 
+uint32_t peeridcnt;
+
 struct {
 	struct event	ev;
 	struct event	evt;
@@ -46,12 +48,14 @@ struct {
 
 struct ctl_conn {
 	TAILQ_ENTRY(ctl_conn)	entry;
+	uint32_t		peerid;
 	struct imsgev		iev;
 };
 
 TAILQ_HEAD(ctl_conns, ctl_conn)	ctl_conns = TAILQ_HEAD_INITIALIZER(ctl_conns);
 
 struct ctl_conn	*control_connbyfd(int);
+struct ctl_conn	*control_connbypeer(uint32_t);
 struct ctl_conn	*control_connbypid(pid_t);
 void		 control_close(int);
 
@@ -154,6 +158,7 @@ control_accept(int listenfd, short event, void *bula)
 		return;
 	}
 
+	c->peerid = peeridcnt++;
 	imsg_init(&c->iev.ibuf, connfd);
 	c->iev.handler = control_dispatch_imsg;
 	c->iev.events = EV_READ;
@@ -171,6 +176,19 @@ control_connbyfd(int fd)
 
 	TAILQ_FOREACH(c, &ctl_conns, entry) {
 		if (c->iev.ibuf.fd == fd)
+			break;
+	}
+
+	return (c);
+}
+
+struct ctl_conn *
+control_connbypeer(uint32_t peerid)
+{
+	struct ctl_conn	*c;
+
+	TAILQ_FOREACH(c, &ctl_conns, entry) {
+		if (c->peerid == peerid)
 			break;
 	}
 
@@ -255,6 +273,10 @@ control_dispatch_imsg(int fd, short event, void *bula)
 			if (main_reload() == -1)
 				log_warnx("configuration reload failed");
 			break;
+		case IMSG_CTL_DEBUG:
+			main_imsg_compose_listener(IMSG_CTL_DEBUG, -1,
+			    c->peerid, NULL, 0);
+			break;
 		case IMSG_CTL_LOG_VERBOSE:
 			if (IMSG_DATA_SIZE(imsg) != sizeof(verbose))
 				break;
@@ -282,7 +304,7 @@ control_imsg_relay(struct imsg *imsg)
 {
 	struct ctl_conn	*c;
 
-	if ((c = control_connbypid(imsg->hdr.pid)) == NULL)
+	if ((c = control_connbypeer(imsg->hdr.peerid)) == NULL)
 		return (0);
 
 	return (imsg_compose_event(&c->iev, imsg->hdr.type, 0, imsg->hdr.pid,

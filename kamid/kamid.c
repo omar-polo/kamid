@@ -422,6 +422,10 @@ main_dispatch_listener(int fd, short event, void *d)
 		case IMSG_AUTH_TLS:
 			do_auth_tls(&imsg);
 			break;
+		case IMSG_CTL_DEBUG_BACK:
+		case IMSG_CTL_DEBUG_END:
+			control_imsg_relay(&imsg);
+			break;
 		default:
 			log_debug("%s: error handling imsg %d", __func__,
 				imsg.hdr.type);
