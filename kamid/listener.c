@@ -276,7 +276,6 @@ listener_dispatch_main(int fd, short event, void *d)
 {
 	static struct kd_conf		*nconf;
 	static struct kd_pki_conf	*pki;
-	struct kd_listen_conf		*listen;
 	struct client			*client, find;
 	struct imsg			 imsg;
 	struct imsgev			*iev = d;
