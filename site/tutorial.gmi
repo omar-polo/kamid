@@ -32,6 +32,18 @@ listen on localhost port 1337 tls pki localhost auth <users>
 
 "SHA256:..." is the hash of the client certificate for the user "op" and is used for authentication.  The configuration is quite flexible, and allows to create “virtual users” and map those to custom home directories too.
 
+An easy way to generate certificates and obtain their fingerprint is by using the scripts ‘fingerprint’ and ‘gencert’ in the ‘contrib’ directory:
+
+```example of how to use fingerprint and gencert
+% ./gencert foo
+Generating a 4096 bit RSA private key
+[...]
+writing new private key to 'foo'
+-----
+% ./fingerprint foo
+SHA256:c043a39b4c65993f03b8df46116a692392399e3be0eb233f4efd74cd53540370
+```
+
 To check the configuration for syntax errors, execute:
 
 ```
