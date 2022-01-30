@@ -131,7 +131,7 @@
       *remote-test-path-contents*
       (example-slurp *remote-test-path*)))
 
-(defun example-write (path &optional (root "/"))
+(defun example-write-data (path data &optional (root "/"))
   (with-open-ssl-stream (stream
                          socket
                          *host*
@@ -142,12 +142,16 @@
            (*buffer-size*   256)
            (root-fid        (mount stream root))
            (fid             (open-path stream root-fid path :mode +create-for-read-write+)))
-      (9p-write stream fid 0 *remote-test-path-contents*)
+      (9p-write stream fid 0 data)
       (read-all-pending-messages stream)
       t)))
 
+(defun example-write (path &optional (root "/"))
+  (example-write-data path *remote-test-path-contents* root))
+
 (deftest test-write ((kami-suite) (test-open-path test-read))
-  (assert-true (ignore-errors (example-write *remote-test-path-write*))))
+  (assert-true (ignore-errors (example-write *remote-test-path-write*)))
+  (assert-true (ignore-errors (example-write-data *remote-test-path-write* #()))))
 
 (defun example-write-2-3 (path &optional (root "/"))
   (with-open-ssl-stream (stream
