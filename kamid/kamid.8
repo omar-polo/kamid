@@ -12,7 +12,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: July 07 2021 $
+.Dd $Mdocdate: January 31 2022 $
 .Dt KAMID 8
 .Os
 .Sh NAME
@@ -76,6 +76,6 @@ program was written by
 doesn't handle very well when a user directory is over multiple
 devices since it uses the inode of files to build the QID path field.
 .Pp
-Opening/creating a file with the
+Opening or creating a file with the
 .Dv OEXEC
-result in an error.
+flag set result in an error.
