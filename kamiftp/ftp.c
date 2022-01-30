@@ -849,6 +849,10 @@ do_tls_connect(const char *host, const char *port)
 		fatalx("tls_config_new");
 	tls_config_insecure_noverifycert(tlsconf);
 	tls_config_insecure_noverifyname(tlsconf);
+
+	if (keypath == NULL)
+		keypath = crtpath;
+
 	if (tls_config_set_keypair_file(tlsconf, crtpath, keypath) == -1)
 		fatalx("can't load certs (%s, %s)", crtpath, keypath);
 
@@ -1589,7 +1593,7 @@ main(int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 
-	if (argc == 0)
+	if (argc == 0 || (tls && crtpath == NULL))
 		usage(1);
 
 	signal(SIGPIPE, SIG_IGN);
