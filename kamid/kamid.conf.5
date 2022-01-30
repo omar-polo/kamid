@@ -123,7 +123,7 @@ pki localhost key "/etc/ssl/private/localhost.key"
 
 table users { "SHA256:..." => "op" }
 
-listen on localhost port 1337 tls pki localhost auth <users>
+listen on localhost port 5640 tls pki localhost auth <users>
 .Ed
 .Sh SEE ALSO
 .Xr kamictl 8 ,
