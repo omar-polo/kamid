@@ -34,10 +34,8 @@ The options are as follows:
 .Bl -tag -width Ds
 .It Fl c
 Use TLS for the connection.
-.Fl K
-and
 .Fl C
-are mandatory if
+is mandatory if
 .Fl c
 is used.
 .It Fl C Ar certificate
@@ -48,6 +46,9 @@ to be use during the TLS handsahke.
 Specify the path to the client certificate
 .Ar key
 to be used during the TLS handshake.
+If not given, the file passed to
+.Fl C
+will be used.
 .El
 .Pp
 The following commands are recognized by
