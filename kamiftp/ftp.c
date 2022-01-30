@@ -1578,12 +1578,14 @@ main(int argc, char **argv)
 	while ((ch = getopt(argc, argv, "C:cK:")) != -1) {
 		switch (ch) {
 		case 'C':
+			tls = 1;
 			crtpath = optarg;
 			break;
 		case 'c':
 			tls = 1;
 			break;
 		case 'K':
+			tls = 1;
 			keypath = optarg;
 			break;
 		default:
