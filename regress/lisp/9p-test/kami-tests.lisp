@@ -670,3 +670,56 @@
         (multiple-value-list (example-change-times-file (renamed-filename)
                                                         +new-atime-2+
                                                         +new-mtime-2+)))))
+
+(alexandria::define-constant +many-files-number+ 10000               :test #'=)
+
+(alexandria::define-constant +many-files-path+   "/many/open/files/" :test #'string=)
+
+(alexandria::define-constant +many-files-format+ "~a/~a.dummy"       :test #'string=)
+
+(defun example-create-many-files (path &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (root-fid        (mount stream root)))
+      (length (loop for i from 0 below +many-files-number+
+                    collect
+                    (let* ((cloned-fid  (clone-fid stream root-fid))
+                           (created-fid (create-path stream
+                                                     cloned-fid
+                                                     (format nil
+                                                             +many-files-format+
+                                                             path
+                                                             i))))
+                      (9p-clunk stream created-fid)
+                      cloned-fid))))))
+
+(deftest test-create-many-files ((kami-suite) (test-move-file))
+  (assert-equality #'=
+      +many-files-number+
+      (ignore-errors (example-create-many-files +many-files-path+))))
+
+(defun example-open-many-files (path &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (root-fid        (mount stream root)))
+      (loop for i from 0 below 509 do
+        (9p-clunk stream (open-path stream
+                                    root-fid
+                                    (format nil
+                                            +many-files-format+
+                                            path
+                                            i))))
+      t)))
+
+(deftest test-open-many-files ((kami-suite) (test-create-many-files))
+  (assert-true (ignore-errors (example-open-many-files +many-files-path+))))
