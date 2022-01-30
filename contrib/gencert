@@ -1,0 +1,15 @@
+#!/bin/sh
+#
+# usage: gencert <name>
+# generates a certificate and private key and saves them in the
+# given file.
+
+file="${1?:missing file name}"
+
+exec openssl req -x509 \
+	-newkey rsa:4096 \
+	-out "$file" \
+	-keyout "$file" \
+	-days 365 \
+	-nodes \
+	-subj /

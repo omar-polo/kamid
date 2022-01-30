@@ -1,0 +1,11 @@
+#!/bin/sh
+#
+# usage: fingerprint <file>
+# dump a fingerprint of the given file.
+
+file="${1?:missing file name}"
+
+printf "SHA256:"
+openssl x509 -in "$file" -noout -fingerprint -sha256 |
+	sed -e 's/^.*=//' -e 's/://g' |
+	tr A-Z a-z
