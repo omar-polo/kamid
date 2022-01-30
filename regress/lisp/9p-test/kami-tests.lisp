@@ -239,12 +239,27 @@
                          *certificate-key*)
     (let* ((*messages-sent* ())
            (root-fid        (mount stream root)))
-      (path-exists-p stream root-fid path)
       (path-exists-p stream root-fid path))))
+
+(defun example-path-exists-many-times (path &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (root-fid        (mount stream root)))
+      (loop repeat 10000 do
+        (path-exists-p stream root-fid path))
+        (path-exists-p stream root-fid path))))
 
 (deftest test-path-exists ((kami-suite) (test-stat))
   (assert-true  (example-path-exists *remote-test-path*))
   (assert-false (example-path-exists (concatenate 'string *remote-test-path* ".$$$"))))
+
+(deftest test-path-exists-many-times ((kami-suite) (test-path-exists))
+  (assert-true  (example-path-exists-many-times *remote-test-path*)))
 
 (defun example-create-file (path &optional (root "/"))
   (with-open-ssl-stream (stream
