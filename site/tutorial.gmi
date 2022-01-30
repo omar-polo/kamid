@@ -69,8 +69,10 @@ Congratulations!  Your kamid instance is up and running.
 There are quite a few clients for 9p, even if not all may support 9p over TLS.  As part of kamid there is a small ftp(1)-like client called ‘kamiftp’:
 
 ```
-$ kamiftp -c -C client.pem -K client.key localhost
+$ kamiftp -C foo localhost
 ```
+
+(‘foo’ is the certificate generated previously)
 
 Check out kamiftp(1) for usage.  Alternatively, try tinmop!  It’s a ncurses application that supports a plethora of protocols: it’s a gemini browser, a pleroma client and also 9p-over-TLS capable!
 
