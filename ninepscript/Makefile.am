@@ -17,7 +17,8 @@ ninepscript_SOURCES=parse.y			\
 noinst_man5_MANS = ninepscript.5
 noinst_man8_MANS = ninepscript.8
 
-LDADD =		$(LIBOBJS)
+LDADD =		$(top_builddir)/compat/libopenbsd-compat.a
+ninepscript_DEPENDENCIES = $(top_builddir)/compat/libopenbsd-compat.a
 
 AM_CPPFLAGS +=	-DKAMID_VERSION='"@VERSION@"'	\
 		-I$(top_srcdir)/		\

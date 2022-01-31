@@ -1,4 +1,4 @@
-SUBDIRS = contrib kamictl kamid kamiftp kamirepl ninepscript regress
+SUBDIRS = compat contrib kamictl kamid kamiftp kamirepl ninepscript regress
 
 AM_CPPFLAGS += -DKAMID_VERSION='"@VERSION"' \
 	-I$(top_srcdir)/lib \

@@ -11,7 +11,8 @@ kamictl_SOURCES=ctl_parser.c			\
 
 dist_man8_MANS = kamictl.8
 
-LDADD =		$(LIBOBJS)
+kamictl_LDADD =	$(top_builddir)/compat/libopenbsd-compat.a
+kamictl_DEPENDENCIES = $(top_builddir)/compat/libopenbsd-compat.a
 
 AM_CPPFLAGS +=	-DKAMID_VERSION='"@VERSION@"'	\
 		-I$(top_srcdir)/		\

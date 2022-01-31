@@ -24,7 +24,8 @@ dist_man5_MANS = kamid.conf.5
 dist_man7_MANS = 9p.7
 dist_man8_MANS = kamid.8
 
-LDADD =		$(LIBOBJS)
+kamid_LDADD =	$(top_builddir)/compat/libopenbsd-compat.a
+kamid_DEPENDENCIES = $(top_builddir)/compat/libopenbsd-compat.a
 
 AM_CPPFLAGS +=	-DKAMID_VERSION='"@VERSION@"'	\
 		-I$(top_srcdir)/		\

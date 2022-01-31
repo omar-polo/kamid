@@ -11,7 +11,8 @@ kamirepl_SOURCES=kamirepl.c			\
 
 noinst_man1_MANS = kamirepl.1
 
-LDADD =		$(LIBOBJS)
+LDADD =		$(top_builddir)/compat/libopenbsd-compat.a
+kamirepl_DEPENDENCIES = $(top_builddir)/compat/libopenbsd-compat.a
 
 AM_CPPFLAGS +=	-DKAMID_VERSION='"@VERSION@"'	\
 		-I$(top_srcdir)/		\
