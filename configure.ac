@@ -177,6 +177,7 @@ LDFLAGS="$SAVED_LDFLAGS"
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([
 	Makefile
+	contrib/Makefile
 	kamictl/Makefile
 	kamid/Makefile
 	kamiftp/Makefile

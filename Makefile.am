@@ -1,15 +1,4 @@
-SUBDIRS = kamictl kamid kamiftp kamirepl ninepscript regress
-
-EXTRA_DIST =	compat/imsg.h \
-		compat/ohash.h \
-		compat/queue.h \
-		compat/tree.h \
-		compat/vis.h \
-		contrib/9ps-mode.el \
-		contrib/Makefile \
-		contrib/README.md \
-		contrib/fingerprint \
-		contrib/gencert
+SUBDIRS = contrib kamictl kamid kamiftp kamirepl ninepscript regress
 
 AM_CPPFLAGS += -DKAMID_VERSION='"@VERSION"' \
 	-I$(top_srcdir)/lib \
