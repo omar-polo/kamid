@@ -1420,6 +1420,7 @@ serialize_stat(const char *fname, struct stat *sb, struct evbuffer *evb)
 	struct qid	 qid;
 	const char	*uid, *gid, *muid;
 	size_t		 tot;
+	uint32_t	 mode;
 	uint16_t	 namlen, uidlen, gidlen, ulen;
 
 	qid_update_from_sb(&qid, sb);
@@ -1441,14 +1442,15 @@ serialize_stat(const char *fname, struct stat *sb, struct evbuffer *evb)
 		return -1;
 	}
 
+	mode = sb->st_mode & 0xFFFF;
+	if (qid.type & QTDIR)
+		mode |= 0x80000000;
+
 	np_write16(evb, tot);			/*	size[2]		*/
 	np_write16(evb, sb->st_rdev);		/*	type[2]		*/
 	np_write32(evb, sb->st_dev);		/*	dev[4]		*/
 	np_qid(evb, &qid);			/*	qid[13]		*/
-
-	/* XXX: translate? */
-	np_write32(evb, sb->st_mode);		/*	mode[4]		*/
-
+	np_write32(evb, mode);			/*	mode[4]		*/
 	np_write32(evb, sb->st_atim.tv_sec);	/*	atime[4]	*/
 	np_write32(evb, sb->st_mtim.tv_sec);	/*	mtime[4]	*/
 
