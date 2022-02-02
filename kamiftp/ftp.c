@@ -577,6 +577,9 @@ do_stat(int fid, struct np_stat *st)
 	recv_msg();
 	expect2(Rstat, iota_tag);
 
+	/* eat up the first two byte length */
+	np_read16(buf);
+
 	if (np_read_stat(buf, st) == -1)
 		errx(1, "invalid stat struct read");
 
