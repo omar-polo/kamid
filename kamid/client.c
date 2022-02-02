@@ -1521,6 +1521,8 @@ tread(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 
 			if ((d = readdir(f->d)) == NULL)
 				break;
+			if (!strcmp(d->d_name, ".") || !strcmp(d->d_name, ".."))
+				continue;
 			if (fstatat(f->fd, d->d_name, &sb, 0) == -1) {
 				warn("fstatat");
 				continue;
