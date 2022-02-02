@@ -141,7 +141,7 @@ static void		np_open(uint16_t, struct qid *, uint32_t);
 static void		np_create(uint16_t, struct qid *, uint32_t);
 static void		np_read(uint16_t, uint32_t, void *);
 static void		np_write(uint16_t, uint32_t);
-static void		np_stat(uint16_t, uint32_t, void *);
+static void		np_stat(uint16_t, uint16_t, void *);
 static void		np_wstat(uint16_t);
 static void		np_remove(uint16_t);
 static void		np_error(uint16_t, const char *);
@@ -732,14 +732,15 @@ np_write(uint16_t tag, uint32_t count)
 }
 
 static void
-np_stat(uint16_t tag, uint32_t count, void *data)
+np_stat(uint16_t tag, uint16_t count, void *data)
 {
 	if (sizeof(count) + count + HEADERSIZE >= msize) {
 		np_error(tag, "Rstat would overflow");
 		return;
 	}
 
-	np_header(count, Rstat, tag);
+	np_header(sizeof(count) + count, Rstat, tag);
+	np_write16(evb, count);
 	np_writebuf(evb, count, data);
 	do_send();
 }
