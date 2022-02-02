@@ -1414,7 +1414,7 @@ err:
 	client_shutdown();
 }
 
-static inline void
+static inline int
 serialize_stat(const char *fname, struct stat *sb, struct evbuffer *evb)
 {
 	struct qid	 qid;
@@ -1435,10 +1435,10 @@ serialize_stat(const char *fname, struct stat *sb, struct evbuffer *evb)
 	ulen = strlen(muid);
 
 	tot = NPSTATSIZ(namlen, uidlen, gidlen, ulen);
-	if (tot > UINT32_MAX) {
+	if (tot > UINT16_MAX) {
 		log_warnx("stat info for dir entry %s would overflow",
 		    fname);
-		return;
+		return -1;
 	}
 
 	np_write16(evb, tot);			/*	size[2]		*/
@@ -1462,6 +1462,8 @@ serialize_stat(const char *fname, struct stat *sb, struct evbuffer *evb)
 	np_string(evb, uidlen, uid);		/*	uid[s]		*/
 	np_string(evb, gidlen, gid);		/*	gid[s]		*/
 	np_string(evb, ulen, muid);		/*	muid[s]		*/
+
+	return 0;
 }
 
 static void
@@ -1623,8 +1625,10 @@ tstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 
-	serialize_stat(f->fname, &sb, evb);
-	np_stat(hdr->tag, EVBUFFER_LENGTH(evb), EVBUFFER_DATA(evb));
+	if (serialize_stat(f->fname, &sb, evb) == -1)
+		np_error(hdr->tag, "stat would overflow");
+	else
+		np_stat(hdr->tag, EVBUFFER_LENGTH(evb), EVBUFFER_DATA(evb));
 	evbuffer_free(evb);
 }
 
