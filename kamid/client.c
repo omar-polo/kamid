@@ -992,6 +992,9 @@ tattach(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		return;
 	}
 
+	if (*aname == '\0')
+		strlcpy(aname, "/", sizeof(aname));
+
 	if (len != 0)
 		goto err;
 
