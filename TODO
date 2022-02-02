@@ -37,3 +37,8 @@ Stuff that's still to-do
  - reply with an Rerror in kamid/listener.c:/^client_read when we get
    an invalid message (too big or too small) before closing the
    connection.
+
+ - how (if) handle serialize_stat overflow?  If the info for the file
+   we want to give don't fit inside 16 bit we're currently either
+   skipping the file entry (if during a directory read) or return an
+   error (dirng Tstat.)
