@@ -892,7 +892,9 @@ np_readst(const char *t, const char *f, struct np_stat *st,
 {
 	memset(st, 0, sizeof(*st));
 
-	if (!np_read16(t, "stat.size", &st->size, src, len) ||
+	/* len is sent twice! */
+	if (!np_read16(t, "stat len", &st->size, src, len) ||
+	    !np_read16(t, "stat.size", &st->size, src, len) ||
 	    !np_read16(t, "stat.type", &st->type, src, len) ||
 	    !np_read32(t, "stat.dev", &st->dev, src, len) ||
 	    !np_read64(t, "stat.qid.path", &st->qid.path, src, len) ||
