@@ -251,7 +251,7 @@ void
 twstat(uint32_t fid, const struct np_stat *st)
 {
 	uint32_t	len;
-	uint16_t	stlen;
+	uint16_t	stlen, n;
 
 	/* fid[4] stat[n] */
 
@@ -265,10 +265,12 @@ twstat(uint32_t fid, const struct np_stat *st)
 	if (st->muid != NULL)
 		stlen += strlen(st->muid);
 
-	len = sizeof(fid) + sizeof(stlen) + stlen;
+	n = sizeof(stlen) + stlen;
+	len = sizeof(fid) + sizeof(n) + n;
 
 	write_hdr_auto(len, Twstat);
 	write_fid(fid);
+	write_16(n);
 	write_16(stlen);
 	write_16(st->type);
 	write_32(st->dev);
