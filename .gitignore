@@ -28,6 +28,7 @@ stamp-h1
 kamictl/kamictl
 kamid/kamid
 kamiftp/kamiftp
+kamiproxy/kamiproxy
 kamirepl/kamirepl
 ninepscript/ninepscript
 

@@ -183,6 +183,7 @@ AC_CONFIG_FILES([
 	kamictl/Makefile
 	kamid/Makefile
 	kamiftp/Makefile
+	kamiproxy/Makefile
 	kamirepl/Makefile
 	ninepscript/Makefile
 	regress/Makefile
