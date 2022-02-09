@@ -2,16 +2,17 @@
 
 ## 1. create a dedicated user
 
-kamid needs a dedicated ‘_kamid’ user to run.  How to create an user depends on your operating system; on OpenBSD is:
+kamid needs a dedicated ‘_kamid’ user to run.  How to create an user depends on your operating system; for example on OpenBSD is:
 
 ```
 # useradd -c kamid -d /var/empty -s /sbin/nologin _kamid
 ```
 
-or on some GNU/linux systems:
+while on some GNU/linux systems:
 
 ```
-# useradd --system --no-create-home -s /bin/nologin -c kamid _kamid
+# mkdir -p /var/empty
+# useradd --system -d /var/empty -s /usr/sbin/nologin _kamid
 ```
 
 Ideally the ‘_kamid’ user shouldn’t have a login shell and have an empty home.
@@ -35,12 +36,12 @@ listen on localhost port 1337 tls pki localhost auth <users>
 An easy way to generate certificates and obtain their fingerprint is by using the scripts ‘fingerprint’ and ‘gencert’ in the ‘contrib’ directory:
 
 ```example of how to use fingerprint and gencert
-% ./gencert foo
+% ./contrib/gencert foo
 Generating a 4096 bit RSA private key
 [...]
 writing new private key to 'foo'
 -----
-% ./fingerprint foo
+% ./contrib/fingerprint foo
 SHA256:c043a39b4c65993f03b8df46116a692392399e3be0eb233f4efd74cd53540370
 ```
 
