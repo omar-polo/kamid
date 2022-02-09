@@ -2,7 +2,8 @@ MANPAGES =	../kamictl/kamictl.8	\
 		../kamid/9p.7		\
 		../kamid/kamid.8	\
 		../kamid/kamid.conf.5	\
-		../kamiftp/kamiftp.1
+		../kamiftp/kamiftp.1	\
+		../kamiproxy/kamiproxy.1
 
 PAGES =		index.gmi install.gmi tutorial.gmi
 
