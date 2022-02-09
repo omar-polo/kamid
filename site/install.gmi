@@ -19,6 +19,7 @@ This should install a few programs:
 * kamid - the daemon itself
 * kamictl - a comman-line utility to manage the daemon
 * kamiftp - an ftp(1)-like 9p client
+* kamiproxy - a proxy for clients that speak 9p in cleartext
 
 and the relative manpages.
 
