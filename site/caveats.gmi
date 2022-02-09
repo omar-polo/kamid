@@ -1,0 +1,22 @@
+# caveats
+
+Keep in mind that kamid is a very young project.  It just reached its 0.1 version so while it’s working, there are some caveats.
+
+
+### client certificates are mandatory!
+
+Future version will relax this restriction but at the moment it’s strictly required for all connections to provide a TLS client certificate.
+
+kamiproxy(1) can help with this, as will relay and encrypt all incoming 9p connections to kamid using a client certificate.
+
+
+### not 100% compliant (yet)
+
+kamid aims to be completely compatible with all existing software that speaks 9p, but at the moment it is not yet.  It’s more like 99% compatible, there’s still something missing.
+
+A known bug is that 9front can’t create or write files in a directory tree exported by kamid.  The cause is still unknown.
+
+
+### it's more slower than it needs to be
+
+Due to a technical issue, kamid uses a very small ‘msize’ (the maximum size of the packages) which is critical for reads and writes of big files.  Future version will increase the default ‘msize’.

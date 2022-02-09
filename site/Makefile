@@ -5,8 +5,9 @@ MANPAGES =	../kamictl/kamictl.8	\
 		../kamiftp/kamiftp.1	\
 		../kamiproxy/kamiproxy.1
 
-PAGES =		index.gmi install.gmi tutorial.gmi
+PAGES =		index.gmi install.gmi tutorial.gmi caveats.gmi
 
+TITLE_caveats.gmi =	caveats
 TITLE_index.gmi =	home
 TITLE_install.gmi =	install guide
 TITLE_tutorial.gmi =	tutorial
