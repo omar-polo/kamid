@@ -4,6 +4,7 @@ kamid has a short number of dependency, namely:
 
 * libtls
 * libevent
+* readline
 
 kamid uses the GNU autotools as build tool; assuming you have fetched either the release tarball or cloned locally the git repository, to build execute:
 
