@@ -1,6 +1,6 @@
 # kamid
 
-kamid is a FREE, easy-to-use and portable implementation of a 9p file server daemon for UNIX-like systems.  It has a strong focus on security and correctness.
+kamid is a FREE, easy-to-use and portable implementation of a 9p file server daemon for UNIX-like systems with a strong focus on security and correctness.
 
 => https://git.omarpolo.com/kamid	git repository
 => https://github.com/omar-polo/kamid	GitHub mirror
