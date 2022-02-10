@@ -39,7 +39,7 @@ while (1) {
 	}
 
 	my ($match, $repl) = m/^([^\s]*)=(.*)$/;
-	push @args, "-e", "s/$match/$repl/g";
+	push @args, "-e", "s!$match!$repl!g";
 }
 
 # OK, shelling out to sed is a bit lame...

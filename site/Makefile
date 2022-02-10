@@ -12,8 +12,13 @@ TITLE_index.gmi =	home
 TITLE_install.gmi =	install guide
 TITLE_tutorial.gmi =	tutorial
 
-SUBST_GEM =	./subst MANEXT=txt  EXT=gmi
-SUBST_WWW =	./subst MANEXT=html EXT=html
+SUBST = ./subst CURRV=0.1 NEXTV=0.2 \
+	GH=https://github.com/omar-polo/kamid \
+	CURRSIGN=RWTaqCGPkA11Nhvo+uW+U1EKASiVo3IxKrQOqLaEtpYDdw5qLzs4a/9T \
+	NEXTSIGN=RWRwqQVDYtY1jTc1lXqyu2e+ZGWgN/h3n/LE/at7pNTuJ1qWsogFvDh8
+
+SUBST_GEM =	${SUBST} MANEXT=txt  EXT=gmi
+SUBST_WWW =	${SUBST} MANEXT=html EXT=html
 
 .PHONY: all dirs manpages server-www serve-gemini upload clean titles
 
