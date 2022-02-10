@@ -4,7 +4,6 @@ body {
   max-width: 780px;
   margin: 0 auto;
   padding: 20px;
-  padding-bottom: 80px;
 }
 
 h1::before {
@@ -82,6 +81,12 @@ img {
   display: block;
   margin: 0 auto;
   max-width: 100%;
+}
+
+footer {
+  margin-top: 4rem;
+  font-size: 0.8rem;
+  border-top: 1px solid;
 }
 
 @media (prefers-color-scheme: dark) {
