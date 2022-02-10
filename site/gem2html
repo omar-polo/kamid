@@ -73,6 +73,9 @@ while (<>) {
 	}
 }
 
+say "</ul>" if $in_list;
+say "</pre>" if $in_pre;
+
 sub san {
 	s/&/\&amp;/g;
 	s/</\&lt;/g;
