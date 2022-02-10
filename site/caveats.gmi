@@ -7,7 +7,7 @@ Keep in mind that kamid is a very young project.  It just reached its 0.1 versio
 
 Future version will relax this restriction but at the moment it’s strictly required for all connections to provide a TLS client certificate.
 
-kamiproxy(1) can help with this, as will relay and encrypt all incoming 9p connections to kamid using a client certificate.
+kamiproxy(1) can help with this, as will relay and encrypt all incoming 9p connections to kamid.
 
 
 ### not 100% compliant (yet)

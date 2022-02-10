@@ -2,11 +2,20 @@
 
 kamid is a FREE, easy-to-use and portable implementation of a 9p file server daemon for UNIX-like systems with a strong focus on security and correctness.
 
+=> GH/releases/download/CURRV/kamid-CURRV.tar.gz kamid-CURRV.tar.gz
+
+Signify pubkeys for this and the next release:
+```
+kamid-CURRV.pub:	CURRSIGN
+kamid-NEXTV.pub:	NEXTSIGN
+```
+
 => https://git.omarpolo.com/kamid	git repository
 => https://github.com/omar-polo/kamid	GitHub mirror
 
 => install.EXT		Installation guide
 => tutorial.EXT		Tutorial
+=> caveats.EXT		Caveats
 
 
 ## Kamid documentation

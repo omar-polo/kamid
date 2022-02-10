@@ -6,10 +6,29 @@ kamid has a short number of dependency, namely:
 * libevent
 * readline
 
-kamid uses the GNU autotools as build tool; assuming you have fetched either the release tarball or cloned locally the git repository, to build execute:
+Sources can be fetched from:
 
+=> GH/releases/download/CURRV/kamid-CURRV.tar.gz kamid-CURRV.tar.gz
+
+It's strongly advised to verify the tarball before compiling.  A SHA256 file is provided, but it can only detect accidental corruption.  Instead, use signify and SHA256.sig to cryptographically verify the downloaded tarball.
 ```
-$ ./autogen.sh	# not needed when using the tarball
+$ signify -Cp kamid-CURRV.pub -x SHA256.sig
+Signature Verified
+kamid-CURRV.pub: OK
+kamid-CURRV.tar.gz: OK
+kamid-NEXTV.pub: OK
+```
+
+The signify pubkeys for this and the next release are:
+```
+kamid-CURRV.pub:	CURRSIGN
+kamid-NEXTV.pub:	NEXTSIGN
+```
+
+Once the dependencies are installed, building is as easy as:
+```
+$ tar xzf kamid-CURRV.tar.gz
+$ cd kamid-CURRV.tar.gz
 $ ./configure
 $ make
 # make install	# eventually
