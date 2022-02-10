@@ -12,6 +12,7 @@ while (<>) {
 	@pages = (@pages, $_);
 }
 
+say "<nav>";
 my $did = 0;
 for (@pages) {
 	if (!$did) {
@@ -28,4 +29,4 @@ for (@pages) {
 	}
 }
 
-say "";
+say "</nav>";
