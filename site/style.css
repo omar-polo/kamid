@@ -53,7 +53,26 @@ hr {
 }
 
 img {
-  border-radius: 5px;
+  margin: 10px;
+  display: inline-block;
+}
+
+section.with-image {
+}
+
+@media only screen and (min-width: 768px) {
+  section.with-image {
+    display: flex;
+    flex-direction: row;
+  }
+}
+
+section.with-image img {
+  object-fit: contain;
+}
+
+section.with-image div {
+  overflow: auto;
 }
 
 pre {
@@ -75,12 +94,6 @@ code, kbd {
 
 ul.link-list {
   list-style: disclosure-closed;
-}
-
-img {
-  display: block;
-  margin: 0 auto;
-  max-width: 100%;
 }
 
 footer {
@@ -109,6 +122,15 @@ footer {
 
   code, kbd {
     color: #ff4cff;
+  }
+
+  img {
+    opacity: 0.8;
+    transition: opacity .2s ease-in-out;
+  }
+
+  img:hover {
+    opacity: 1;
   }
 }
 

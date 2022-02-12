@@ -1,5 +1,8 @@
 # kamid
 
+<section class="with-image">
+<img src="tohru.png" alt="Tohru from \"Kobayashi' Dragon Maid\"" title="tohru.png" />
+<div>
 kamid is a FREE, easy-to-use and portable implementation of a 9p file server daemon for UNIX-like systems with a strong focus on security and correctness.
 
 => GH/releases/download/CURRV/kamid-CURRV.tar.gz kamid-CURRV.tar.gz
@@ -16,7 +19,8 @@ kamid-NEXTV.pub:	NEXTSIGN
 => install.EXT		Installation guide
 => tutorial.EXT		Tutorial
 => caveats.EXT		Caveats
-
+</div>
+</section>
 
 ## Kamid documentation
 

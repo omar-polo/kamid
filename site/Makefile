@@ -24,6 +24,7 @@ SUBST_WWW =	${SUBST} MANEXT=html EXT=html
 
 all: dirs manpages pages
 	cp style.css www/
+	convert ../art/tohru.png -resize 300x300 www/tohru.png
 
 dirs:
 	mkdir -p gemini
@@ -37,7 +38,7 @@ manpages:
 
 pages:
 .for p in ${PAGES}
-	${SUBST_GEM} $p > gemini/$p
+	grep -v '^<' $p | ${SUBST_GEM} > gemini/$p
 
 	${SUBST_WWW} TITLE=${TITLE_${p}:Q} header.html > www/${p:.gmi=.html}
 	${MAKE} titles | ./menu.pl "${p:.gmi=.html}" >> www/${p:.gmi=.html}
