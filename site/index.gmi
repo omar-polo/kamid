@@ -6,6 +6,7 @@
 kamid is a FREE, easy-to-use and portable implementation of a 9p file server daemon for UNIX-like systems with a strong focus on security and correctness.
 
 => GH/releases/download/CURRV/kamid-CURRV.tar.gz kamid-CURRV.tar.gz
+=> GH/releases/download/CURRV/SHA256.sig SHA256.sig
 
 Signify pubkeys for this and the next release:
 ```
