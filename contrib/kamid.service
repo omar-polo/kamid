@@ -1,0 +1,12 @@
+[Unit]
+Description=9p file server
+After=syslog.target network.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+ExecStart=/usr/local/bin/kamid
+ExecReload=/usr/local/bin/kamictl reload
+
+[Install]
+WantedBy=multi-user.target
