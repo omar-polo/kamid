@@ -984,7 +984,7 @@ add_cert(const char *name, const char *path)
 
 set:
 	if ((pki->cert = tls_load_file(path, &pki->certlen, NULL)) == NULL)
-		fatal(NULL);
+		fatal("can't open %s", path);
 }
 
 static void
@@ -1010,7 +1010,7 @@ add_key(const char *name, const char *path)
 
 set:
 	if ((pki->key = tls_load_file(path, &pki->keylen, NULL)) == NULL)
-		fatal(NULL);
+		fatal("can't open %s", path);
 }
 
 static struct kd_listen_conf *
