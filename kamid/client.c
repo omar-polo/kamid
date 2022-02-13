@@ -1684,7 +1684,7 @@ twstat(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 
 	/* change the permissions */
 	if (st.mode != (uint32_t)-1) {
-		mode_t m = st.mode & 0x7F; /* silently truncate higer bits */
+		mode_t m = st.mode & 0x7FF; /* silently truncate higer bits */
 		if (f->fd != -1)
 			r = fchmod(f->fd, m);
 		else
