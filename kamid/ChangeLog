@@ -1,0 +1,5 @@
+2022-02-13  Omar Polo  <op@openbsd.org>
+
+	* client.c (twstat): fix twstat handling of mode bits, was
+	truncating out the user ones.  Found the hard way by cage.
+
