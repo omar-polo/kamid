@@ -74,8 +74,8 @@ static int		stackh;
 
 static struct envs envs = TAILQ_HEAD_INITIALIZER(envs);
 
-static struct value v_false = {.type = V_NUM, .v = {.num = 0}};
-static struct value v_true  = {.type = V_NUM, .v = {.num = 1}};
+static const struct value v_false = {.type = V_NUM, .v = {.num = 0}};
+static const struct value v_true  = {.type = V_NUM, .v = {.num = 1}};
 
 static uint8_t lasttag;
 
@@ -156,7 +156,7 @@ popvn(int n)
 }
 
 static inline void
-pushv(struct value *v)
+pushv(const struct value *v)
 {
 	if (stackh == STACK_HEIGHT)
 		errx(1, "can't push the stack: overflow");
