@@ -80,8 +80,6 @@ echo
 echo "logging on $logfile"
 ${SUDO} "$(which kamid)" -d -vvv -f regress.conf > "$logfile" 2>&1 &
 
-ret=0
-
 set +e
 cd 9p-test/ && \
 	${SBCL} --noinform \
