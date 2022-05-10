@@ -53,8 +53,8 @@ serve-gemini:
 	gmid -p 1966 ./gemini
 
 upload:
-	rsync --delete -a www/ op:sites/kamid.omarpolo.com
-	rsync --delete -a gemini/ op:gemini/kamid.omarpolo.com
+	openrsync --rsync-path=openrsync --del -a www/ antartica:/var/www/kamid.omarpolo.com
+	openrsync --rsync-path=openrsync --del -a gemini/ antartica:/var/gemini/kamid.omarpolo.com
 
 clean:
 	rm -rf gemini www
