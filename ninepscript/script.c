@@ -1452,10 +1452,10 @@ static int
 builtin_recv(int argc)
 {
 	struct pollfd	pfd;
-        struct value	v;
+	struct value	v;
 	struct imsg	imsg;
 	ssize_t		n, datalen;
-	int		serrno;
+	int		serrno, want_more = 0;
 
 	if (lastmsg != NULL) {
 		free(lastmsg);
@@ -1464,6 +1464,7 @@ builtin_recv(int argc)
 
 	pfd.fd = ibuf.fd;
 	pfd.events = POLLIN;
+again:
 	if (poll(&pfd, 1, INFTIM) == -1) {
 		serrno = errno;
 		before_printing();
@@ -1471,57 +1472,62 @@ builtin_recv(int argc)
 		return EVAL_ERR;
 	}
 
-again:
 	if ((n = imsg_read(&ibuf)) == -1) {
 		if (errno == EAGAIN)
 			goto again;
 		fatal("imsg_read");
 	}
 	if (n == 0) {
-disconnect:
 		before_printing();
 		printf("child disconnected\n");
 		return EVAL_ERR;
 	}
 
-nextmessage:
 	check_for_output();
 
-	/* read only one message */
-	if ((n = imsg_get(&ibuf, &imsg)) == -1)
-		fatal("imsg_get");
-	if (n == 0)
-		goto disconnect;
+	for (;;) {
+		if ((n = imsg_get(&ibuf, &imsg)) == -1)
+			fatal("imsg_get");
+		if (n == 0)
+			break;
 
-	datalen = imsg.hdr.len - IMSG_HEADER_SIZE;
-	switch (imsg.hdr.type) {
-	case IMSG_BUF:
-		v.type = V_MSG;
-		if ((v.v.msg.msg = malloc(datalen)) == NULL)
-			fatal("malloc");
-		memcpy(v.v.msg.msg, imsg.data, datalen);
-		v.v.msg.len = datalen;
-		pushv(&v);
-		imsg_free(&imsg);
-                return EVAL_OK;
+		want_more = 0;
+		datalen = imsg.hdr.len - IMSG_HEADER_SIZE;
+		switch (imsg.hdr.type) {
+		case IMSG_BUF:
+			v.type = V_MSG;
+			if ((v.v.msg.msg = malloc(datalen)) == NULL)
+				fatal("malloc");
+			memcpy(v.v.msg.msg, imsg.data, datalen);
+			v.v.msg.len = datalen;
+			pushv(&v);
+			imsg_free(&imsg);
+			return EVAL_OK;
 
-	case IMSG_CLOSE:
-		before_printing();
-		printf("subprocess closed the connection\n");
-		imsg_free(&imsg);
-		return EVAL_ERR;
+		case IMSG_CLOSE:
+			before_printing();
+			printf("subprocess closed the connection\n");
+			imsg_free(&imsg);
+			return EVAL_ERR;
 
-	case IMSG_MSIZE:
-		imsg_free(&imsg);
-		goto nextmessage;
+		case IMSG_MSIZE:
+			imsg_free(&imsg);
+			want_more = 1;
+			break;
 
-	default:
-		before_printing();
-		printf("got unknown message from subprocess: %d\n",
-		    imsg.hdr.type);
-		imsg_free(&imsg);
-		return EVAL_ERR;
+		default:
+			before_printing();
+			printf("got unknown message from subprocess: %d\n",
+			    imsg.hdr.type);
+			imsg_free(&imsg);
+			return EVAL_ERR;
+		}
 	}
+
+	if (want_more)
+		goto again;
+
+	fatalx("reached the end of %s\n", __func__);
 }
 
 static pid_t
