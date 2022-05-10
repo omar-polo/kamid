@@ -177,9 +177,8 @@ struct op	*op_faccess(struct op *, char *);
 struct op	*op_sfail(struct op *, char *);
 struct op	*op_vargs(void);
 
-void		 ppf_val(FILE *, struct value *);
-void		 pp_val(struct value *);
-void		 pp_val(struct value *);
+void		 ppf_val(FILE *, const struct value *);
+void		 pp_val(const struct value *);
 const char	*val_type(struct value *);
 int		 val_trueish(struct value *);
 int		 val_isnum(struct value *);

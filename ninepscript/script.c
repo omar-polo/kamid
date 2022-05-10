@@ -589,7 +589,7 @@ op_vargs(void)
 }
 
 void
-ppf_val(FILE *f, struct value *val)
+ppf_val(FILE *f, const struct value *val)
 {
 	size_t	i;
 
@@ -629,7 +629,7 @@ ppf_val(FILE *f, struct value *val)
 }
 
 void
-pp_val(struct value *val)
+pp_val(const struct value *val)
 {
 	ppf_val(stdout, val);
 }
