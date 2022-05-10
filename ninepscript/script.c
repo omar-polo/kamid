@@ -44,10 +44,6 @@
 
 #define DEBUG 0
 
-#ifndef INFTIM
-#define INFTIM -1
-#endif
-
 int			 verbose;
 
 static const char	*argv0;

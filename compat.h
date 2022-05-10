@@ -30,6 +30,10 @@
 #define __dead __attribute__((noreturn))
 #endif
 
+#ifndef INFTIM
+#define INFTIM -1
+#endif
+
 #if HAVE_EVENT2
 # include <event2/event.h>
 # include <event2/event_compat.h>
