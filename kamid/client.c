@@ -43,6 +43,11 @@
 #include "utils.h"
 
 /*
+ * Max message size aviable via a single imsg.
+ */
+#define IMSG_MAXSIZE (MAX_IMSGSIZE - IMSG_HEADER_SIZE)
+
+/*
  * The minimum value allowed for the msize.
  */
 #define MIN_MSIZE 256
@@ -1974,6 +1979,13 @@ handle_message(struct imsg *imsg, size_t len, int cont)
 		writetag = hdr.tag;
 		twrite(&hdr, data, len, &writefid, &writepos, &writeleft,
 		    &writeskip);
+		return;
+	}
+
+	if (len > IMSG_MAXSIZE) {
+		log_warnx("can't handle message: too long for its type");
+		client_send_listener(IMSG_CLOSE, NULL, 0);
+		client_shutdown();
 		return;
 	}
 
