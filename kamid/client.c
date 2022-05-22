@@ -555,8 +555,10 @@ parse_message(const uint8_t *data, size_t len, struct np_msg_header *hdr,
 	return;
 
 err:
-	/* TODO: send a proper message to terminate the connection. */
-	fatalx("got invalid message");
+	log_warnx("got invalid message: (%d, %d, %d)",
+	    hdr->len, hdr->type, hdr->tag);
+	client_send_listener(IMSG_CLOSE, NULL, 0);
+	client_shutdown();
 }
 
 static void
