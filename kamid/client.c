@@ -43,15 +43,6 @@
 #include "utils.h"
 
 /*
- * XXX: atm is difficult to accept messages bigger than MAX_IMSGSIZE
- * minus IMSG_HEADER_SIZE, we need something to split messages into
- * chunks and receive them one by the other.
- *
- * CLIENT_MSIZE is thus the maximum message size we can handle now.
- */
-#define CLIENT_MSIZE (MAX_IMSGSIZE - IMSG_HEADER_SIZE)
-
-/*
  * The minimum value allowed for the msize.
  */
 #define MIN_MSIZE 256
@@ -186,11 +177,12 @@ static void	twalk(struct np_msg_header *, const uint8_t *, size_t);
 static void	topen(struct np_msg_header *, const uint8_t *, size_t);
 static void	tcreate(struct np_msg_header *, const uint8_t *, size_t);
 static void	tread(struct np_msg_header *, const uint8_t *, size_t);
-static void	twrite(struct np_msg_header *, const uint8_t *, size_t);
+static void	twrite(struct np_msg_header *, const uint8_t *, size_t, struct fid **, off_t *, size_t *, int *);
+static void	twrite_cont(struct fid *, off_t *, size_t *, int *, uint16_t, const uint8_t *, size_t);
 static void	tstat(struct np_msg_header *, const uint8_t *, size_t);
 static void	twstat(struct np_msg_header *, const uint8_t *, size_t);
 static void	tremove(struct np_msg_header *, const uint8_t *, size_t);
-static void	handle_message(struct imsg *, size_t);
+static void	handle_message(struct imsg *, size_t, int);
 
 __dead void
 client(int debug, int verbose)
@@ -337,10 +329,12 @@ client_dispatch_listener(int fd, short event, void *d)
 			explicit_bzero(&rauth, sizeof(rauth));
 			break;
 		case IMSG_BUF:
+		case IMSG_BUF_CONT:
 			if (!auth)
 				fatalx("%s: can't handle messages before"
 				    " doing the auth", __func__);
-			handle_message(&imsg, IMSG_DATA_SIZE(imsg));
+			handle_message(&imsg, IMSG_DATA_SIZE(imsg),
+			    imsg.hdr.type == IMSG_BUF_CONT);
 			break;
 		case IMSG_CONN_GONE:
 			log_debug("closing");
@@ -962,7 +956,7 @@ tversion(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 
 	/* version matched */
 	handshaked = 1;
-	msize = MIN(msize, CLIENT_MSIZE);
+	msize = MIN(msize, MSIZE9P);
 	client_send_listener(IMSG_MSIZE, &msize, sizeof(msize));
 	np_version(hdr->tag, msize, VERSION9P);
 	return;
@@ -1555,7 +1549,8 @@ tread(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 }
 
 static void
-twrite(struct np_msg_header *hdr, const uint8_t *data, size_t len)
+twrite(struct np_msg_header *hdr, const uint8_t *data, size_t len,
+    struct fid **writefid, off_t *writepos, size_t *writeleft, int *writeskip)
 {
 	struct fid	*f;
 	ssize_t		 r;
@@ -1566,33 +1561,70 @@ twrite(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	if (!NPREAD32("fid", &fid, &data, &len) ||
 	    !NPREAD64("off", &off, &data, &len) ||
 	    !NPREAD32("count", &count, &data, &len) ||
-	    len != count) {
+	    count < len) {
 		client_send_listener(IMSG_CLOSE, NULL, 0);
 		client_shutdown();
 		return;
 	}
 
 	if ((f = fid_by_id(fid)) == NULL || f->fd == -1) {
+		*writeskip = 1;
 		np_error(hdr->tag, "invalid fid");
 		return;
 	}
 
 	if (!(f->iomode & O_WRONLY) &&
 	    !(f->iomode & O_RDWR)) {
+		*writeskip = 1;
 		np_error(hdr->tag, "fid not opened for writing");
 		return;
 	}
 
 	if (TYPE_OVERFLOW(off_t, off)) {
+		*writeskip = 1;
 		log_warnx("unexpected off_t size");
 		np_error(hdr->tag, "invalid offset");
 		return;
 	}
 
-	if ((r = pwrite(f->fd, data, len, off)) == -1)
+	if ((r = pwrite(f->fd, data, len, off)) == -1) {
+		*writeskip = 1;
 		np_errno(hdr->tag);
-	else
+	} else if (count == len)
 		np_write(hdr->tag, r);
+
+	/* account for a continuated write */
+	if (count > len) {
+		*writefid = f;
+		*writepos = off + len;
+		*writeleft = count - len;
+		*writeskip = 0;
+	}
+}
+
+static void
+twrite_cont(struct fid *f, off_t *writepos, size_t *writeleft, int *writeskip,
+    uint16_t tag, const uint8_t *data, size_t len)
+{
+	ssize_t r;
+
+	if (len > *writeleft) {
+		client_send_listener(IMSG_CLOSE, NULL, 0);
+		client_shutdown();
+		return;
+	}
+
+	if ((r = pwrite(f->fd, data, len, *writepos)) == -1) {
+		*writeskip = 1;
+		np_errno(tag);
+		return;
+	}
+
+	*writeleft -= len;
+	*writepos += len;
+
+	if (*writeleft == 0)
+		np_write(tag, r);
 }
 
 static void
@@ -1857,8 +1889,13 @@ tremove(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 }
 
 static void
-handle_message(struct imsg *imsg, size_t len)
+handle_message(struct imsg *imsg, size_t len, int cont)
 {
+	static struct fid *writefid;
+	static off_t writepos;
+	static size_t writeleft;
+	static int writeskip;
+	static uint16_t writetag;
 	struct msg {
 		uint8_t	 type;
 		void	(*fn)(struct np_msg_header *, const uint8_t *, size_t);
@@ -1871,7 +1908,7 @@ handle_message(struct imsg *imsg, size_t len)
 		{Topen,		topen},
 		{Tcreate,	tcreate},
 		{Tread,		tread},
-		{Twrite,	twrite},
+		/* {Twrite,	twrite}, */
 		{Tstat,		tstat},
 		{Twstat,	twstat},
 		{Tremove,	tremove},
@@ -1884,6 +1921,41 @@ handle_message(struct imsg *imsg, size_t len)
 	hexdump("incoming packet", imsg->data, len);
 #endif
 
+	/*
+	 * Twrite is special and can be "continued" to allow writing
+	 * more than what the imsg framework would allow us to.
+	 */
+	if (writeleft > 0 && !cont) {
+		log_warnx("received a non continuation message when still "
+		    "missed %zu bytes to write", writeleft);
+		client_send_listener(IMSG_CLOSE, NULL, 0);
+		client_shutdown();
+		return;
+	}
+
+	if (cont) {
+		if (writeskip)
+			return;
+
+		if (writefid == NULL) {
+			log_warnx("received a continuation message without "
+			    "seeing a Twrite");
+			client_send_listener(IMSG_CLOSE, NULL, 0);
+			client_shutdown();
+			return;
+		}
+
+		log_warnx("continuing...");
+		twrite_cont(writefid, &writepos, &writeleft, &writeskip,
+		    writetag, imsg->data, len);
+		return;
+	}
+
+	writefid = NULL;
+	writepos = -1;
+	writeleft = 0;
+	writeskip = 0;
+
 	parse_message(imsg->data, len, &hdr, &data);
 	len -= HEADERSIZE;
 
@@ -1893,6 +1965,13 @@ handle_message(struct imsg *imsg, size_t len)
 	if (!handshaked && hdr.type != Tversion) {
 		client_send_listener(IMSG_CLOSE, NULL, 0);
 		client_shutdown();
+		return;
+	}
+
+	if (hdr.type == Twrite) {
+		writetag = hdr.tag;
+		twrite(&hdr, data, len, &writefid, &writepos, &writeleft,
+		    &writeskip);
 		return;
 	}
 

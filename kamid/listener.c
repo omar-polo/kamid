@@ -44,6 +44,8 @@
 #include "sandbox.h"
 #include "utils.h"
 
+#define IMSG_MAXSIZE (MAX_IMSGSIZE - IMSG_HEADER_SIZE)
+
 static struct kd_conf	*listener_conf;
 static struct imsgev	*iev_main;
 
@@ -57,6 +59,7 @@ struct client {
 	uint32_t		 lid;
 	uint32_t		 lflags;
 	uint32_t		 msize;
+	uint32_t		 left;
 	int			 fd;
 	struct tls		*ctx;
 	struct event		 event;
@@ -483,7 +486,7 @@ listener_dispatch_client(int fd, short event, void *d)
 
 			if (client->msize == 0)
 				fatal("IMSG_MSIZE got msize = 0");
-
+			log_debug("set msize to %d", client->msize);
 			break;
 
 		case IMSG_CLOSE:
@@ -689,17 +692,33 @@ client_read(struct bufferevent *bev, void *d)
 {
 	struct client	*client = d;
 	struct evbuffer	*src = EVBUFFER_INPUT(bev);
-	uint32_t	 len;
+	size_t evlen;
+	uint32_t len;
 
 	for (;;) {
-		if (EVBUFFER_LENGTH(src) < 4)
+		evlen = EVBUFFER_LENGTH(src);
+
+		if (client->left != 0) {
+			/* wait to fill a whole imsg if possible */
+			if (client->left >= IMSG_MAXSIZE &&
+			    evlen < IMSG_MAXSIZE)
+				return;
+
+			len = MIN(client->left, evlen);
+			listener_imsg_compose_client(client, IMSG_BUF_CONT,
+			    client->id, EVBUFFER_DATA(src), len);
+			evbuffer_drain(src, len);
+			client->left -= len;
+			continue;
+		}
+
+		if (evlen < 4)
 			return;
 
 		memcpy(&len, EVBUFFER_DATA(src), sizeof(len));
 		len = le32toh(len);
 		log_debug("expecting a message %"PRIu32" bytes long "
-		    "(of wich %zu already read)",
-		    len, EVBUFFER_LENGTH(src));
+		    "(of wich %zu already read)", len, evlen);
 
 		if (len < HEADERSIZE) {
 			log_warnx("invalid message size %d (too low)", len);
@@ -714,7 +733,15 @@ client_read(struct bufferevent *bev, void *d)
 			return;
 		}
 
-		if (len > EVBUFFER_LENGTH(src))
+		if (len > IMSG_MAXSIZE && evlen >= len) {
+			listener_imsg_compose_client(client, IMSG_BUF,
+			    client->id, EVBUFFER_DATA(src), IMSG_MAXSIZE);
+			evbuffer_drain(src, IMSG_MAXSIZE);
+			client->left = len - IMSG_MAXSIZE;
+			continue;
+		}
+
+		if (len > evlen)
 			return;
 
 		listener_imsg_compose_client(client, IMSG_BUF, client->id,

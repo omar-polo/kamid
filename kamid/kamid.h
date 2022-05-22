@@ -46,6 +46,7 @@ enum imsg_type {
 	IMSG_AUTH_TLS,		/* kd_auth_req */
 	IMSG_CONN_GONE,
 	IMSG_BUF,
+	IMSG_BUF_CONT,
 	IMSG_MSIZE,
 	IMSG_CLOSE,
 };
