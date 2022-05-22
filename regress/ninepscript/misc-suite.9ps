@@ -6,6 +6,18 @@ testing "if version works" {
 	assert m.type == Rversion
 }
 
+testing "that fails with an msize too small" {
+	send(Tversion, notag, 64:u32, np2000)
+	m = recv()
+	assert m.type == Rversion
+
+	# we can't check if the replied version is "unknown" because
+	# of a limitation of 9pscript...  instead, we'll try to attach
+	# and expect a failure.
+	attach(0, nofid, "op", "/")
+	should-fail recv() : "the connection should have been closed"
+}
+
 testing "fails when sending a R-message" {
 	send(Rversion, notag, msize, np2000)
 	should-fail recv() : "the connection should have been closed"

@@ -51,6 +51,11 @@
  */
 #define CLIENT_MSIZE (MAX_IMSGSIZE - IMSG_HEADER_SIZE)
 
+/*
+ * The minimum value allowed for the msize.
+ */
+#define MIN_MSIZE 256
+
 #define DEBUG_PACKETS 0
 
 /* straight outta /src/usr.bin/ssh/scp.c */
@@ -931,7 +936,8 @@ tversion(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 		goto err;
 	case READSTRTRUNC:
 		log_warnx("9P version string too long, truncated");
-		goto mismatch;
+		np_version(hdr->tag, MSIZE9P, "unknown");
+		return;
 	}
 
 	if (len != 0)
@@ -940,21 +946,25 @@ tversion(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 	if ((dot = strchr(version, '.')) != NULL)
 		*dot = '\0';
 
-	if (strcmp(version, VERSION9P) != 0 ||
-	    msize == 0)
-		goto mismatch;
+	if (strcmp(version, VERSION9P) != 0) {
+		log_warnx("unknown 9P version \"%s\"; want "VERSION9P,
+		    version);
+		np_version(hdr->tag, MSIZE9P, "unknown");
+		return;
+	}
+
+	if (msize < MIN_MSIZE) {
+		log_warnx("msize too small: %"PRIu32"; want %d at least",
+		    msize, MIN_MSIZE);
+		np_version(hdr->tag, MSIZE9P, "unknown");
+		return;
+	}
 
 	/* version matched */
 	handshaked = 1;
 	msize = MIN(msize, CLIENT_MSIZE);
 	client_send_listener(IMSG_MSIZE, &msize, sizeof(msize));
 	np_version(hdr->tag, msize, VERSION9P);
-	return;
-
-mismatch:
-	log_warnx("unknown 9P version string: \"%s\", want "VERSION9P,
-	    version);
-	np_version(hdr->tag, MSIZE9P, "unknown");
 	return;
 
 err:
