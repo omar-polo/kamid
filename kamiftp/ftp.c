@@ -1288,7 +1288,7 @@ cmd_ls(int argc, const char **argv)
 	evbuffer_drain(dirbuf, EVBUFFER_LENGTH(dirbuf));
 
 	for (;;) {
-		tread(nfid, off, BUFSIZ);
+		tread(nfid, off, msize - 4);
 		do_send();
 		recv_msg();
 		expect2(Rread, iota_tag);
