@@ -691,21 +691,24 @@ draw_progress(const char *pre, const struct progress *p)
 static int
 fetch_fid(int fid, int fd, const char *name)
 {
+	static char buf[MSIZE9P];
 	struct progress p = {0};
 	struct np_stat st;
 	size_t r;
 	int ret = 0;
-	char buf[BUFSIZ];
 
 	do_stat(fid, &st);
 	do_open(fid, KOREAD);
 
 	p.max = st.length;
 	for (;;) {
-		size_t off;
+		size_t len, off;
 		ssize_t nw;
 
-		r = do_read(fid, p.done, sizeof(buf), buf);
+		len = MIN(sizeof(buf), msize);
+		len -= HEADERSIZE + 4; /* for the request' fields */
+
+		r = do_read(fid, p.done, len, buf);
 		if (r == 0)
 			break;
 
@@ -738,11 +741,11 @@ end:
 static void
 send_fid(int fid, const char *fnam, int open_flags, int fd, const char *name)
 {
+	static char buf[MSIZE9P];
 	struct progress p = {0};
 	struct stat sb;
 	ssize_t r;
-	size_t w;
-	char buf[BUFSIZ];
+	size_t w, len;
 
 	if (fstat(fd, &sb) == -1)
 		err(1, "fstat");
@@ -754,7 +757,10 @@ send_fid(int fid, const char *fnam, int open_flags, int fd, const char *name)
 
 	p.max = sb.st_size;
 	for (;;) {
-		r = read(fd, buf, sizeof(buf));
+		len = MIN(sizeof(buf), msize);
+		len -= HEADERSIZE + 4 + 4 + 8; /* for the request' fields */
+
+		r = read(fd, buf, len);
 		if (r == 0)
 			break;
 		if (r == -1)
