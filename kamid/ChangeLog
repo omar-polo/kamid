@@ -1,3 +1,7 @@
+2022-05-23  Omar Polo  <op@omarpolo.com>
+
+	* client.c (tread): allow "jumbo" reads
+
 2022-05-22  Omar Polo  <op@omarpolo.com>
 
 	* client.c (handle_message): allow "jumbo" writes

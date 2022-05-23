@@ -637,7 +637,7 @@ static void
 do_send(void)
 {
 	size_t	 len;
-	void	*data;
+	uint8_t	*data;
 
 	len = EVBUFFER_LENGTH(evb);
 	data = EVBUFFER_DATA(evb);
@@ -645,8 +645,18 @@ do_send(void)
 #if DEBUG_PACKETS
 	hexdump("outgoing packet", data, len);
 #endif
-	client_send_listener(IMSG_BUF, data, len);
-	evbuffer_drain(evb, len);
+
+	while (len > IMSG_MAXSIZE) {
+		client_send_listener(IMSG_BUF, data, IMSG_MAXSIZE);
+		evbuffer_drain(evb, IMSG_MAXSIZE);
+		len -= IMSG_MAXSIZE;
+		data += IMSG_MAXSIZE;
+	}
+
+	if (len != 0) {
+		client_send_listener(IMSG_BUF, data, len);
+		evbuffer_drain(evb, len);
+	}
 }
 
 static void
@@ -1487,12 +1497,12 @@ serialize_stat(const char *fname, struct stat *sb, struct evbuffer *evb)
 static void
 tread(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 {
+	static char	 buf[MSIZE9P - HEADERSIZE - 4];
 	struct fid	*f;
 	ssize_t		 r;
 	size_t		 howmuch;
 	uint64_t	 off;
 	uint32_t	 fid, count;
-	char		 buf[2048];
 
 	/* fid[4] offset[8] count[4] */
 	if (!NPREAD32("fid", &fid, &data, &len) ||
