@@ -425,7 +425,7 @@ do_version(void)
 	msize = np_read32(buf);
 	version = np_readstr(buf);
 
-	if (msize > MSIZE9P)
+	if (msize > MSIZE9P || msize < 256)
 		errx(1, "got unexpected msize: %d", msize);
 	if (strcmp(version, VERSION9P))
 		errx(1, "unexpected 9p version: %s", version);
