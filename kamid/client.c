@@ -545,7 +545,10 @@ parse_message(const uint8_t *data, size_t len, struct np_msg_header *hdr,
 	    !NPREAD16("tag", &hdr->tag, &data, &len))
 		goto err;
 
-	if (olen != hdr->len)
+	/*
+	 * Allow only "jumbo" Twrites.
+	 */
+	if (hdr->type != Twrite && olen != hdr->len)
 		goto err;
 
 	if (hdr->type < Tversion ||
