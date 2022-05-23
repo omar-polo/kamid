@@ -182,8 +182,8 @@ static void	twalk(struct np_msg_header *, const uint8_t *, size_t);
 static void	topen(struct np_msg_header *, const uint8_t *, size_t);
 static void	tcreate(struct np_msg_header *, const uint8_t *, size_t);
 static void	tread(struct np_msg_header *, const uint8_t *, size_t);
-static void	twrite(struct np_msg_header *, const uint8_t *, size_t, struct fid **, off_t *, size_t *, int *);
-static void	twrite_cont(struct fid *, off_t *, size_t *, int *, uint16_t, const uint8_t *, size_t);
+static void	twrite(struct np_msg_header *, const uint8_t *, size_t, struct fid **, off_t *, size_t *, size_t *, int *);
+static void	twrite_cont(struct fid *, off_t *, size_t *, size_t *, int *, uint16_t, const uint8_t *, size_t);
 static void	tstat(struct np_msg_header *, const uint8_t *, size_t);
 static void	twstat(struct np_msg_header *, const uint8_t *, size_t);
 static void	tremove(struct np_msg_header *, const uint8_t *, size_t);
@@ -1570,7 +1570,8 @@ tread(struct np_msg_header *hdr, const uint8_t *data, size_t len)
 
 static void
 twrite(struct np_msg_header *hdr, const uint8_t *data, size_t len,
-    struct fid **writefid, off_t *writepos, size_t *writeleft, int *writeskip)
+    struct fid **writefid, off_t *writepos, size_t *writetot,
+    size_t *writeleft, int *writeskip)
 {
 	struct fid	*f;
 	ssize_t		 r;
@@ -1617,14 +1618,16 @@ twrite(struct np_msg_header *hdr, const uint8_t *data, size_t len,
 	if (count > len) {
 		*writefid = f;
 		*writepos = off + len;
+		*writetot = len;
 		*writeleft = count - len;
 		*writeskip = 0;
 	}
 }
 
 static void
-twrite_cont(struct fid *f, off_t *writepos, size_t *writeleft, int *writeskip,
-    uint16_t tag, const uint8_t *data, size_t len)
+twrite_cont(struct fid *f, off_t *writepos, size_t *writetot,
+    size_t *writeleft, int *writeskip, uint16_t tag, const uint8_t *data,
+    size_t len)
 {
 	ssize_t r;
 
@@ -1640,11 +1643,12 @@ twrite_cont(struct fid *f, off_t *writepos, size_t *writeleft, int *writeskip,
 		return;
 	}
 
+	*writetot += len;
 	*writeleft -= len;
 	*writepos += len;
 
 	if (*writeleft == 0)
-		np_write(tag, r);
+		np_write(tag, *writetot);
 }
 
 static void
@@ -1913,6 +1917,7 @@ handle_message(struct imsg *imsg, size_t len, int cont)
 {
 	static struct fid *writefid;
 	static off_t writepos;
+	static size_t writetot;
 	static size_t writeleft;
 	static int writeskip;
 	static uint16_t writetag;
@@ -1965,14 +1970,14 @@ handle_message(struct imsg *imsg, size_t len, int cont)
 			return;
 		}
 
-		log_warnx("continuing...");
-		twrite_cont(writefid, &writepos, &writeleft, &writeskip,
-		    writetag, imsg->data, len);
+		twrite_cont(writefid, &writepos, &writetot, &writeleft,
+		    &writeskip, writetag, imsg->data, len);
 		return;
 	}
 
 	writefid = NULL;
 	writepos = -1;
+	writetot = 0;
 	writeleft = 0;
 	writeskip = 0;
 
@@ -1990,8 +1995,8 @@ handle_message(struct imsg *imsg, size_t len, int cont)
 
 	if (hdr.type == Twrite) {
 		writetag = hdr.tag;
-		twrite(&hdr, data, len, &writefid, &writepos, &writeleft,
-		    &writeskip);
+		twrite(&hdr, data, len, &writefid, &writepos, &writetot,
+		    &writeleft, &writeskip);
 		return;
 	}
 
