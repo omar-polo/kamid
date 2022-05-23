@@ -25,6 +25,8 @@
 
 (defparameter *remote-test-path-huge*    "/test-file-huge")
 
+(defparameter *remote-test-path-big-buffer*    "/test-file-big-buffer")
+
 (defparameter *remote-test-path-contents* (format nil "qwertyuiopasdfghjklòàù è~%"))
 
 (alexandria:define-constant +remote-test-path-ovewrwrite-data+ "12" :test #'string=)
@@ -470,6 +472,28 @@
 
 (deftest test-write-huge-file ((kami-suite) (test-collect-dir-root-children))
   (let* ((size-file  (stat-size (write-huge-file *remote-test-path-huge*))))
+    (assert-equality #'= (length (make-huge-data)) size-file)))
+
+(defun write-big-buffer (path &optional (root "/"))
+  (with-open-ssl-stream (stream
+                         socket
+                         *host*
+                         *port*
+                         *client-certificate*
+                         *certificate-key*)
+    (let* ((*messages-sent* ())
+           (*buffer-size*   4292608)
+           (root-fid        (mount stream root))
+           (saved-root-fid  (clone-fid stream root-fid))
+           (fid             (create-path stream root-fid path))
+           (data            (make-huge-data)))
+      (9p-write stream fid 0 data)
+      (9p-clunk stream fid)
+      (read-all-pending-messages stream)
+      (path-info stream saved-root-fid path))))
+
+(deftest test-write-big-buffer ((kami-suite) (test-collect-dir-root-children))
+  (let* ((size-file  (stat-size (write-huge-file *remote-test-path-big-buffer*))))
     (assert-equality #'= (length (make-huge-data)) size-file)))
 
 (defun read-huge-file (path &optional (root "/"))
