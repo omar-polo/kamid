@@ -721,7 +721,7 @@ np_create(uint16_t tag, struct qid *qid, uint32_t iounit)
 static void
 np_read(uint16_t tag, uint32_t count, void *data)
 {
-	if (sizeof(count) + count + HEADERSIZE >= msize) {
+	if (sizeof(count) + count + HEADERSIZE > msize) {
 		np_error(tag, "Rread would overflow");
 		return;
 	}
