@@ -41,4 +41,4 @@ Stuff that's still to-do
  - how (if) handle serialize_stat overflow?  If the info for the file
    we want to give don't fit inside 16 bit we're currently either
    skipping the file entry (if during a directory read) or return an
-   error (dirng Tstat.)
+   error (during Tstat.)
