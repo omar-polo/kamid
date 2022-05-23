@@ -705,6 +705,8 @@ client_read(struct bufferevent *bev, void *d)
 				return;
 
 			len = MIN(client->left, evlen);
+			len = MIN(len, IMSG_MAXSIZE);
+
 			listener_imsg_compose_client(client, IMSG_BUF_CONT,
 			    client->id, EVBUFFER_DATA(src), len);
 			evbuffer_drain(src, len);
