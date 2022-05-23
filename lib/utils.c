@@ -177,6 +177,7 @@ hexdump(const char *label, uint8_t *data, size_t len)
                 hexdump_ppline(x, &data[i - n], n);
 
 	printf("\n");
+	fflush(stdout);
 }
 
 void
