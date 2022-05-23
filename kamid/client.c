@@ -1950,14 +1950,6 @@ handle_message(struct imsg *imsg, size_t len, int cont)
 	 * Twrite is special and can be "continued" to allow writing
 	 * more than what the imsg framework would allow us to.
 	 */
-	if (writeleft > 0 && !cont) {
-		log_warnx("received a non continuation message when still "
-		    "missed %zu bytes to write", writeleft);
-		client_send_listener(IMSG_CLOSE, NULL, 0);
-		client_shutdown();
-		return;
-	}
-
 	if (cont) {
 		if (writeskip)
 			return;
@@ -1972,6 +1964,14 @@ handle_message(struct imsg *imsg, size_t len, int cont)
 
 		twrite_cont(writefid, &writepos, &writetot, &writeleft,
 		    &writeskip, writetag, imsg->data, len);
+		return;
+	}
+
+	if (writeleft > 0) {
+		log_warnx("received a non continuation message when still "
+		    "missed %zu bytes to write", writeleft);
+		client_send_listener(IMSG_CLOSE, NULL, 0);
+		client_shutdown();
 		return;
 	}
 
