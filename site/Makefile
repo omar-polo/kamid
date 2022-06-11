@@ -7,6 +7,8 @@ MANPAGES =	../kamictl/kamictl.8	\
 
 PAGES =		index.gmi install.gmi tutorial.gmi caveats.gmi
 
+IMAGE =		tohru.png
+
 TITLE_caveats.gmi =	caveats
 TITLE_index.gmi =	home
 TITLE_install.gmi =	install guide
@@ -24,7 +26,7 @@ SUBST_WWW =	${SUBST} MANEXT=html EXT=html
 
 all: dirs manpages pages
 	cp style.css www/
-	convert ../art/tohru.png -resize 300x300 www/tohru.png
+	convert ../art/${IMAGE} -resize 300x300 www/${IMAGE}
 
 dirs:
 	mkdir -p gemini
