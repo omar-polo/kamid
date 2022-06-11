@@ -1,7 +1,7 @@
 # kamid
 
 <section class="with-image">
-<img src="tohru.png" alt="Tohru from \"Kobayashi' Dragon Maid\"" title="tohru.png" />
+<img src="yotsuba.png" alt="Yotsuba from \"Yotsuba to!\"" title="yotsuba.png" />
 <div>
 kamid is a FREE, easy-to-use and portable implementation of a 9p file server daemon for UNIX-like systems with a strong focus on security and correctness.
 
