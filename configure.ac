@@ -1,4 +1,4 @@
-AC_INIT([kamid], [0.1], [kamid@omarpolo.com], [],
+AC_INIT([kamid], [0.2], [kamid@omarpolo.com], [],
 	[https://kamid.omarpolo.com])
 AC_CONFIG_AUX_DIR(etc)
 AC_CONFIG_LIBOBJ_DIR(compat)
