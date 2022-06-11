@@ -15,8 +15,3 @@ kamiproxy(1) can help with this, as will relay and encrypt all incoming 9p conne
 kamid aims to be completely compatible with all existing software that speaks 9p, but at the moment it is not yet.  It’s more like 99% compatible, there’s still something missing.
 
 A known bug is that 9front can’t create or write files in a directory tree exported by kamid.  The cause is still unknown.
-
-
-### it's more slower than it needs to be
-
-Due to a technical issue, kamid uses a very small ‘msize’ (the maximum size of the packages) which is critical for reads and writes of big files.  Future version will increase the default ‘msize’.

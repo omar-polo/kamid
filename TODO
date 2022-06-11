@@ -13,12 +13,6 @@ Stuff that's still to-do
 
  - tweak iounit so it's always lower than the choosen msize
 
- - handle message bigger than MAX_IMSGSIZE - IMSG_HEADER_SIZE.  One
-   way to do that would be to *not* use asynchroonus imsgs in client.c
-   but synchronous I/O: this way, once a message has been processed,
-   we can just receive the next in the same function (i.e. twrite) and
-   go ahead.
-
  - fill user and group name in struct stat.  The problem is that, being
    chrooted, we don't have access to /etc/passwd nor /etc/group. We
    could use setpassent(3) and setgroupent(3), but if they change in the
