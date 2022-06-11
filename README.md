@@ -38,6 +38,24 @@ listen on localhost port 1337 tls pki localhost auth <users>
 ```
 
 
+## Contributing
+
+Every form of contribution is well accepted!  Just send an email or
+open a pull request (either on Codeberg or GitHub.)
+
+Don't know where to start?  Take a look at the [TODO](./TODO) file!
+
+
+## Porting
+
+kamid is developed primarly on OpenBSD, but it's known to work on
+Debian, Devuan and NixOS.
+
+Have you ported / compiled kamid on other systems?  Cool, I'd be happy
+to hear about it!  I'm particularly interested in the difficulties in
+doing so to ease the portability.
+
+
 ## Testing
 
 The regression suite uses sudo (or doas) because it needs root
