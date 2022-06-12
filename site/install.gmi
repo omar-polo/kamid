@@ -8,9 +8,12 @@ kamid has a short number of dependency, namely:
 
 Sources can be fetched from:
 
-=> GH/releases/download/CURRV/kamid-CURRV.tar.gz kamid-CURRV.tar.gz
+=> GH/releases/download/CURRV/kamid-CURRV.tar.gz	kamid-CURRV.tar.gz
+=> GH/releases/download/CURRV/SHA256			SHA256
+=> GH/releases/download/CURRV/SHA256.sig		SHA256.sig
+=> GH/releases/download/CURRV/kamid-CURRV.pub		kamid-CURRV.pub
 
-It's strongly advised to verify the tarball before compiling.  A SHA256 file is provided, but it can only detect accidental corruption.  Instead, use signify and SHA256.sig to cryptographically verify the downloaded tarball.
+It's strongly advised to verify the tarball before compiling.  A SHA256 file is provided, but it can only detect accidental corruption.  Instead, use signify(1) and SHA256.sig to cryptographically verify the downloaded tarball.
 ```
 $ signify -Cp kamid-CURRV.pub -x SHA256.sig
 Signature Verified
