@@ -59,6 +59,10 @@ int		 tls;
 const char	*crtpath;
 const char	*keypath;
 
+char		*user;
+char		*host;
+char		*port;
+
 /* state */
 struct tls_config	*tlsconf;
 struct tls		*ctx;
@@ -437,13 +441,10 @@ do_version(void)
 static void
 do_attach(const char *path)
 {
-	const char *user;
 	struct qid qid;
 
 	if (path == NULL)
 		path = "/";
-	if ((user = getenv("USER")) == NULL)
-		user = "flan";
 
 	tattach(pwdfid, NOFID, user, path);
 	do_send();
@@ -928,13 +929,24 @@ do_ctxt_connect(const char *host, const char *port)
 static void
 do_connect(const char *connspec, const char *path)
 {
-	char *host, *colon;
+	char *t;
 	const char *port;
 
 	host = xstrdup(connspec);
-	if ((colon = strchr(host, ':')) != NULL) {
-		*colon = '\0';
-		port = ++colon;
+	if ((t = strchr(host, '@')) != NULL) {
+		if (t == host)
+			errx(1, "invalid connection string: %s", connspec);
+		*t = '\0';
+		user = host;
+		host = ++t;
+	} else if ((user = getenv("USER")) == NULL)
+		errx(1, "USER not defined");
+
+	if ((t = strchr(host, ':')) != NULL) {
+		*t = '\0';
+		port = ++t;
+		if (*port == '\0')
+			errx(1, "invalid connection string: %s", connspec);
 	} else
 		port = "1337";
 
@@ -950,8 +962,6 @@ do_connect(const char *connspec, const char *path)
 
 	do_version();
 	do_attach(path);
-
-	free(host);
 }
 
 static int
