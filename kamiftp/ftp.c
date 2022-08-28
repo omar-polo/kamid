@@ -707,7 +707,7 @@ fetch_fid(int fid, int fd, const char *name)
 		ssize_t nw;
 
 		len = MIN(sizeof(buf), msize);
-		len -= HEADERSIZE + 4; /* for the request' fields */
+		len -= IOHDRSZ; /* for the request' fields */
 
 		r = do_read(fid, p.done, len, buf);
 		if (r == 0)
@@ -1304,7 +1304,7 @@ cmd_ls(int argc, const char **argv)
 	evbuffer_drain(dirbuf, EVBUFFER_LENGTH(dirbuf));
 
 	for (;;) {
-		tread(nfid, off, msize - 4);
+		tread(nfid, off, msize - IOHDRSZ);
 		do_send();
 		recv_msg();
 		expect2(Rread, iota_tag);

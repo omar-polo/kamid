@@ -64,6 +64,13 @@ struct np_stat {
 #define QIDSIZE		13
 #define MAXWELEM	16
 
+/*
+ * from u9fs "ample room for Twrite/Rread header".  It's a bit sloppy
+ * but otherwise it fails with "i/o count too large".  Only for usage in
+ * clients.
+ */
+#define IOHDRSZ		24
+
 #define NPSTATSIZ(namlen, uidnam, gidnam, unam) \
 	(6 + QIDSIZE + 20 + 2 + namlen + 2 + uidnam + 2 + gidnam + 2 + unam)
 
