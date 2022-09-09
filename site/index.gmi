@@ -14,7 +14,7 @@ kamid-CURRV.pub:	CURRSIGN
 kamid-NEXTV.pub:	NEXTSIGN
 ```
 
-=> https://git.omarpolo.com/cgi-bin/gotweb/gotweb?path=kamid.git&action=summary	git repository
+=> https://git.omarpolo.com/?action=summary&path=kamid.git	git repository
 => https://codeberg.org/op/kamid	Codeberg mirror
 => https://github.com/omar-polo/kamid	GitHub mirror
 
