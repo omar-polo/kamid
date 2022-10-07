@@ -12,7 +12,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: August 28 2022 $
+.Dd $Mdocdate: October 7 2022 $
 .Dt KAMIFTP 1
 .Os
 .Sh NAME
@@ -158,6 +158,10 @@ as a fallback.
 If both are undefined,
 .Xr ed 1
 is given some love.
+.It Ev USER
+Default login, used if no
+.Ar user
+is given on the command line.
 .El
 .Sh SEE ALSO
 .Xr 9p 7 ,
