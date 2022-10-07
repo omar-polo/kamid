@@ -6,12 +6,12 @@ Stuff that's still to-do
    related: this is needed only for glibc or musl too?
 
  - (possibly related) find out what pread(2) black magic we can do to
-   read stuff on 32 bits
+   read stuff on 32 bits portably.
 
  - rework the ninepscript so tests are parsed and executed by the _kamid
    user and not by root.
 
- - tweak iounit so it's always lower than the choosen msize
+ - tweak iounit so it's always lower than the choosen msize?
 
  - fill user and group name in struct stat.  The problem is that, being
    chrooted, we don't have access to /etc/passwd nor /etc/group. We
