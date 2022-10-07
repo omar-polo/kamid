@@ -21,6 +21,17 @@
 #include <stdint.h>
 #include <tls.h>
 
+/* Linux and OpenBSD have LOGIN_NAME_MAX, FreeBSD MAXLOGNAME. */
+#ifndef LOGIN_NAME_MAX
+# if defined(MAXLOGNAME)
+#  define LOGIN_NAME_MAX MAXLOGNAME
+# elif defined(_POSIX_LOGIN_NAME_MAX)
+#  define LOGIN_NAME_MAX _POSIX_LOGIN_NAME_MAX
+# else
+#  define LOGIN_NAME_MAX 32
+# endif
+#endif
+
 /* TODO: make these customizable */
 #define KD_CONF_FILE		"/etc/kamid.conf"
 #define KD_USER			"_kamid"
