@@ -3,6 +3,9 @@
 kamid is a FREE, easy-to-use and portable implementation of a 9p file
 server daemon for UNIX-like systems.
 
+It includes the kamid(8) daemon, a control utility kamictl(8), the
+kamiftp(1) 9P CLI client and the TLS proxy kamiproxy(1).
+
 
 ## Building
 
