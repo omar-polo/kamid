@@ -36,3 +36,7 @@ Stuff that's still to-do
    we want to give don't fit inside 16 bit we're currently either
    skipping the file entry (if during a directory read) or return an
    error (during Tstat.)
+
+ - artworks!  I'd like for every release of kamid to be accompanied by a
+   hand-drawed artwork, so some artworks for future releases are welcome!
+   See the art/ directory for previous versions.
