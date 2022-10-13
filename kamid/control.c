@@ -26,6 +26,7 @@
 #include <net/if.h>
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -125,7 +126,7 @@ control_listen(int fd)
 void
 control_accept(int listenfd, short event, void *bula)
 {
-	int			 connfd;
+	int			 connfd, flags;
 	socklen_t		 len;
 	struct sockaddr_un	 sun;
 	struct ctl_conn		*c;
@@ -135,8 +136,7 @@ control_accept(int listenfd, short event, void *bula)
 		return;
 
 	len = sizeof(sun);
-	if ((connfd = accept4(listenfd, (struct sockaddr *)&sun, &len,
-	    SOCK_CLOEXEC | SOCK_NONBLOCK)) == -1) {
+	if ((connfd = accept(listenfd, (struct sockaddr *)&sun, &len)) == -1) {
 		/*
 		 * Pause accept if we are out of file descriptors, or
 		 * libevent will haunt us here too.
@@ -149,6 +149,19 @@ control_accept(int listenfd, short event, void *bula)
 		} else if (errno != EWOULDBLOCK && errno != EINTR &&
 		    errno != ECONNABORTED)
 			log_warn("%s: accept4", __func__);
+		return;
+	}
+
+	if ((flags = fcntl(connfd, F_GETFL)) == -1) {
+		log_warn("%s: fcntl F_GETFL", __func__);
+		close(connfd);
+		return;
+	}
+	flags |= O_NONBLOCK;
+	if (fcntl(connfd, F_SETFL, flags) == -1 ||
+	    fcntl(connfd, F_SETFD, FD_CLOEXEC) == -1) {
+		log_warn("%s: can't set nonblock/cloexec", __func__);
+		close(connfd);
 		return;
 	}
 
