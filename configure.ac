@@ -62,6 +62,7 @@ AC_REPLACE_FUNCS([
 	getdtablesize	\
 	getprogname	\
 	memmem		\
+	reallocarray	\
 	recallocarray	\
 	setproctitle	\
 	setprogname	\

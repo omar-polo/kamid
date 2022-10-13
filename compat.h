@@ -111,6 +111,10 @@ const char	*getprogname(void);
 void		*memmem(const void *, size_t, const void *, size_t);
 #endif
 
+#ifndef HAVE_REALLOCARRAY
+void		*reallocarray(void *, size_t, size_t);
+#endif
+
 #ifndef HAVE_RECALLOCARRAY
 void		*recallocarray(void *, size_t, size_t, size_t);
 #endif
