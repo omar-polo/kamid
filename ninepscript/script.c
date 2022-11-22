@@ -21,7 +21,6 @@
 #include <sys/wait.h>
 
 #include <assert.h>
-#include <endian.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>

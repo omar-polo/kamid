@@ -16,7 +16,6 @@
 
 #include "compat.h"
 
-#include <endian.h>
 #include <inttypes.h>
 #include <string.h>
 

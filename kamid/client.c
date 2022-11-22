@@ -21,7 +21,6 @@
 #include <sys/uio.h>
 
 #include <dirent.h>
-#include <endian.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>

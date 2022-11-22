@@ -24,7 +24,6 @@
 #include <sys/types.h>
 #include <sys/uio.h>
 
-#include <endian.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <pwd.h>
