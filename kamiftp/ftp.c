@@ -214,7 +214,7 @@ static void __dead
 usage(int ret)
 {
 	fprintf(stderr, "usage: %s [-C cert] [-K key] [-o output] "
-	    "[user@]host[:port][/path]\n", getprogname());
+	    "[9p://][user@]host[:port][/path]\n", getprogname());
 	fprintf(stderr, "kamid suite version " KAMID_VERSION "\n");
 	exit(ret);
 }
@@ -1646,6 +1646,9 @@ parse_addr(const char *url, const char **user,
 
 	if (strlcpy(buf, url, sizeof(buf)) >= sizeof(buf))
 		errx(1, "connection string too long");
+
+	if (!strncmp(host, "9p://", 5))
+		host += 5;
 
 	if ((t = strchr(host, '/')) != NULL) {
 		if (t == host)
