@@ -620,6 +620,22 @@ do_wstat(int fid, const struct np_stat *st)
 	return NULL;
 }
 
+static char *
+do_remove(int fid)
+{
+	char	*errstr;
+
+	tremove(fid);
+	do_send();
+	recv_msg();
+	if ((errstr = check(Rremove, iota_tag)) != NULL)
+		return errstr;
+
+	ASSERT_EMPTYBUF();
+
+	return NULL;
+}
+
 static size_t
 do_read(int fid, uint64_t off, uint32_t count, void *data)
 {
@@ -1536,6 +1552,39 @@ cmd_rename(int argc, const char **argv)
 }
 
 static void
+cmd_rm(int argc, const char **argv)
+{
+	struct qid	 qid;
+	char		*errstr;
+	int		 nfid, miss;
+
+	if (argc == 0) {
+		puts("usage: rm file ...");
+		return;
+	}
+
+	for (; *argv; ++argv, --argc) {
+		nfid = nextfid();
+		errstr = walk_path(pwdfid, nfid, *argv, &miss, &qid);
+		if (errstr != NULL) {
+			printf("%s: %s\n", *argv, errstr);
+			free(errstr);
+			continue;
+		}
+		if (miss) {
+			printf("%s: not such file or directory\n", *argv);
+			continue;
+		}
+
+		if ((errstr = do_remove(nfid)) != NULL) {
+			printf("%s: %s\n", *argv, errstr);
+			free(errstr);
+			continue;
+		}
+	}
+}
+
+static void
 cmd_verbose(int argc, const char **argv)
 {
 	if (argc == 0) {
@@ -1587,6 +1636,7 @@ excmd(int argc, const char **argv)
 		{"put",		cmd_put},
 		{"quit",	cmd_bye},
 		{"rename",	cmd_rename},
+		{"rm",		cmd_rm},
 		{"verbose",	cmd_verbose},
 	};
 	size_t i;
