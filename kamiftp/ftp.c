@@ -210,7 +210,7 @@ tty_resized(int signo)
 	resized = 1;
 }
 
-static void __dead
+static __dead void
 usage(int ret)
 {
 	fprintf(stderr, "usage: %s [-C cert] [-K key] [-o output] "
