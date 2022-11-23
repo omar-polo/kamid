@@ -218,7 +218,7 @@ static void __dead
 usage(int ret)
 {
 	fprintf(stderr, "usage: %s [-c] [-C cert] [-K key] "
-	    "host[:port] [path]\n", getprogname());
+	    "[user@]host[:port][/path]\n", getprogname());
 	fprintf(stderr, "kamid suite version " KAMID_VERSION "\n");
 	exit(ret);
 }
@@ -916,10 +916,21 @@ dial(const char *host, const char *port)
 static void
 do_connect(const char *connspec, const char *path)
 {
+	char pathbuf[PATH_MAX];
 	char *t;
 	const char *port;
 
 	host = xstrdup(connspec);
+
+	if ((t = strchr(host, '/')) != NULL) {
+		if (t == host)
+			errx(1, "invalid connection string: %s", connspec);
+		if (strlcpy(pathbuf, t, sizeof(pathbuf)) >= sizeof(pathbuf))
+			errx(1, "path too long: %s", t);
+		path = pathbuf;
+		*t = '\0';
+	}
+
 	if ((t = strchr(host, '@')) != NULL) {
 		if (t == host)
 			errx(1, "invalid connection string: %s", connspec);
