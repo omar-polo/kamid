@@ -462,14 +462,11 @@ do_version(void)
 }
 
 static void
-do_attach(const char *path)
+do_attach()
 {
 	struct qid qid;
 
-	if (path == NULL)
-		path = "/";
-
-	tattach(pwdfid, NOFID, user, path);
+	tattach(pwdfid, NOFID, user, "/");
 	do_send();
 	recv_msg();
 	expect2(Rattach, iota_tag);
@@ -996,7 +993,7 @@ do_connect(const char *connspec, const char *path)
 	printf(" done!\n");
 
 	do_version();
-	do_attach(path);
+	do_attach();
 }
 
 static int
