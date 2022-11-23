@@ -1713,7 +1713,7 @@ main(int argc, char **argv)
 		usage(1);
 
 	host = parse_addr(argv[0], &user, &port, &path);
-	if (path == NULL && argv[1] != NULL)
+	if (path == NULL && argv[1] != NULL) /* drop argv[1] after 0.3 */
 		path = argv[1];
 	if (outfile && path == NULL)
 		usage(1);
