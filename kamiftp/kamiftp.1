@@ -23,6 +23,7 @@
 .Op Fl c
 .Op Fl C Ar cert
 .Op Fl K Ar key
+.Op Fl o Ar output
 .Oo Ar user Ns @ Oc Ns Ar host Ns Oo : Ns Ar port Oc Ns Op / Ns Ar path
 .Sh DESCRIPTION
 .Nm
@@ -58,6 +59,19 @@ If not given, the file passed to
 will be used.
 Implies
 .Fl c .
+.It Fl o Ar output
+When fetching the file specified to the command line,
+save its content in
+.Ar output .
+To write the content to standard output, use
+.Sq - .
+It's an error to specify
+.Fl o
+when not givin a
+.Ar path
+or when
+.Ar path
+names a directory.
 .El
 .Pp
 The following commands are recognized by

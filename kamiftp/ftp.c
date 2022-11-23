@@ -213,7 +213,7 @@ tty_resized(int signo)
 static void __dead
 usage(int ret)
 {
-	fprintf(stderr, "usage: %s [-c] [-C cert] [-K key] "
+	fprintf(stderr, "usage: %s [-c] [-C cert] [-K key] [-o output] "
 	    "[user@]host[:port][/path]\n", getprogname());
 	fprintf(stderr, "kamid suite version " KAMID_VERSION "\n");
 	exit(ret);
@@ -1584,10 +1584,9 @@ excmd(int argc, const char **argv)
 }
 
 static void
-cd_or_fetch(const char *path)
+cd_or_fetch(const char *path, const char *outfile)
 {
 	struct qid	 qid;
-	const char	*l;
 	char		*errstr;
 	int		 fd, nfid, miss;
 
@@ -1604,22 +1603,32 @@ cd_or_fetch(const char *path)
 		errc(1, ENOENT, "walk %s", path);
 
 	if (qid.type & QTDIR) {
+		if (outfile)
+			errx(1, "can't fetch directory %s", path);
 		do_clunk(pwdfid);
 		pwdfid = nfid;
 		return;
 	}
 
-	if ((l = strrchr(path, '/')) == NULL)
-		l = path;
-	else
-		l++;
-	if (*l == '\0')
-		errx(1, "invalid path: missing file name: %s", path);
+	if (outfile == NULL) {
+		if ((outfile = strrchr(path, '/')) == NULL)
+			outfile = path;
+		else
+			outfile++;
+		if (*outfile == '\0')
+			errx(1, "invalid path: missing file name: %s",
+			    path);
+	}
 
-	if ((fd = open(l, O_WRONLY|O_CREAT, 0644)) == -1)
-		err(1, "can't open for writing %s", l);
-	if (fetch_fid(nfid, fd, l) == -1)
-		err(1, "write %s", l);
+	if (strcmp(outfile, "-") != 0) {
+		fd = open(outfile, O_WRONLY|O_CREAT, 0644);
+		if (fd == -1)
+			err(1, "can't open for writing %s", outfile);
+	} else
+		fd = 1;
+
+	if (fetch_fid(nfid, fd, outfile) == -1)
+		err(1, "write %s", outfile);
 	close(fd);
 	fclose(fp);
 	exit(0);
@@ -1670,13 +1679,14 @@ int
 main(int argc, char **argv)
 {
 	const char	*user, *host, *port, *path;
+	const char	*outfile = NULL;
 	int		 ch;
 
 	log_init(1, LOG_DAEMON);
 	log_setverbose(0);
 	log_procinit(getprogname());
 
-	while ((ch = getopt(argc, argv, "C:cK:")) != -1) {
+	while ((ch = getopt(argc, argv, "C:cK:o:")) != -1) {
 		switch (ch) {
 		case 'C':
 			tls = 1;
@@ -1688,6 +1698,9 @@ main(int argc, char **argv)
 		case 'K':
 			tls = 1;
 			keypath = optarg;
+			break;
+		case 'o':
+			outfile = optarg;
 			break;
 		default:
 			usage(1);
@@ -1702,6 +1715,8 @@ main(int argc, char **argv)
 	host = parse_addr(argv[0], &user, &port, &path);
 	if (path == NULL && argv[1] != NULL)
 		path = argv[1];
+	if (outfile && path == NULL)
+		usage(1);
 
 	signal(SIGPIPE, SIG_IGN);
 	if (isatty(1)) {
@@ -1721,7 +1736,7 @@ main(int argc, char **argv)
 
 	do_connect(host, port, user);
 	if (path)
-		cd_or_fetch(path);
+		cd_or_fetch(path, outfile);
 
 	for (;;) {
 		int argc = 0;
