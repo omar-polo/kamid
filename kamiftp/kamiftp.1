@@ -70,6 +70,26 @@ or when
 names a directory.
 .El
 .Pp
+.Nm
+parses the input similarly to
+.Xr sh .
+Words are splitted on spaces, multiple spaces are collapsed into one.
+Quoting with
+.Sq '
+or
+.Sq \&"
+can be used to preserve spaces and other quotes.
+.Sq \e
+can be used to quote the following character.
+No special meaning is given to
+.Sq \e
+sequences
+.Po i.e.\& Sq \en
+is just the
+.Sq n
+character
+.Pc .
+.Pp
 The following commands are recognized by
 .Nm :
 .Bl -tag -width Ds

@@ -1603,6 +1603,70 @@ excmd(int argc, const char **argv)
 	log_warnx("unknown command %s", *argv);
 }
 
+static int
+parsecmd(char *cmd, char **argv, size_t len)
+{
+	int		 escape, quote;
+	int		 argc = 0;
+
+	memset(argv, 0, sizeof(*argv) * len);
+
+	while (argc < len) {
+		while (isspace((unsigned char)*cmd))
+			cmd++;
+		if (*cmd == '\0')
+			break;
+
+		argv[argc++] = cmd;
+		escape = quote = 0;
+		for (; *cmd != '\0'; ++cmd) {
+			if (escape) {
+				escape = 0;
+				continue;
+			}
+			if (*cmd == '\\') {
+				escape = 1;
+				memmove(cmd, cmd + 1, strlen(cmd));
+				cmd--;
+				continue;
+			}
+			if (*cmd == quote) {
+				quote = 0;
+				memmove(cmd, cmd + 1, strlen(cmd));
+				cmd--;
+				continue;
+			}
+			if (*cmd == '\'' || *cmd == '"') {
+				quote = *cmd;
+				memmove(cmd, cmd + 1, strlen(cmd));
+				cmd--;
+				continue;
+			}
+			if (quote)
+				continue;
+
+			if (isspace((unsigned char)*cmd))
+				break;
+		}
+
+		if (*cmd == '\0' && (escape || quote)) {
+			fprintf(stderr, "unterminated %s\n",
+			    escape ? "escape" : "quote");
+			return -1;
+		}
+
+		if (*cmd == '\0')
+			break;
+		*cmd++ = '\0';
+	}
+
+	if (*cmd != '\0') {
+		fprintf(stderr, "too many arguments\n");
+		return -1;
+	}
+	return argc;
+}
+
 static void
 cd_or_fetch(const char *path, const char *outfile)
 {
@@ -1762,17 +1826,18 @@ main(int argc, char **argv)
 		cd_or_fetch(path, outfile);
 
 	for (;;) {
-		int argc = 0;
+		int argc;
 		char *line, *argv[16] = {0}, **ap;
 
 		if ((line = read_line("kamiftp> ")) == NULL)
 			break;
 
-		for (argc = 0, ap = argv; ap < &argv[15] &&
-		    (*ap = strsep(&line, " \t")) != NULL;) {
-			if (**ap != '\0')
-				ap++, argc++;
+		if ((argc = parsecmd(line, argv, nitems(argv) - 1)) == -1) {
+			free(line);
+			continue;
 		}
+
+		argv[argc] = NULL;
 		excmd(argc, (const char **)argv);
 
 		if (bell)
