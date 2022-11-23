@@ -1274,27 +1274,47 @@ cmd_lpwd(int argc, const char **argv)
 static void
 cmd_ls(int argc, const char **argv)
 {
+	struct qid qid;
 	struct np_stat st;
 	time_t now, mtime;
 	struct tm *tm;
 	uint64_t off = 0;
 	uint32_t len;
-	int nfid;
+	int nfid, miss;
 	const char *timfmt;
 	char fmt[FMT_SCALED_STRSIZE], tim[13], *errstr;
 
-	if (argc != 0) {
-		printf("ls don't take arguments (yet)\n");
+	if (argc > 1) {
+		puts("usage: ls [path]");
 		return;
 	}
 
 	now = time(NULL);
 
 	nfid = nextfid();
-	if ((errstr = dup_fid(pwdfid, nfid)) != NULL) {
-		printf(".: %s\n", errstr);
-		free(errstr);
-		return;
+	if (argc == 0) {
+		if ((errstr = dup_fid(pwdfid, nfid)) != NULL) {
+			printf(".: %s\n", errstr);
+			free(errstr);
+			return;
+		}
+	} else {
+		errstr = walk_path(pwdfid, nfid, argv[0], &miss, &qid);
+		if (errstr != NULL) {
+			printf("%s: %s\n", argv[0], errstr);
+			free(errstr);
+			return;
+		}
+		if (miss) {
+			printf("%s: No such file or directory\n",
+			    argv[0]);
+			return;
+		}
+		if (!(qid.type & QTDIR)) {
+			printf("%s: not a directory\n", argv[0]);
+			do_clunk(nfid);
+			return;
+		}
 	}
 
 	do_open(nfid, KOREAD);
