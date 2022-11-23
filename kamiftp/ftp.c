@@ -684,25 +684,23 @@ draw_progress(const char *pre, const struct progress *p)
 	w = tty_width;
 
 	if (pre == NULL ||
-	    ((l = printf("\r%s ", pre)) == -1 || l >= w))
+	    ((l = fprintf(stderr, "\r%s ", pre)) == -1 || l >= w))
 		return;
 
 	w -= l + 2 + 5; /* 2 for |, 5 for percentage + \n */
 	if (w < 0) {
-		printf("%4d%%\n", (int)perc);
+		fprintf(stderr, "%4d%%\n", (int)perc);
 		return;
 	}
 
-	printf("|");
+	fprintf(stderr, "|");
 
 	l = w * MIN(100.0, perc) / 100.0;
 	for (i = 0; i < l; i++)
-		printf("*");
+		fprintf(stderr, "*");
 	for (; i < w; i++)
-		printf(" ");
-	printf("|%4d%%", (int)perc);
-
-	fflush(stdout);
+		fprintf(stderr, " ");
+	fprintf(stderr, "|%4d%%", (int)perc);
 }
 
 static int
@@ -812,7 +810,7 @@ woc_file(int fd, const char *prompt, const char *path)
 	nfid = nextfid();
 	errstr = walk_path(pwdfid, nfid, path, &miss, &qid);
 	if (errstr != NULL && miss > 1) {
-		printf("%s: %s\n", path, errstr);
+		fprintf(stderr, "%s: %s\n", path, errstr);
 		free(errstr);
 		return -1;
 	}
@@ -826,7 +824,7 @@ woc_file(int fd, const char *prompt, const char *path)
 		 */
 
 		if (strlcpy(p, path, sizeof(p)) >= sizeof(p)) {
-			printf("path too long: %s\n", path);
+			fprintf(stderr, "path too long: %s\n", path);
 			return -1;
 		}
 		dn = dirname(p);
@@ -838,13 +836,13 @@ woc_file(int fd, const char *prompt, const char *path)
 			errstr = walk_path(pwdfid, nfid, dn, &miss, &qid);
 
 		if (errstr != NULL) {
-			printf("%s: %s\n", dn, errstr);
+			fprintf(stderr, "%s: %s\n", dn, errstr);
 			free(errstr);
 			return -1;
 		}
 
 		if (miss != 0) {
-			printf("%s: not a directory\n", dn);
+			fprintf(stderr, "%s: not a directory\n", dn);
 			return -1;
 		}
 
@@ -857,8 +855,8 @@ woc_file(int fd, const char *prompt, const char *path)
 	free(errstr);
 
 	if (miss > 1) {
-		printf("can't create %s: missing %d path component(s)\n",
-		    path, miss);
+		fprintf(stderr, "can't create %s: missing %d path"
+		    " component(s)\n", path, miss);
 		return -1;
 	}
 
@@ -913,8 +911,7 @@ do_connect(const char *host, const char *port, const char *user)
 	int nfid, miss, fd;
 	char *errstr;
 
-	printf("connecting to %s:%s...", host, port);
-	fflush(stdout);
+	fprintf(stderr, "connecting to %s:%s...", host, port);
 
 	if (tls) {
 		struct tls_config	*conf;
@@ -958,7 +955,7 @@ do_connect(const char *host, const char *port, const char *user)
 			fatal("fdopen");
 	}
 
-	printf(" done!\n");
+	fprintf(stderr, " done!\n");
 
 	do_version();
 	do_attach(user);
