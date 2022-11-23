@@ -20,7 +20,6 @@
 .Nd 9p client
 .Sh SYNOPSIS
 .Nm
-.Op Fl c
 .Op Fl C Ar cert
 .Op Fl K Ar key
 .Op Fl o Ar output
@@ -39,17 +38,13 @@ remote working directory and starts accepting commands.
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
-.It Fl c
-Use TLS for the connection.
 If used,
 .Fl C
 is mandatory.
 .It Fl C Ar certificate
-Specify the path to the client
+Connect with TLS to the remote server and use the given
 .Ar certificate
-to be use during the TLS handsahke.
-Implies
-.Fl c .
+during the TLS handsahke.
 .It Fl K Ar key
 Specify the path to the client certificate
 .Ar key
@@ -57,8 +52,9 @@ to be used during the TLS handshake.
 If not given, the file passed to
 .Fl C
 will be used.
-Implies
-.Fl c .
+If used,
+.Fl C
+must be provided too.
 .It Fl o Ar output
 When fetching the file specified to the command line,
 save its content in

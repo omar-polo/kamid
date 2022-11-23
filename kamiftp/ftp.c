@@ -213,7 +213,7 @@ tty_resized(int signo)
 static void __dead
 usage(int ret)
 {
-	fprintf(stderr, "usage: %s [-c] [-C cert] [-K key] [-o output] "
+	fprintf(stderr, "usage: %s [-C cert] [-K key] [-o output] "
 	    "[user@]host[:port][/path]\n", getprogname());
 	fprintf(stderr, "kamid suite version " KAMID_VERSION "\n");
 	exit(ret);
@@ -1692,7 +1692,7 @@ main(int argc, char **argv)
 			tls = 1;
 			crtpath = optarg;
 			break;
-		case 'c':
+		case 'c': /* deprecated, remove after 0.3 */
 			tls = 1;
 			break;
 		case 'K':
