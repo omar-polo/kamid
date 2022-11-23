@@ -1752,10 +1752,8 @@ main(int argc, char **argv)
 		}
 		excmd(argc, (const char **)argv);
 
-		if (bell) {
-			printf("\a");
-			fflush(stdout);
-		}
+		if (bell)
+			fprintf(stderr, "\a");
 
 		free(line);
 	}
