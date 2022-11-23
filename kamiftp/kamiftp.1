@@ -29,6 +29,12 @@
 is a
 .Xr 9p 7
 client.
+If
+.Ar path
+names a remote file,
+.Nm
+downloads it in the current directory and exit, otherwise changes the
+remote working directory and starts accepting commands.
 .Pp
 The options are as follows:
 .Bl -tag -width Ds

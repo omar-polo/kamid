@@ -59,10 +59,6 @@ int		 tls;
 const char	*crtpath;
 const char	*keypath;
 
-char		*user;
-char		*host;
-char		*port;
-
 /* state */
 FILE			*fp;
 struct evbuffer		*buf;
@@ -462,7 +458,7 @@ do_version(void)
 }
 
 static void
-do_attach()
+do_attach(const char *user)
 {
 	struct qid qid;
 
@@ -911,39 +907,11 @@ dial(const char *host, const char *port)
 }
 
 static void
-do_connect(const char *connspec, const char *path)
+do_connect(const char *host, const char *port, const char *user)
 {
-	char pathbuf[PATH_MAX];
-	char *t;
-	const char *port;
-
-	host = xstrdup(connspec);
-
-	if ((t = strchr(host, '/')) != NULL) {
-		if (t == host)
-			errx(1, "invalid connection string: %s", connspec);
-		if (strlcpy(pathbuf, t, sizeof(pathbuf)) >= sizeof(pathbuf))
-			errx(1, "path too long: %s", t);
-		path = pathbuf;
-		*t = '\0';
-	}
-
-	if ((t = strchr(host, '@')) != NULL) {
-		if (t == host)
-			errx(1, "invalid connection string: %s", connspec);
-		*t = '\0';
-		user = host;
-		host = ++t;
-	} else if ((user = getenv("USER")) == NULL)
-		errx(1, "USER not defined");
-
-	if ((t = strchr(host, ':')) != NULL) {
-		*t = '\0';
-		port = ++t;
-		if (*port == '\0')
-			errx(1, "invalid connection string: %s", connspec);
-	} else
-		port = "1337";
+	struct qid qid;
+	int nfid, miss, fd;
+	char *errstr;
 
 	printf("connecting to %s:%s...", host, port);
 	fflush(stdout);
@@ -993,7 +961,7 @@ do_connect(const char *connspec, const char *path)
 	printf(" done!\n");
 
 	do_version();
-	do_attach();
+	do_attach(user);
 }
 
 static int
@@ -1618,10 +1586,94 @@ excmd(int argc, const char **argv)
 	log_warnx("unknown command %s", *argv);
 }
 
+static void
+cd_or_fetch(const char *path)
+{
+	struct qid	 qid;
+	const char	*l;
+	char		*errstr;
+	int		 fd, nfid, miss;
+
+	while (*path == '/')
+		path++;
+	if (*path == '\0')
+		return;
+
+	nfid = nextfid();
+	errstr = walk_path(pwdfid, nfid, path, &miss, &qid);
+	if (errstr)
+		errx(1, "walk %s: %s", path, errstr);
+	if (miss)
+		errc(1, ENOENT, "walk %s", path);
+
+	if (qid.type & QTDIR) {
+		do_clunk(pwdfid);
+		pwdfid = nfid;
+		return;
+	}
+
+	if ((l = strrchr(path, '/')) == NULL)
+		l = path;
+	else
+		l++;
+	if (*l == '\0')
+		errx(1, "invalid path: missing file name: %s", path);
+
+	if ((fd = open(l, O_WRONLY|O_CREAT, 0644)) == -1)
+		err(1, "can't open for writing %s", l);
+	if (fetch_fid(nfid, fd, l) == -1)
+		err(1, "write %s", l);
+	close(fd);
+	fclose(fp);
+	exit(0);
+}
+
+static const char *
+parse_addr(const char *url, const char **user,
+    const char **port, const char **path)
+{
+	static char	 buf[PATH_MAX];
+	char		*host, *t;
+
+	*user = *port = *path = NULL;
+	host = buf;
+
+	if (strlcpy(buf, url, sizeof(buf)) >= sizeof(buf))
+		errx(1, "connection string too long");
+
+	if ((t = strchr(host, '/')) != NULL) {
+		if (t == host)
+			errx(1, "invalid connection string: %s", url);
+		*t++ = '\0';
+		if (*t != '\0')
+			*path = t;
+	}
+
+	if ((t = strchr(host, '@')) != NULL) {
+		if (t == host)
+			errx(1, "invalid connection string: %s", url);
+		*t++ = '\0';
+		*user = host;
+		host = t;
+	} else if ((*user = getenv("USER")) == NULL)
+		errx(1, "USER not defined");
+
+	if ((t = strchr(host, ':')) != NULL) {
+		*t++ = '\0';
+		if (*t != '\0')
+			*port = t;
+	}
+	if (*port == NULL)
+		*port = "1337";
+
+	return host;
+}
+
 int
 main(int argc, char **argv)
 {
-	int	ch;
+	const char	*user, *host, *port, *path;
+	int		 ch;
 
 	log_init(1, LOG_DAEMON);
 	log_setverbose(0);
@@ -1650,6 +1702,10 @@ main(int argc, char **argv)
 	if (argc == 0 || (tls && crtpath == NULL))
 		usage(1);
 
+	host = parse_addr(argv[0], &user, &port, &path);
+	if (path == NULL && argv[1] != NULL)
+		path = argv[1];
+
 	signal(SIGPIPE, SIG_IGN);
 	if (isatty(1)) {
 		tty_p = 1;
@@ -1666,7 +1722,9 @@ main(int argc, char **argv)
 	if ((dirbuf = evbuffer_new()) == NULL)
 		fatal("evbuferr_new");
 
-	do_connect(argv[0], argv[1]);
+	do_connect(host, port, user);
+	if (path)
+		cd_or_fetch(path);
 
 	for (;;) {
 		int argc = 0;
