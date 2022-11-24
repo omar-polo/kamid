@@ -1,6 +1,7 @@
 bin_PROGRAMS =	kamiftp
 
 kamiftp_SOURCES=ftp.c				\
+		rl.c				\
 		$(top_srcdir)/lib/9pclib.c	\
 		$(top_srcdir)/lib/9pclib.h	\
 		$(top_srcdir)/lib/kami.h	\

@@ -42,14 +42,12 @@
 #include <readline/history.h>
 #endif
 
-#ifndef nitems
-#define nitems(_a)	(sizeof((_a)) / sizeof((_a)[0]))
-#endif
-
 #include "kami.h"
 #include "utils.h"
 #include "log.h"
 #include "9pclib.h"
+
+#include "kamiftp.h"
 
 #define TMPFSTR		"/tmp/kamiftp.XXXXXXXXXX"
 #define TMPFSTRLEN	sizeof(TMPFSTR)
@@ -65,6 +63,7 @@ struct evbuffer		*buf;
 struct evbuffer		*dirbuf;
 uint32_t		 msize;
 int			 bell;
+time_t			 now;
 
 volatile sig_atomic_t	 resized;
 int			 tty_p;
@@ -79,33 +78,6 @@ struct progress {
 int pwdfid;
 
 #define ASSERT_EMPTYBUF() assert(EVBUFFER_LENGTH(buf) == 0)
-
-#if !HAVE_READLINE
-char *
-readline(const char *prompt)
-{
-	char *ch, *line = NULL;
-	size_t linesize = 0;
-	ssize_t linelen;
-
-	printf("%s", prompt);
-	fflush(stdout);
-
-	linelen = getline(&line, &linesize, stdin);
-	if (linelen == -1)
-		return NULL;
-
-	if ((ch = strchr(line, '\n')) != NULL)
-		*ch = '\0';
-	return line;
-}
-
-void
-add_history(const char *line)
-{
-	return;
-}
-#endif
 
 static char *
 read_line(const char *prompt)
@@ -1034,7 +1006,114 @@ prepare_wstat(struct np_stat *st)
 	st->muid = NULL;
 }
 
-static void
+static int
+print_dirent(const struct np_stat *st)
+{
+	time_t	mtime;
+	struct tm *tm;
+	const char *timfmt;
+	char fmt[FMT_SCALED_STRSIZE], tim[13];
+
+	if (fmt_scaled(st->length, fmt) == -1)
+		strlcpy(fmt, "xxx", sizeof(fmt));
+
+	mtime = st->mtime;
+
+	if (now > mtime && (now - mtime) < 365/2 * 24 * 12 * 60)
+		timfmt = "%b %e %R";
+	else
+		timfmt = "%b %e  %Y";
+
+	if ((tm = localtime(&mtime)) == NULL ||
+	    strftime(tim, sizeof(tim), timfmt, tm) == 0)
+		strlcpy(tim, "unknown", sizeof(tim));
+
+	if (st->qid.type & QTDIR)
+		printf("d");
+	else
+		printf("-");
+	printf("%s", pp_perm(st->mode >> 6));
+	printf("%s", pp_perm(st->mode >> 3));
+	printf("%s", pp_perm(st->mode));
+	printf(" %8s %12s %s%s\n", fmt, tim, st->name,
+	    st->qid.type & QTDIR ? "/" : "");
+
+	return 0;
+}
+
+int
+dir_listing(const char *path, int (*fn)(const struct np_stat *),
+    int printerr)
+{
+	struct qid	 qid;
+	struct np_stat	 st;
+	uint64_t	 off = 0;
+	uint32_t	 len;
+	int		 nfid, miss, r;
+	char		*errstr;
+
+	now = time(NULL);
+	nfid = nextfid();
+
+	errstr = walk_path(pwdfid, nfid, path, &miss, &qid);
+	if (errstr != NULL) {
+		if (printerr)
+			printf("%s: %s\n", path, errstr);
+		free(errstr);
+		return -1;
+	}
+	if (miss) {
+		if (printerr)
+			printf("%s: No such file or directory\n", path);
+		return -1;
+	}
+	if (!(qid.type & QTDIR)) {
+		if (printerr)
+			printf("%s: not a directory\n", path);
+		do_clunk(nfid);
+		return -1;
+	}
+
+	do_open(nfid, KOREAD);
+	evbuffer_drain(dirbuf, EVBUFFER_LENGTH(dirbuf));
+
+	for (;;) {
+		tread(nfid, off, msize - IOHDRSZ);
+		do_send();
+		recv_msg();
+		expect2(Rread, iota_tag);
+
+		len = np_read32(buf);
+		if (len == 0)
+			break;
+
+		evbuffer_add_buffer(dirbuf, buf);
+		off += len;
+
+		ASSERT_EMPTYBUF();
+	}
+
+	while (EVBUFFER_LENGTH(dirbuf) != 0) {
+		if (np_read_stat(dirbuf, &st) == -1)
+			errx(1, "invalid stat struct read");
+
+		r = fn(&st);
+
+		free(st.name);
+		free(st.uid);
+		free(st.gid);
+		free(st.muid);
+
+		if (r == -1)
+			break;
+	}
+
+	evbuffer_drain(dirbuf, EVBUFFER_LENGTH(dirbuf));
+	do_clunk(nfid);
+	return 0;
+}
+
+void
 cmd_bell(int argc, const char **argv)
 {
 	if (argc == 0) {
@@ -1065,7 +1144,7 @@ usage:
 	printf("bell [on | off]\n");
 }
 
-static void
+void
 cmd_bye(int argc, const char **argv)
 {
 	log_warnx("bye\n");
@@ -1073,7 +1152,7 @@ cmd_bye(int argc, const char **argv)
 	exit(0);
 }
 
-static void
+void
 cmd_cd(int argc, const char **argv)
 {
 	struct qid qid;
@@ -1104,7 +1183,7 @@ cmd_cd(int argc, const char **argv)
 	pwdfid = nfid;
 }
 
-static void
+void
 cmd_edit(int argc, const char **argv)
 {
 	struct qid qid;
@@ -1170,7 +1249,7 @@ end:
 	unlink(sfn);
 }
 
-static void
+void
 cmd_get(int argc, const char **argv)
 {
 	struct qid qid;
@@ -1216,7 +1295,7 @@ cmd_get(int argc, const char **argv)
 	close(fd);
 }
 
-static void
+void
 cmd_hexdump(int argc, const char **argv)
 {
 	if (argc == 0) {
@@ -1247,7 +1326,7 @@ usage:
 	puts("usage: hexdump [on | off]");
 }
 
-static void
+void
 cmd_lcd(int argc, const char **argv)
 {
 	const char *dir;
@@ -1269,7 +1348,7 @@ cmd_lcd(int argc, const char **argv)
 		printf("cd: %s: %s\n", dir, strerror(errno));
 }
 
-static void
+void
 cmd_lpwd(int argc, const char **argv)
 {
 	char path[PATH_MAX];
@@ -1287,110 +1366,18 @@ cmd_lpwd(int argc, const char **argv)
 	printf("%s\n", path);
 }
 
-static void
+void
 cmd_ls(int argc, const char **argv)
 {
-	struct qid qid;
-	struct np_stat st;
-	time_t now, mtime;
-	struct tm *tm;
-	uint64_t off = 0;
-	uint32_t len;
-	int nfid, miss;
-	const char *timfmt;
-	char fmt[FMT_SCALED_STRSIZE], tim[13], *errstr;
-
 	if (argc > 1) {
 		puts("usage: ls [path]");
 		return;
 	}
 
-	now = time(NULL);
-
-	nfid = nextfid();
-	if (argc == 0) {
-		if ((errstr = dup_fid(pwdfid, nfid)) != NULL) {
-			printf(".: %s\n", errstr);
-			free(errstr);
-			return;
-		}
-	} else {
-		errstr = walk_path(pwdfid, nfid, argv[0], &miss, &qid);
-		if (errstr != NULL) {
-			printf("%s: %s\n", argv[0], errstr);
-			free(errstr);
-			return;
-		}
-		if (miss) {
-			printf("%s: No such file or directory\n",
-			    argv[0]);
-			return;
-		}
-		if (!(qid.type & QTDIR)) {
-			printf("%s: not a directory\n", argv[0]);
-			do_clunk(nfid);
-			return;
-		}
-	}
-
-	do_open(nfid, KOREAD);
-
-	evbuffer_drain(dirbuf, EVBUFFER_LENGTH(dirbuf));
-
-	for (;;) {
-		tread(nfid, off, msize - IOHDRSZ);
-		do_send();
-		recv_msg();
-		expect2(Rread, iota_tag);
-
-		len = np_read32(buf);
-		if (len == 0)
-			break;
-
-		evbuffer_add_buffer(dirbuf, buf);
-		off += len;
-
-		ASSERT_EMPTYBUF();
-	}
-
-	while (EVBUFFER_LENGTH(dirbuf) != 0) {
-		if (np_read_stat(dirbuf, &st) == -1)
-			errx(1, "invalid stat struct read");
-
-		if (fmt_scaled(st.length, fmt) == -1)
-			strlcpy(fmt, "xxx", sizeof(fmt));
-
-		mtime = st.mtime;
-
-		if (now > mtime && (now - mtime) < 365/2 * 24 * 12 * 60)
-			timfmt = "%b %e %R";
-		else
-			timfmt = "%b %e  %Y";
-
-		if ((tm = localtime(&mtime)) == NULL ||
-		    strftime(tim, sizeof(tim), timfmt, tm) == 0)
-			strlcpy(tim, "unknown", sizeof(tim));
-
-		if (st.qid.type & QTDIR)
-			printf("d");
-		else
-			printf("-");
-		printf("%s", pp_perm(st.mode >> 6));
-		printf("%s", pp_perm(st.mode >> 3));
-		printf("%s", pp_perm(st.mode));
-		printf(" %8s %12s %s%s\n", fmt, tim, st.name,
-		    st.qid.type & QTDIR ? "/" : "");
-
-		free(st.name);
-		free(st.uid);
-		free(st.gid);
-		free(st.muid);
-	}
-
-	do_clunk(nfid);
+	dir_listing(argc == 0 ? "." : argv[0], print_dirent, 1);
 }
 
-static void
+void
 cmd_page(int argc, const char **argv)
 {
 	struct qid qid;
@@ -1436,7 +1423,7 @@ cmd_page(int argc, const char **argv)
 	unlink(sfn);
 }
 
-static void
+void
 cmd_pipe(int argc, const char **argv)
 {
 	struct qid qid;
@@ -1487,7 +1474,7 @@ cmd_pipe(int argc, const char **argv)
 	waitpid(pid, &status, 0);
 }
 
-static void
+void
 cmd_put(int argc, const char **argv)
 {
 	struct qid qid;
@@ -1515,7 +1502,7 @@ cmd_put(int argc, const char **argv)
 	close(fd);
 }
 
-static void
+void
 cmd_rename(int argc, const char **argv)
 {
 	struct np_stat st;
@@ -1551,7 +1538,7 @@ cmd_rename(int argc, const char **argv)
 	do_clunk(nfid);
 }
 
-static void
+void
 cmd_rm(int argc, const char **argv)
 {
 	struct qid	 qid;
@@ -1584,7 +1571,7 @@ cmd_rm(int argc, const char **argv)
 	}
 }
 
-static void
+void
 cmd_verbose(int argc, const char **argv)
 {
 	if (argc == 0) {
@@ -1618,31 +1605,11 @@ usage:
 static void
 excmd(int argc, const char **argv)
 {
-	struct cmd {
-		const char	*name;
-		void		(*fn)(int, const char **);
-	} cmds[] = {
-		{"bell",	cmd_bell},
-		{"bye",		cmd_bye},
-		{"cd",		cmd_cd},
-		{"edit",	cmd_edit},
-		{"get",		cmd_get},
-		{"hexdump",	cmd_hexdump},
-		{"lcd",		cmd_lcd},
-		{"lpwd",	cmd_lpwd},
-		{"ls",		cmd_ls},
-		{"page",	cmd_page},
-		{"pipe",	cmd_pipe},
-		{"put",		cmd_put},
-		{"quit",	cmd_bye},
-		{"rename",	cmd_rename},
-		{"rm",		cmd_rm},
-		{"verbose",	cmd_verbose},
-	};
 	size_t i;
 
 	if (argc == 0)
 		return;
+
 	for (i = 0; i < nitems(cmds); ++i) {
 		if (!strcmp(cmds[i].name, *argv)) {
 			cmds[i].fn(argc-1, argv+1);
@@ -1875,6 +1842,7 @@ main(int argc, char **argv)
 	if (path)
 		cd_or_fetch(path, outfile);
 
+	compl_setup();
 	for (;;) {
 		int argc;
 		char *line, *argv[16] = {0}, **ap;
