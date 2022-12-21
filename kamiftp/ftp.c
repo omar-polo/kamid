@@ -191,9 +191,10 @@ do_send(void)
 }
 
 static void
-mustread(void *d, size_t len)
+mustread(void *buf, size_t len)
 {
 	ssize_t r;
+	uint8_t *d = buf;
 
 	while (len != 0) {
 		if (ctx == NULL) {
