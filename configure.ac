@@ -96,7 +96,36 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 	AC_DEFINE([HAVE_QUEUE_H], 1, [QUEUE_H])
 ], AC_MSG_RESULT(no))
 
-AC_CHECK_HEADERS([sys/tree.h])
+AC_MSG_CHECKING([for usable sys/tree.h])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+#include <sys/tree.h>
+#include <stdio.h>
+
+struct client {
+	int			id;
+	SPLAY_ENTRY(client)	sp_entry;
+};
+SPLAY_HEAD(clients_tree_id, client) clients;
+
+static inline int
+clients_tree_cmp(struct client *a, struct client *b)
+{
+	if (a->id == b->id)
+		return 0;
+	else if (a->id < b->id)
+		return -1;
+	else
+		return +1;
+}
+
+SPLAY_PROTOTYPE(clients_tree_id, client, sp_entry, clients_tree_cmp);
+SPLAY_GENERATE(clients_tree_id, client, sp_entry, clients_tree_cmp);
+], [
+	return 0;
+])], [
+	AC_MSG_RESULT(yes)
+	AC_DEFINE([HAVE_SYS_TREE_H], 1, [TREE_H])
+], AC_MSG_RESULT(no))
 
 AC_CHECK_HEADER([endian.h], [AC_DEFINE(HAVE_ENDIAN_H, 1, [have endian.h])], [
 	AC_CHECK_HEADER([sys/endian.h],
