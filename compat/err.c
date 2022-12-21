@@ -53,6 +53,19 @@ err(int ret, const char *fmt, ...)
 }
 
 void
+errc(int ret, int code, const char *fmt, ...)
+{
+	va_list	ap;
+
+	errno = code;
+
+	va_start(ap, fmt);
+	vwarn(fmt, ap);
+	va_end(ap);
+	exit(ret);
+}
+
+void
 errx(int ret, const char *fmt, ...)
 {
 	va_list	ap;
@@ -67,6 +80,18 @@ void
 warn(const char *fmt, ...)
 {
 	va_list	ap;
+
+	va_start(ap, fmt);
+	vwarn(fmt, ap);
+	va_end(ap);
+}
+
+void
+warnc(int code, const char *fmt, ...)
+{
+	va_list	ap;
+
+	errno = code;
 
 	va_start(ap, fmt);
 	vwarn(fmt, ap);
