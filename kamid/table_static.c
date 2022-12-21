@@ -85,12 +85,14 @@ table_static_add(struct table *t, const char *key, const char *val)
 {
 	struct kp	*kp;
 	unsigned int	 slot;
+	size_t		 len;
 
 	if (key == NULL)
 		return -1;
 
-	kp = xcalloc(1, sizeof(*kp) + strlen(key) + 1);
-	strcpy(kp->key, key);
+	len = strlen(key) + 1;
+	kp = xcalloc(1, sizeof(*kp) + len);
+	memcpy(kp->key, key, len);
 	if (val != NULL)
 		kp->val = xstrdup(val);
 
