@@ -151,7 +151,7 @@ usage(int ret)
 static int
 nextfid(void)
 {
-	uint32_t i;
+	int i;
 
 	for (i = 0; ; ++i) {
 		if (i != pwdfid)
@@ -1599,7 +1599,7 @@ excmd(int argc, const char **argv)
 }
 
 static int
-parsecmd(char *cmd, char **argv, size_t len)
+parsecmd(char *cmd, char **argv, int len)
 {
 	int		 escape, quote;
 	int		 argc = 0;
