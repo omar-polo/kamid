@@ -174,6 +174,7 @@ CC_ADD_CHECK_FLAGS([-Wno-unused-parameter])
 CC_ADD_CHECK_FLAGS([-Wpointer-arith])
 CC_ADD_CHECK_FLAGS([-Wsign-compare])
 CC_ADD_CHECK_FLAGS([-Wcast-align])
+CC_ADD_CHECK_FLAGS([-Wno-pointer-sign])
 
 # Save our CFLAGS/CPPFLAGS/LDFLAGS for the Makefile and restore the old user
 # variables.
