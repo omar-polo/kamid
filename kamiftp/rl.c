@@ -84,10 +84,7 @@ compl_state_reset(void)
 		free(compl_state.entries[i]);
 	free(compl_state.entries);
 
-	compl_state.len = 0;
-	compl_state.size = 16;
-	if ((compl_state.entries = calloc(16, sizeof(char *))) == NULL)
-		compl_state.size = 0;
+	memset(&compl_state, 0, sizeof(compl_state));
 }
 
 static int
@@ -101,8 +98,12 @@ compl_add_entry(const struct np_stat *st)
 		size_t newsz = compl_state.size * 1.5;
 		void *t;
 
+		if (newsz == 0)
+			newsz = 16;
+
+		/* one for the NULL entry at the end */
 		t = recallocarray(compl_state.entries, compl_state.size,
-		    newsz, sizeof(char *));
+		    newsz + 1, sizeof(char *));
 		if (t == NULL)
 			return -1;
 		compl_state.entries = t;
