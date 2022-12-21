@@ -282,14 +282,12 @@ ftp_dirent_generator(const char *text, int state)
 static char **
 ftp_remote_files(const char *text, int start, int end)
 {
-	const char	*dir;
-	char		 t[PATH_MAX];
-	char		*s, *e;
+	char		*t, dir[PATH_MAX];
 
-	strlcpy(t, text, sizeof(t));
-	cleanword(t, 0);
+	strlcpy(dir, text, sizeof(dir));
+	cleanword(dir, 0);
 
-	if (!strcmp(t, "..")) {
+	if (!strcmp(dir, "..")) {
 		char **cs;
 		if ((cs = calloc(2, sizeof(*cs))) == NULL)
 			return NULL;
@@ -297,16 +295,17 @@ ftp_remote_files(const char *text, int start, int end)
 		return cs;
 	}
 
-	s = t;
-	if (!strncmp(s, "./", 2)) {
-		s++;
-		while (*s == '/')
-			s++;
+	t = dir;
+	if (!strncmp(t, "./", 2)) {
+		t++;
+		while (*t == '/')
+			t++;
 	}
+	if (t != dir)
+		memmove(dir, t, strlen(t) + 1);
 
-	if ((e = strrchr(s, '/')) != NULL)
-		e[1] = '\0';
-	dir = t;
+	if ((t = strrchr(dir, '/')) != NULL)
+		t[1] = '\0';
 
 	if (!strcmp(dir, "."))
 		strlcpy(compl_prfx, "", sizeof(compl_prfx));
