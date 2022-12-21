@@ -1021,17 +1021,20 @@ int
 dir_listing(const char *path, int (*fn)(const struct np_stat *),
     int printerr)
 {
-	struct qid	 qid;
+	struct qid	 qid = {0, 0, QTDIR};
 	struct np_stat	 st;
 	uint64_t	 off = 0;
 	uint32_t	 len;
-	int		 nfid, miss, r;
+	int		 nfid, r, miss = 0;
 	char		*errstr;
 
 	now = time(NULL);
 	nfid = nextfid();
 
-	errstr = walk_path(pwdfid, nfid, path, &miss, &qid);
+	if (!strcmp(path, "."))
+		errstr = dup_fid(pwdfid, nfid);
+	else
+		errstr = walk_path(pwdfid, nfid, path, &miss, &qid);
 	if (errstr != NULL) {
 		if (printerr)
 			printf("%s: %s\n", path, errstr);
