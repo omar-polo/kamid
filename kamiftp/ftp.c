@@ -909,10 +909,6 @@ do_ctxt_connect(const char *host, const char *port)
 static void
 do_connect(const char *host, const char *port, const char *user)
 {
-	struct qid qid;
-	int nfid, miss, fd;
-	char *errstr;
-
 	fprintf(stderr, "connecting to %s:%s...", host, port);
 
 	if (tls)
@@ -1407,7 +1403,7 @@ cmd_pipe(int argc, const char **argv)
 {
 	struct qid qid;
 	pid_t pid;
-	int nfid, tmpfd, miss, status;
+	int nfid, miss, status;
 	int filedes[2]; /* read end, write end */
 	char *errstr;
 
@@ -1456,7 +1452,6 @@ cmd_pipe(int argc, const char **argv)
 void
 cmd_put(int argc, const char **argv)
 {
-	struct qid qid;
 	const char *l;
 	int fd;
 
@@ -1823,7 +1818,7 @@ main(int argc, char **argv)
 	compl_setup();
 	for (;;) {
 		int argc;
-		char *line, *argv[16] = {0}, **ap;
+		char *line, *argv[16] = {0};
 
 		if ((line = read_line("kamiftp> ")) == NULL)
 			break;

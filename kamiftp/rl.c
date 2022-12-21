@@ -92,7 +92,6 @@ compl_add_entry(const struct np_stat *st)
 {
 	const char	*sufx = "";
 	char		*dup;
-	int		 r;
 
 	if (compl_state.len == compl_state.size) {
 		size_t newsz = compl_state.size * 1.5;
