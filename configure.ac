@@ -42,8 +42,6 @@ AC_ARG_WITH([libbsd],
   [with_libbsd=auto])
 if test x"$with_libbsd" != x"no"; then
   PKG_CHECK_MODULES([libbsd], [libbsd-overlay libbsd-ctor], [
-    _save_AM_CFLAGS="$AM_CFLAGS"
-    _save_LIBS="$LIBS"
     AM_CFLAGS="$AM_CFLAGS $libbsd_CFLAGS"
     LIBS="$LIBS $libbsd_LIBS"
   ], [
