@@ -1663,7 +1663,8 @@ main(int argc, char **argv)
 	const char	*pat = NULL;
 	regex_t		 reg;
 
-	assert(argv0 = argv[0]);
+	if ((argv0 = argv[0]) == NULL)
+		fatal("empty argv[0]");
 
 	signal(SIGPIPE, SIG_IGN);
 
