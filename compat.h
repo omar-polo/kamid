@@ -108,10 +108,10 @@ int		 asprintf(char **, const char *, ...);
 int		 vasprintf(char **, const char *, ...);
 #endif
 
-#ifndef HAVE_ERR
-void		 err(int, const char *, ...);
-void		 errc(int, int, const char *, ...);
-void		 errx(int, const char *, ...);
+#ifndef HAVE_ERRC
+__dead void	 err(int, const char *, ...);
+__dead void	 errc(int, int, const char *, ...);
+__dead void	 errx(int, const char *, ...);
 void		 warn(const char *, ...);
 void		 warnc(int, const char *, ...);
 void		 warnx(const char *, ...);
