@@ -54,7 +54,7 @@ fi
 
 AC_REPLACE_FUNCS([
 	asprintf	\
-	err		\
+	errc		\
 	freezero	\
 	getdtablecount	\
 	getdtablesize	\
