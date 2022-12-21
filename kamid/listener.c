@@ -25,6 +25,7 @@
 #include <sys/uio.h>
 
 #include <errno.h>
+#include <grp.h>
 #include <inttypes.h>
 #include <pwd.h>
 #include <signal.h>
