@@ -97,7 +97,7 @@ clients_tree_cmp(struct client *a, struct client *b)
 }
 
 SPLAY_PROTOTYPE(clients_tree_id, client, sp_entry, clients_tree_cmp);
-SPLAY_GENERATE(clients_tree_id, client, sp_entry, clients_tree_cmp)
+SPLAY_GENERATE(clients_tree_id, client, sp_entry, clients_tree_cmp);
 
 static void
 listener_sig_handler(int sig, short event, void *d)
