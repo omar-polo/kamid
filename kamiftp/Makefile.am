@@ -12,7 +12,7 @@ kamiftp_SOURCES=ftp.c				\
 
 dist_man1_MANS = kamiftp.1
 
-kamiftp_CFLAGS=	@READLINE_CFLAGS@
+kamiftp_CFLAGS=	@READLINE_CFLAGS@ $(AM_CFLAGS)
 kamiftp_LDADD=	@READLINE_LIBS@ $(top_builddir)/compat/libopenbsd-compat.a
 kamiftp_DEPENDENCIES = $(top_builddir)/compat/libopenbsd-compat.a
 
