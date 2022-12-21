@@ -54,7 +54,7 @@ Don't know where to start?  Take a look at the [TODO](./TODO) file!
 kamid is developed primarly on OpenBSD, but it's known to work on
 Debian, Devuan and NixOS.
 
-Have you ported / compiled kamid on other systems?  Cool, I'd be happy
+Have you ported / compiled kamid on other systems?  Cool!  I'd be happy
 to hear about it!  I'm particularly interested in the difficulties in
 doing so to ease the portability.
 
