@@ -55,6 +55,7 @@ compl_setup(void)
 #else /* HAVE_READLINE */
 
 #include <ctype.h>
+#include <libgen.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -279,6 +280,26 @@ ftp_dirent_generator(const char *text, int state)
 	return NULL;
 }
 
+static inline void
+set_compl_prfx(const char *path)
+{
+	if (!strcmp(path, "."))
+		strlcpy(compl_prfx, "", sizeof(compl_prfx));
+	else
+		strlcpy(compl_prfx, path, sizeof(compl_prfx));
+}
+
+static inline void
+inplace_dirname(char *path, size_t len)
+{
+	char	*t;
+
+	if ((t = strrchr(path, '/')) == NULL)
+		strlcpy(path, ".", len);
+	else
+		t[1] = '\0';
+}
+
 static char **
 ftp_remote_files(const char *text, int start, int end)
 {
@@ -300,21 +321,25 @@ ftp_remote_files(const char *text, int start, int end)
 		t++;
 		while (*t == '/')
 			t++;
-	}
-	if (t != dir)
 		memmove(dir, t, strlen(t) + 1);
+	}
 
-	if ((t = strrchr(dir, '/')) != NULL)
-		t[1] = '\0';
+	if (*dir && dir[strlen(dir) - 1] != '/')
+		strlcat(dir, "/", sizeof(dir));
 
-	if (!strcmp(dir, "."))
-		strlcpy(compl_prfx, "", sizeof(compl_prfx));
-	else
-		strlcpy(compl_prfx, dir, sizeof(compl_prfx));
-
+	set_compl_prfx(dir);
 	compl_state_reset();
-	if (dir_listing(dir, compl_add_entry, 0) == -1)
-		return NULL;
+	if (dir_listing(dir, compl_add_entry, 0) == -1) {
+		if (*dir)
+			dir[strlen(dir) - 1] = '\0';
+		inplace_dirname(dir, sizeof(dir));
+		set_compl_prfx(dir);
+
+		compl_state_reset();
+		if (dir_listing(dir, compl_add_entry, 0) == -1)
+			return NULL;
+	}
+
 	return rl_completion_matches(text, ftp_dirent_generator);
 }
 
