@@ -328,6 +328,9 @@ ftp_completion(const char *text, int start, int end)
 	/* don't fall back on the default completion system by default */
 	rl_attempted_completion_over = 1;
 
+	/* append a space after selecting a command */
+	rl_completion_append_character = ' ';
+
 	if ((line = rl_copy_text(0, start)) == NULL)
 		return NULL;
 
@@ -335,6 +338,9 @@ ftp_completion(const char *text, int start, int end)
 	free(line);
 	if (argno == 0)
 		return rl_completion_matches(text, ftp_cmdname_generator);
+
+	/* but not for file completions */
+	rl_completion_append_character = '\0';
 
 	switch (cmdtype) {
 	case CMD_BELL:
