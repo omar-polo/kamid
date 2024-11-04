@@ -113,17 +113,14 @@ typedef struct {
 %token	INCLUDE
 %token	KEY
 %token	LISTEN
-%token	NO
 %token	ON
 %token	PKI PORT
 %token	TABLE TLS
 %token	USERDATA
 %token	VIRTUAL
-%token	YES
 
 %token	<v.string>	STRING
 %token	<v.number>	NUMBER
-%type	<v.number>	yesno
 %type	<v.string>	string
 %type	<v.table>	tableref
 
@@ -167,15 +164,8 @@ string		: string STRING	{
 		| STRING
 		;
 
-yesno		: YES	{ $$ = 1; }
-		| NO	{ $$ = 0; }
-		;
-
 optnl		: '\n' optnl		/* zero or more newlines */
 		| /*empty*/
-		;
-
-nl		: '\n' optnl		/* one or more newlines */
 		;
 
 arrow		: '=' '>' ;
@@ -350,7 +340,6 @@ lookup(char *s)
 		{"include",		INCLUDE},
 		{"key",			KEY},
 		{"listen",		LISTEN},
-		{"no",			NO},
 		{"on",			ON},
 		{"pki",			PKI},
 		{"port",		PORT},
@@ -358,7 +347,6 @@ lookup(char *s)
 		{"tls",			TLS},
 		{"userdata",		USERDATA},
 		{"virtual",		VIRTUAL},
-		{"yes",			YES},
 	};
 	const struct keywords	*p;
 
@@ -503,9 +491,6 @@ yylex(void)
 	case LISTEN:
 		puts("listen");
 		break;
-	case NO:
-		puts("no");
-		break;
 	case ON:
 		puts("on");
 		break;
@@ -520,9 +505,6 @@ yylex(void)
 		break;
 	case TLS:
 		puts("tls");
-		break;
-	case YES:
-		puts("yes");
 		break;
 	case STRING:
 		printf("string \"%s\"\n", yylval.v.string);
