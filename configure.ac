@@ -141,7 +141,10 @@ AC_CHECK_DECL(PR_SET_NAME, AC_DEFINE([HAVE_PR_SET_NAME], 1, [pr_set_name]), [],
 	[[#include <sys/prctl.h>]])
 
 AC_CHECK_LIB([crypto], [RAND_add], [], [
-	AC_MSG_ERROR([requires openssl])
+	PKG_CHECK_MODULES([libcrypto], [libcrypto], [
+		AM_CFLAGS="$libcrypto_CFLAGS $AM_CFLAGS"
+		LIBS="$libcrypto_LIBS $LIBS"
+	], [AC_MSG_ERROR([requires openssl])])
 ])
 
 AC_CHECK_LIB(tls, tls_init, [], [
