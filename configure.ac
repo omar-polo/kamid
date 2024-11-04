@@ -52,9 +52,10 @@ if test x"$with_libbsd" != x"no"; then
   ])
 fi
 
-AC_REPLACE_FUNCS([
+AC_REPLACE_FUNCS([	\
 	asprintf	\
 	errc		\
+	explicit_bzero	\
 	freezero	\
 	getdtablecount	\
 	getdtablesize	\

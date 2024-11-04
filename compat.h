@@ -119,6 +119,10 @@ void		 warnx(const char *, ...);
 #include <err.h>
 #endif
 
+#ifndef HAVE_EXPLICIT_BZERO
+void		 explicit_bzero(void *, size_t);
+#endif
+
 #ifndef FREEZERO
 void		 freezero(void *, size_t);
 #endif
