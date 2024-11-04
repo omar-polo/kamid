@@ -159,6 +159,18 @@ void		 setproctitle(const char *, ...);
 void		 setprogname(const char *);
 #endif
 
+#if !defined(HAVE_SETRESGID) || !defined(HAVE_SETRESUID)
+# include <unistd.h>
+#endif
+
+#ifndef HAVE_SETRESGID
+int		 setresgid(gid_t, gid_t, gid_t);
+#endif
+
+#ifndef HAVE_SETRESUID
+int		 setresuid(gid_t, gid_t, gid_t);
+#endif
+
 #ifndef HAVE_STRLCAT
 size_t		 strlcat(char *, const char *, size_t);
 #endif

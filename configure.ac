@@ -65,6 +65,8 @@ AC_REPLACE_FUNCS([	\
 	recallocarray	\
 	setproctitle	\
 	setprogname	\
+	setresgid	\
+	setresuid	\
 	strlcat		\
 	strlcpy		\
 	strsep		\
