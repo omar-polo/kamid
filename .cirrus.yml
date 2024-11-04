@@ -1,0 +1,39 @@
+linux_amd64_task:
+  container:
+    image: alpine:latest
+  test_script:
+    - apk add alpine-sdk bison libretls-dev libevent-dev readline-dev autoconf automake
+    - ./autogen.sh
+    - ./configure
+    - make
+    - make SUDO=env test
+
+linux_arm_task:
+  container:
+    image: alpine:latest
+  test_script:
+    - apk add alpine-sdk bison libretls-dev libevent-dev readline-dev autoconf automake
+    - ./autogen.sh
+    - ./configure
+    - make
+    - make SUDO=env test
+
+freebsd_14_task:
+  freebsd_instance:
+    image_family: freebsd-14-0
+  install_script: pkg install -y libevent libressl pkgconf autoconf automake
+  script:
+    - ./autogen.sh
+    - ./configure
+    - make
+    - make SUDO=env test
+
+mac_task:
+  macos_instance:
+    image: ghcr.io/cirruslabs/macos-runner:sonoma
+  test_script:
+    - brew install libevent openssl libretls autoconf automake pkg-config
+    - ./autogen.sh
+    - PKG_CONFIG_PATH="$(brew --prefix openssl)/lib/pkgconfig" ./configure
+    - make
+    - make SUDO=env test
