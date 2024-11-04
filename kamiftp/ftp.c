@@ -1313,8 +1313,7 @@ cmd_lcd(int argc, const char **argv)
 
 	if (argc == 1)
 		dir = *argv;
-
-	if (argc == 0 && (dir = getenv("HOME")) == NULL) {
+	else if ((dir = getenv("HOME")) == NULL) {
 		printf("HOME is not defined\n");
 		return;
 	}

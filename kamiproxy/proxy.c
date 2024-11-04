@@ -211,7 +211,7 @@ setup(void)
 	struct addrinfo	 hints, *res, *res0;
 	int		 v, r, saved_errno;
 	char		 host[64];
-	const char	*c, *h, *port, *cause;
+	const char	*c, *h, *port, *cause = "";
 
 	if ((c = strchr(fromhost, ':')) == NULL) {
 		h = NULL;
@@ -274,7 +274,7 @@ servconnect(void)
 {
 	struct addrinfo	 hints, *res, *res0;
 	int		 r, saved_errno, sock;
-	const char	*cause;
+	const char	*cause = "";
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
