@@ -496,8 +496,8 @@ main(int argc, char **argv)
 	log_init(debug, LOG_DAEMON);
 	log_setverbose(verbose);
 
-	if (!debug)
-		daemon(1, 0);
+	if (!debug && daemon(1, 0) == -1)
+		fatal("daemon");
 
 	signal(SIGPIPE, SIG_IGN);
 
