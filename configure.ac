@@ -148,7 +148,10 @@ AC_CHECK_LIB([crypto], [RAND_add], [], [
 ])
 
 AC_CHECK_LIB(tls, tls_init, [], [
-	AC_MSG_ERROR([requires libtls])
+	PKG_CHECK_MODULES([libtls], [libtls], [
+		AM_CFLAGS="$libtls_CFLAGS $AM_CFLAGS"
+		LIBS="$libtls_LIBS $LIBS"
+	], [AC_MSG_ERROR([requires libtls])])
 ])
 
 AS_CASE([$host_os],
